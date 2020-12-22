@@ -7,7 +7,7 @@
 #include "parser.h"
 #include "lexer.h"
 
-static char lexdest[MAXIMUM_LEX_TOKEN_LEN];
+__thread static char lexdest[NEOAST_MAX_TOK_N];
 
 int lex_next(const char** input, GrammarParser* parser, void* lval)
 {
@@ -25,7 +25,7 @@ int lex_next(const char** input, GrammarParser* parser, void* lval)
             int n = regex_matches[0].rm_eo - regex_matches[0].rm_so;
             int token;
             char skip = 0;
-            if (n > MAXIMUM_LEX_TOKEN_LEN)
+            if (n > NEOAST_MAX_TOK_N)
             {
                 char* dest = strndup(*input + regex_matches[0].rm_so, n);
                 token = rule->expr(dest, lval, &skip);

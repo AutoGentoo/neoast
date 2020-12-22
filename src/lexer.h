@@ -9,7 +9,9 @@
 #include <regex.h>
 #include "common.h"
 
-#define MAXIMUM_LEX_TOKEN_LEN 1024
+// Length of the token buffer
+// Anything longer will be dynamically allocated
+#define NEOAST_MAX_TOK_N 1024
 
 typedef int (*lexer_expr) (const char* lex_text, void* lex_val, char* skip);
 
