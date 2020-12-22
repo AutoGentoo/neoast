@@ -11,5 +11,6 @@ typedef struct LexerRule_prv LexerRule;
 typedef struct GrammarParser_prv GrammarParser;
 typedef struct GrammarRule_prv GrammarRule;
 typedef struct GrammarSubRule_prv GrammarSubRule;
+typedef struct ParserState_prv ParserState;
 
 #endif //NEOAST_COMMON_H

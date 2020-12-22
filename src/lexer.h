@@ -9,11 +9,12 @@
 #include <regex.h>
 #include "common.h"
 
+#define MAXIMUM_LEX_TOKEN_LEN 1024
+
 typedef int (*lexer_expr) (const char* lex_text, void* lex_val, char* skip);
 
 struct LexerRule_prv
 {
-    LexerRule* next;
     regex_t regex;
     lexer_expr expr;
 };
@@ -23,11 +24,11 @@ struct LexerRule_prv
  * We want to use FILE* here even if we
  * feed in char* so that we can use the builtin
  * buffer in the FILE protocol
- * @param fp input buffer
+ * @param input input buffer
  * @param parser object that has the lexer rules
- * @param dest destination of the lexer text
+ * @param lval destination of the lexer rule
  * @return next token in buffer
  */
-int lex_next(FILE* fp, GrammarParser* parser, char** dest);
+int lex_next(const char** input, GrammarParser* parser, void* lval);
 
 #endif //NEOAST_LEXER_H

@@ -1,0 +1,1 @@
+add_subdirectory(cmocka EXCLUDE_FROM_ALL)
