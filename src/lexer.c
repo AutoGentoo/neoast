@@ -22,7 +22,7 @@ int lex_next(const char** input, GrammarParser* parser, void* lval)
         {
             // Match found
             // Build the destination
-            int n = regex_matches[0].rm_eo - regex_matches[0].rm_so;
+            size_t n = regex_matches[0].rm_eo - regex_matches[0].rm_so;
             int token;
             char skip = 0;
             if (n > NEOAST_MAX_TOK_N)
