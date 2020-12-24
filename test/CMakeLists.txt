@@ -9,3 +9,5 @@ endmacro()
 
 
 CUnitTest(lexer)
+CUnitTest(left_scan)
+CUnitTest(lr)

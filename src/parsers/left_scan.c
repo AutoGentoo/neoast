@@ -7,24 +7,9 @@
 #include "parser.h"
 #include "lexer.h"
 
-#define OFFSET_VOID_PTR(ptr, s, i) (void*)(((char*)(ptr)) + ((s) * (i)))
-
-int parser_fill_table(const char** input, GrammarParser* parse, int* table, void* val_table, size_t val_n, int table_n)
-{
-    void* current_val = val_table;
-    int i = 0;
-    while ((table[i] = lex_next(input, parse, current_val)) && i < table_n) // While not EOF
-    {
-        current_val += val_n;
-        i++;
-    }
-
-    return i;
-}
-
 static inline
-int tok_match(const int* haystack,
-              const int* needle)
+int tok_match(const U32* haystack,
+              const U32* needle)
 {
     int m = 0;
     while (*haystack && *needle)
@@ -40,11 +25,12 @@ int tok_match(const int* haystack,
 }
 
 static
-int parser_reduce(GrammarParser* parser,
-                  int* n,
-                  int* tokens,
-                  void* val_table,
-                  size_t val_s)
+int parser_left_scan(
+        const GrammarParser* parser,
+        int* n,
+        U32* tokens,
+        void* val_table,
+        U32 val_s)
 {
     // Create a buffer to hold the output union
     void* dest = alloca(val_s);
@@ -110,11 +96,12 @@ int parser_reduce(GrammarParser* parser,
 }
 
 
-void parser_parse(GrammarParser* parser,
-                  int* n,
-                  int* tokens,
-                  void* val_table,
-                  size_t val_s)
+void parser_parse_left_scan(
+        const GrammarParser* parser,
+        int* n,
+        U32* tokens,
+        void* val_table,
+        U32 val_s)
 {
-    while(parser_reduce(parser, n, tokens, val_table, val_s));
+    while (parser_left_scan(parser, n, tokens, val_table, val_s));
 }
