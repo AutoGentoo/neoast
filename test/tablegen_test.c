@@ -47,6 +47,7 @@ enum
 };
 
 static const char* token_names = "$N+-*/^()ES'";
+static precedence_t precedence_table[TOK_AUGMENT] = {PRECEDENCE_NONE};
 
 typedef union {
     double number;
@@ -259,6 +260,12 @@ void initialize_parser()
     static U32 r8[] = {TOK_E};
     static U32 r9[] = {};
 
+    precedence_table[TOK_PLUS] = PRECEDENCE_REDUCE;
+    precedence_table[TOK_MINUS] = PRECEDENCE_REDUCE;
+    precedence_table[TOK_STAR] = PRECEDENCE_REDUCE;
+    precedence_table[TOK_SLASH] = PRECEDENCE_REDUCE;
+    precedence_table[TOK_CARET] = PRECEDENCE_REDUCE;
+
     static U32 a_r[] = {TOK_S};
 
     static GrammarRule g_rules[] = {
@@ -293,7 +300,7 @@ CTEST(test_clr_1)
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, clr_1_cmp, clr_1_merge);
 
-    U32* table = canonical_collection_generate(cc);
+    U32* table = canonical_collection_generate(cc, precedence_table);
     dump_table(table, cc, token_names, 0);
     canonical_collection_free(cc);
     free(table);
@@ -305,7 +312,7 @@ CTEST(test_lalr_1)
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, lalr_1_cmp, lalr_1_merge);
 
-    U32* table = canonical_collection_generate(cc);
+    U32* table = canonical_collection_generate(cc, precedence_table);
     dump_table(table, cc, token_names, 0);
     canonical_collection_free(cc);
     free(table);
@@ -328,12 +335,13 @@ CTEST(test_lalr_1_calculator)
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, lalr_1_cmp, lalr_1_merge);
 
-    U32* table = canonical_collection_generate(cc);
+    U32* table = canonical_collection_generate(cc, precedence_table);
 
     ParserStack* stack = malloc(sizeof(ParserStack) + (sizeof(U32) * 64));
     stack->pos = 0;
     I32 res_idx = parser_parse_lr(&p, stack, table, token_table, value_table, sizeof(ValUnion));
 
+    printf("%s = %lf\n", lexer_input, value_table[res_idx].number);
     assert_double_equal(value_table[res_idx].number, 1 + (5 * 9) + 2, 0.005);
 
     free(stack);
@@ -343,7 +351,7 @@ CTEST(test_lalr_1_calculator)
 
 
 const static struct CMUnitTest left_scan_tests[] = {
-        //cmocka_unit_test(test_clr_1),
+        cmocka_unit_test(test_clr_1),
         cmocka_unit_test(test_lalr_1),
         cmocka_unit_test(test_lalr_1_calculator),
 };

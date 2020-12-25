@@ -40,6 +40,13 @@ enum
             ),
 };
 
+typedef enum
+{
+    PRECEDENCE_NONE,
+    PRECEDENCE_REDUCE,
+    PRECEDENCE_SHIFT
+} precedence_t;
+
 struct GrammarRule_prv
 {
     U32 token;

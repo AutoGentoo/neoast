@@ -6,6 +6,7 @@
 #define NEOAST_CANONICAL_COLLECTION_H
 
 #include "common.h"
+#include "parser.h"
 
 typedef int (*state_compare)(
         const GrammarState* original_state,
@@ -45,7 +46,7 @@ struct CanonicalCollection_prv
 
 CanonicalCollection* canonical_collection_init(const GrammarParser* parser);
 void canonical_collection_resolve(CanonicalCollection* self, state_compare cmp_f, state_merge cmp_m);
-U32* canonical_collection_generate(const CanonicalCollection* self);
+U32* canonical_collection_generate(const CanonicalCollection* self, const precedence_t precedence_table[]);
 
 void canonical_collection_free(CanonicalCollection* self);
 

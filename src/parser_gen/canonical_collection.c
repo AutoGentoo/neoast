@@ -320,7 +320,7 @@ U32* cc_allocate_table(const CanonicalCollection* self)
     return calloc(self->state_n * self->parser->token_n, sizeof(U32));
 }
 
-U32* canonical_collection_generate(const CanonicalCollection* self)
+U32* canonical_collection_generate(const CanonicalCollection* self, const precedence_t precedence_table[])
 {
     U32 rr_conflicts = 0, sr_conflicts = 0;
     U32* table = cc_allocate_table(self); // zeroes
@@ -399,8 +399,20 @@ U32* canonical_collection_generate(const CanonicalCollection* self)
                         }
                         else if (table[idx] & TOK_SHIFT_MASK)
                         {
-                            fprintf(stderr, "SR conflict at state %d tok %d\n", state_i, lookahead_i);
-                            sr_conflicts++;
+                            if (precedence_table && precedence_table[lookahead_i] == PRECEDENCE_REDUCE)
+                            {
+                                // Let the table value take reduction
+                            }
+                            else if (precedence_table && precedence_table[lookahead_i] == PRECEDENCE_SHIFT)
+                            {
+                                // Keep the shift
+                                continue;
+                            }
+                            else
+                            {
+                                fprintf(stderr, "SR conflict at state %d tok %d\n", state_i, lookahead_i);
+                                sr_conflicts++;
+                            }
                         }
                     }
                     table[idx] = action_mask | grammar_id;
