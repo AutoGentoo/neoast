@@ -54,7 +54,6 @@ struct GrammarParser_prv
     U32 grammar_n;
     LexerRule* lexer_rules;
     GrammarRule* grammar_rules;
-    GrammarRule* augmented_rule;
 
     // Also number of columns
     U32 token_n;

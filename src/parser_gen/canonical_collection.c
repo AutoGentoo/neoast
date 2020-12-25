@@ -49,6 +49,14 @@ lookahead_copy(U8 dest[], const U8 src[], U32 n)
     memcpy(dest, src, sizeof(U8) * n);
 }
 
+static void
+lookahead_merge(U8 dest[], const U8 src[], U32 n)
+{
+    for (U32 i = 0; i < n; i++)
+        dest[i] = dest[i] || src[i];
+}
+
+
 static void lr_1_firstof(U8 dest[], U32 token, const GrammarParser* parser)
 {
     if (token < parser->action_token_n)
@@ -100,39 +108,40 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
                 continue;
             }
 
+            // Generate the lookahead for this rule
+            U8* temp_lookahead = alloca(sizeof(U8) * parser->action_token_n);
+            if (item->final_item || item->item_i + 1 >= item->grammar->tok_n)
+            {
+                // This is the last item in the list
+                // The next item is our own look ahead
+                lookahead_copy(temp_lookahead, item->look_ahead, parser->action_token_n);
+            }
+            else
+            {
+                // The look ahead is the next item in our grammar
+                lr_1_firstof(
+                        temp_lookahead,
+                        item->grammar->grammar[item->item_i + 1],
+                        parser);
+            }
+
             if (already_expanded[potential_token - parser->action_token_n])
             {
                 // This is already expanded
+                // We need to merge the lookahead with every other
+                // rule that matches this token
+                for (LR_1* item_iter_2 = self->head_item; item_iter_2; item_iter_2 = item_iter_2->next)
+                {
+                    if (item_iter_2->grammar->token == potential_token)
+                    {
+                        lookahead_merge(item_iter_2->look_ahead, temp_lookahead, parser->action_token_n);
+                    }
+                }
                 continue;
             }
 
             dirty = 1;
             already_expanded[potential_token - parser->action_token_n] = 1;
-
-            if (potential_token == parser->token_n)
-            {
-                // Augmented rule
-                LR_1* new_rule = lr_1_init(parser->augmented_rule, 0, parser->action_token_n);
-
-                new_rule->next = item->next;
-                item->next = new_rule;
-
-                // Generate the lookahead
-                if (item->final_item || item->item_i + 1 >= item->grammar->tok_n)
-                {
-                    // This is the last item in the list
-                    // The next item is our own look ahead
-                    lookahead_copy(new_rule->look_ahead, item->look_ahead, parser->action_token_n);
-                }
-                else
-                {
-                    // The look ahead is the next item in our
-                    // grammar
-                    lr_1_firstof(new_rule->look_ahead,
-                            item->grammar->grammar[item->item_i + 1],
-                            parser);
-                }
-            }
 
             for (U32 i = 0; i < parser->grammar_n; i++)
             {
@@ -144,23 +153,7 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
 
                     new_rule->next = item->next;
                     item->next = new_rule;
-
-                    // Generate the lookahead
-                    if (item->final_item || item->item_i + 1 >= item->grammar->tok_n)
-                    {
-                        // This is the last item in the list
-                        // The next item is our own look ahead
-                        lookahead_copy(new_rule->look_ahead, item->look_ahead, parser->action_token_n);
-                    }
-                    else
-                    {
-                        // The look ahead is the next item in our
-                        // grammar
-                        lr_1_firstof(
-                                new_rule->look_ahead,
-                                item->grammar->grammar[item->item_i + 1],
-                                parser);
-                    }
+                    lookahead_copy(new_rule->look_ahead, temp_lookahead, parser->action_token_n);
                 }
             }
         }
@@ -172,7 +165,8 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
 static GrammarState* cc_generate_augmented(const CanonicalCollection* cc)
 {
     GrammarState* initial = gs_init(cc);
-    LR_1* augmented_item = lr_1_init(cc->parser->augmented_rule, 0, cc->parser->action_token_n);
+    LR_1* augmented_item = lr_1_init(&cc->parser->grammar_rules[0],
+                                     0, cc->parser->action_token_n);
     augmented_item->look_ahead[0] = 1;
 
     initial->head_item = augmented_item;
@@ -368,7 +362,7 @@ U32* canonical_collection_generate(const CanonicalCollection* self)
             {
                 U32 action_mask;
                 U32 grammar_id;
-                if (item->grammar == self->parser->augmented_rule)
+                if (item->grammar->token == self->parser->token_n) // Augmented rule
                 {
                     // This is an accept
                     action_mask = TOK_ACCEPT_MASK;

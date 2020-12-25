@@ -11,9 +11,9 @@ int lr_1_cmp_look_ahead(
         const U8 b[],
         U32 tok_n)
 {
-    while(tok_n--)
+    for (U32 i = 0; i < tok_n; i++)
     {
-        if (a[tok_n] != b[tok_n])
+        if (a[i] != b[i])
             return 1;
     }
 

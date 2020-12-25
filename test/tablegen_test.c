@@ -109,7 +109,7 @@ static GrammarParser p;
 void dump_item(const LR_1* lr1, U32 tok_n, const char* tok_names)
 {
     U8 printed = 0;
-    printf("'");
+    printf("['");
     for (U32 i = 0; i < lr1->grammar->tok_n; i++)
     {
         if (i == lr1->item_i && !printed)
@@ -146,6 +146,7 @@ void dump_item(const LR_1* lr1, U32 tok_n, const char* tok_names)
             printed = 1;
         }
     }
+    printf("]; ");
 }
 
 void dump_state(const GrammarState* state, U32 tok_n, const char* tok_names, U8 line_wrap)
@@ -165,10 +166,6 @@ void dump_state(const GrammarState* state, U32 tok_n, const char* tok_names, U8 
         if (line_wrap)
         {
             printf("\n");
-        }
-        else
-        {
-            printf("  ");
         }
     }
 }
@@ -252,11 +249,12 @@ void initialize_parser()
      *      | '(' E ')'
      */
 
-    static U32 r2[] = {TOK_NUM, TOK_PLUS, TOK_E};
-    static U32 r3[] = {TOK_NUM, TOK_MINUS, TOK_E};
-    static U32 r4[] = {TOK_NUM, TOK_STAR, TOK_E};
-    static U32 r5[] = {TOK_NUM, TOK_SLASH, TOK_E};
-    static U32 r6[] = {TOK_NUM, TOK_CARET, TOK_E};
+    static U32 r1[] = {TOK_NUM};
+    static U32 r2[] = {TOK_E, TOK_PLUS, TOK_E};
+    static U32 r3[] = {TOK_E, TOK_MINUS, TOK_E};
+    static U32 r4[] = {TOK_E, TOK_STAR, TOK_E};
+    static U32 r5[] = {TOK_E, TOK_SLASH, TOK_E};
+    static U32 r6[] = {TOK_E, TOK_CARET, TOK_E};
     static U32 r7[] = {TOK_OPEN_P, TOK_E, TOK_CLOSE_P};
     static U32 r8[] = {TOK_E};
     static U32 r9[] = {};
@@ -264,8 +262,10 @@ void initialize_parser()
     static U32 a_r[] = {TOK_S};
 
     static GrammarRule g_rules[] = {
+            {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r, .expr = NULL}, // Augmented rule
             {.token = TOK_S, .tok_n = 1, .grammar = r8, .expr = (parser_expr) copy_op},
             {.token = TOK_S, .tok_n = 0, .grammar = r9, .expr = NULL}, // Empty, no-op
+            {.token = TOK_E, .tok_n = 1, .grammar = r1, .expr = (parser_expr) copy_op},
             {.token = TOK_E, .tok_n = 3, .grammar = r2, .expr = (parser_expr) binary_op},
             {.token = TOK_E, .tok_n = 3, .grammar = r3, .expr = (parser_expr) binary_op},
             {.token = TOK_E, .tok_n = 3, .grammar = r4, .expr = (parser_expr) binary_op},
@@ -274,18 +274,10 @@ void initialize_parser()
             {.token = TOK_E, .tok_n = 3, .grammar = r7, .expr = (parser_expr) group_op},
     };
 
-    static GrammarRule aug_rule = {
-            .tok_n = 1,
-            .token = TOK_AUGMENT,
-            .expr = NULL,
-            .grammar = a_r
-    };
-
-    p.grammar_n = 8;
+    p.grammar_n = 10;
     p.grammar_rules = g_rules;
     p.lex_n = 3;
     p.lexer_rules = l_rules;
-    p.augmented_rule = &aug_rule;
     p.action_token_n = 9;
     p.token_n = TOK_AUGMENT;
 
@@ -351,7 +343,7 @@ CTEST(test_lalr_1_calculator)
 
 
 const static struct CMUnitTest left_scan_tests[] = {
-        cmocka_unit_test(test_clr_1),
+        //cmocka_unit_test(test_clr_1),
         cmocka_unit_test(test_lalr_1),
         cmocka_unit_test(test_lalr_1_calculator),
 };
