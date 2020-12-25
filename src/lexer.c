@@ -7,7 +7,7 @@
 #include "parser.h"
 #include "lexer.h"
 
-__thread static char lexdest[NEOAST_MAX_TOK_N];
+static __thread char lexdest[NEOAST_MAX_TOK_N];
 
 U32 lexer_fill_table(const char** input, GrammarParser* parse, U32* table, void* val_table, U32 val_n, U32 table_n)
 {

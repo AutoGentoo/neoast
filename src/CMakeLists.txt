@@ -3,7 +3,7 @@ add_library(neoast STATIC
         lexer.c
         lexer.h
         parser.h
-        lr.c)
+        lr.c parser.c)
 
 target_include_directories(neoast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
