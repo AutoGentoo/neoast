@@ -101,6 +101,8 @@ CTEST(test_lexer)
     assert_int_equal(llval.integer, 30);
     assert_int_equal(lex_next(yyinput, &p, &llval), -1); // Unhandled 'a'
     assert_int_equal(lex_next(yyinput, &p, &llval), 0);
+
+    parser_free(&p);
 }
 
 const static struct CMUnitTest lexer_tests[] = {

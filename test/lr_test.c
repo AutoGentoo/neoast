@@ -137,7 +137,7 @@ CTEST(test_parser)
     I32 res_idx = parser_parse_lr(&p, stack, lalr_table, token_table, value_table, sizeof(ValUnion));
 
     free(stack);
-
+    parser_free(&p);
     assert_int_not_equal(res_idx, -1);
 }
 
