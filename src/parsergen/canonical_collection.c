@@ -399,11 +399,11 @@ U32* canonical_collection_generate(const CanonicalCollection* self, const preced
                         }
                         else if (table[idx] & TOK_SHIFT_MASK)
                         {
-                            if (precedence_table && precedence_table[lookahead_i] == PRECEDENCE_REDUCE)
+                            if (precedence_table && precedence_table[lookahead_i] == PRECEDENCE_LEFT)
                             {
                                 // Let the table value take reduction
                             }
-                            else if (precedence_table && precedence_table[lookahead_i] == PRECEDENCE_SHIFT)
+                            else if (precedence_table && precedence_table[lookahead_i] == PRECEDENCE_RIGHT)
                             {
                                 // Keep the shift
                                 continue;

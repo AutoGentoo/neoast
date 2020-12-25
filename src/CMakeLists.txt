@@ -7,4 +7,4 @@ add_library(neoast STATIC
 
 target_include_directories(neoast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_subdirectory(parser_gen)
+add_subdirectory(parsergen)

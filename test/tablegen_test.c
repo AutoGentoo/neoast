@@ -6,8 +6,8 @@
 #include <parser.h>
 #include <cmocka.h>
 #include <stdlib.h>
-#include <parser_gen/canonical_collection.h>
-#include <parser_gen/clr_lalr.h>
+#include <parsergen/canonical_collection.h>
+#include <parsergen/clr_lalr.h>
 #include <math.h>
 
 #define CTEST(name) static void name(void** state)
@@ -260,11 +260,11 @@ void initialize_parser()
     static U32 r8[] = {TOK_E};
     static U32 r9[] = {};
 
-    precedence_table[TOK_PLUS] = PRECEDENCE_REDUCE;
-    precedence_table[TOK_MINUS] = PRECEDENCE_REDUCE;
-    precedence_table[TOK_STAR] = PRECEDENCE_REDUCE;
-    precedence_table[TOK_SLASH] = PRECEDENCE_REDUCE;
-    precedence_table[TOK_CARET] = PRECEDENCE_REDUCE;
+    precedence_table[TOK_PLUS] = PRECEDENCE_LEFT;
+    precedence_table[TOK_MINUS] = PRECEDENCE_LEFT;
+    precedence_table[TOK_STAR] = PRECEDENCE_LEFT;
+    precedence_table[TOK_SLASH] = PRECEDENCE_LEFT;
+    precedence_table[TOK_CARET] = PRECEDENCE_RIGHT;
 
     static U32 a_r[] = {TOK_S};
 
@@ -272,13 +272,13 @@ void initialize_parser()
             {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r, .expr = NULL}, // Augmented rule
             {.token = TOK_S, .tok_n = 1, .grammar = r8, .expr = (parser_expr) copy_op},
             {.token = TOK_S, .tok_n = 0, .grammar = r9, .expr = NULL}, // Empty, no-op
-            {.token = TOK_E, .tok_n = 1, .grammar = r1, .expr = (parser_expr) copy_op},
-            {.token = TOK_E, .tok_n = 3, .grammar = r2, .expr = (parser_expr) binary_op},
-            {.token = TOK_E, .tok_n = 3, .grammar = r3, .expr = (parser_expr) binary_op},
-            {.token = TOK_E, .tok_n = 3, .grammar = r4, .expr = (parser_expr) binary_op},
-            {.token = TOK_E, .tok_n = 3, .grammar = r5, .expr = (parser_expr) binary_op},
-            {.token = TOK_E, .tok_n = 3, .grammar = r6, .expr = (parser_expr) binary_op},
             {.token = TOK_E, .tok_n = 3, .grammar = r7, .expr = (parser_expr) group_op},
+            {.token = TOK_E, .tok_n = 1, .grammar = r1, .expr = (parser_expr) copy_op},
+            {.token = TOK_E, .tok_n = 3, .grammar = r6, .expr = (parser_expr) binary_op},
+            {.token = TOK_E, .tok_n = 3, .grammar = r5, .expr = (parser_expr) binary_op},
+            {.token = TOK_E, .tok_n = 3, .grammar = r4, .expr = (parser_expr) binary_op},
+            {.token = TOK_E, .tok_n = 3, .grammar = r3, .expr = (parser_expr) binary_op},
+            {.token = TOK_E, .tok_n = 3, .grammar = r2, .expr = (parser_expr) binary_op},
     };
 
     p.grammar_n = 10;
@@ -320,7 +320,6 @@ CTEST(test_lalr_1)
 
 CTEST(test_lalr_1_calculator)
 {
-
     const char* lexer_input = "1 + (5 * 9) + 2";
     initialize_parser();
 
@@ -349,11 +348,42 @@ CTEST(test_lalr_1_calculator)
     free(table);
 }
 
+CTEST(test_lalr_1_order_of_ops)
+{
+    const char* lexer_input = "1 + 5 * 9 + 4";
+    initialize_parser();
+
+    const char** yyinput = &lexer_input;
+
+    U32 token_table[32];
+    ValUnion value_table[32];
+
+    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(ValUnion), 32);
+    assert_int_equal(tok_n, 7);
+
+    CanonicalCollection* cc = canonical_collection_init(&p);
+    canonical_collection_resolve(cc, lalr_1_cmp, lalr_1_merge);
+
+    U32* table = canonical_collection_generate(cc, precedence_table);
+
+    ParserStack* stack = malloc(sizeof(ParserStack) + (sizeof(U32) * 64));
+    stack->pos = 0;
+    I32 res_idx = parser_parse_lr(&p, stack, table, token_table, value_table, sizeof(ValUnion));
+
+    // This parser has no order of ops
+    assert_double_equal(value_table[res_idx].number, (((1 + 5) * 9) + 4), 0.005);
+
+    free(stack);
+    canonical_collection_free(cc);
+    free(table);
+}
+
 
 const static struct CMUnitTest left_scan_tests[] = {
         cmocka_unit_test(test_clr_1),
         cmocka_unit_test(test_lalr_1),
         cmocka_unit_test(test_lalr_1_calculator),
+        cmocka_unit_test(test_lalr_1_order_of_ops),
 };
 
 int main()

@@ -43,8 +43,8 @@ enum
 typedef enum
 {
     PRECEDENCE_NONE,
-    PRECEDENCE_REDUCE,
-    PRECEDENCE_SHIFT
+    PRECEDENCE_LEFT,
+    PRECEDENCE_RIGHT
 } precedence_t;
 
 struct GrammarRule_prv

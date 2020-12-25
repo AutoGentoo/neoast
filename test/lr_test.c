@@ -64,9 +64,9 @@ U32 lalr_table[] = {
         LR_A( ), LR_A( ), LR_A( ), LR_E( ), LR_E( ), /* 1 */
         LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(5), /* 2 */
         LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(6), /* 3 */
-        LR_R(2), LR_R(2), LR_R(2), LR_E( ), LR_E( ), /* 4 */
-        LR_R(0), LR_E( ), LR_E( ), LR_E( ), LR_E( ), /* 5 */
-        LR_R(1), LR_R(1), LR_R(1), LR_E( ), LR_E( ), /* 6 */
+        LR_R(3), LR_R(3), LR_R(3), LR_E( ), LR_E( ), /* 4 */
+        LR_R(1), LR_E( ), LR_E( ), LR_E( ), LR_E( ), /* 5 */
+        LR_R(2), LR_R(2), LR_R(2), LR_E( ), LR_E( ), /* 6 */
 };
 
 void initialize_parser()
@@ -96,21 +96,14 @@ void initialize_parser()
     };
 
     static GrammarRule g_rules[] = {
+            {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r, .expr = NULL},
             {.token = TOK_S, .tok_n = 2, .grammar = r1, .expr = NULL},
             {.token = TOK_A, .tok_n = 2, .grammar = r2, .expr = NULL},
             {.token = TOK_A, .tok_n = 1, .grammar = r3, .expr = NULL},
     };
 
-    static GrammarRule augmented_rule = {
-            .token = TOK_AUGMENT,
-            .tok_n = 1,
-            .grammar = a_r,
-            .expr = NULL
-    };
-
-    p.grammar_n = 3;
+    p.grammar_n = 4;
     p.grammar_rules = g_rules;
-    p.augmented_rule = &augmented_rule;
     p.lex_n = 3;
     p.lexer_rules = l_rules;
     p.token_n = TOK_AUGMENT,
