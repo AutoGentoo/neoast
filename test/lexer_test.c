@@ -51,7 +51,7 @@ typedef union {
         int val;
         struct expr_* next;
     }* expr;
-} ValUnion;
+} LexerUnion;
 
 I32 ll_skip(const char* yytext, void* yyval)
 {
@@ -59,7 +59,7 @@ I32 ll_skip(const char* yytext, void* yyval)
     (void)yyval;
     return -1;
 }
-I32 ll_tok_num(const char* yytext, ValUnion* yyval)
+I32 ll_tok_num(const char* yytext, LexerUnion* yyval)
 {
     yyval->integer = (int)strtol(yytext, NULL, 10);
     return TOK_NUMBER;
@@ -70,8 +70,9 @@ static GrammarParser p;
 void initialize_parser()
 {
     static LexerRule l_rules[] = {
-            {.expr = ll_skip, .regex = 0},
-            {.expr = (lexer_expr) ll_tok_num, .regex = 0}
+            {.expr = ll_skip, .regex_raw = "^[ ]+"},
+            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "^[0-9]+"}
+
     };
 
     p.grammar_n = 0;
@@ -80,8 +81,7 @@ void initialize_parser()
     p.lexer_rules = l_rules;
 
     // Initialize the lexer regex rules
-    assert_int_equal(regcomp(&l_rules[0].regex, "^[ ]+", REG_EXTENDED), 0);
-    assert_int_equal(regcomp(&l_rules[1].regex, "^[0-9]+", REG_EXTENDED), 0);
+    parser_init(&p);
 }
 
 CTEST(test_lexer)
@@ -91,7 +91,7 @@ CTEST(test_lexer)
 
     const char** yyinput = &lexer_input;
 
-    ValUnion llval;
+    LexerUnion llval;
 
     assert_int_equal(lex_next(yyinput, &p, &llval), 1);
     assert_int_equal(llval.integer, 10);

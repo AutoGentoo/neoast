@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#define ARR_LEN(arr) (sizeof(arr)) / sizeof((arr[0]))
+
 typedef struct LexerRule_prv LexerRule;
 typedef struct GrammarParser_prv GrammarParser;
 typedef struct GrammarRule_prv GrammarRule;

@@ -9,7 +9,7 @@
 
 static __thread char lexdest[NEOAST_MAX_TOK_N];
 
-U32 lexer_fill_table(const char** input, GrammarParser* parse, U32* table, void* val_table, U32 val_n, U32 table_n)
+U32 lexer_fill_table(const char** input, const GrammarParser* parse, U32* table, void* val_table, U32 val_n, U32 table_n)
 {
     void* current_val = val_table;
     int i = 0;
@@ -27,7 +27,7 @@ U32 lexer_fill_table(const char** input, GrammarParser* parse, U32* table, void*
     return i;
 }
 
-int lex_next(const char** input, GrammarParser* parser, void* lval)
+int lex_next(const char** input, const GrammarParser* parser, void* lval)
 {
     if (!**input)
         return 0;
@@ -45,16 +45,28 @@ int lex_next(const char** input, GrammarParser* parser, void* lval)
             // Build the destination
             size_t n = regex_matches[0].rm_eo - regex_matches[0].rm_so;
             I32 token;
-            if (n > NEOAST_MAX_TOK_N)
+
+            if (rule->expr)
             {
-                char* dest = strndup(*input + regex_matches[0].rm_so, n);
-                token = rule->expr(dest, lval);
-                free(dest);
+                if (n > NEOAST_MAX_TOK_N)
+                {
+                    char* dest = strndup(*input + regex_matches[0].rm_so, n);
+                    token = rule->expr(dest, lval, n);
+                    free(dest);
+                }
+                else
+                {
+                    strncpy(lexdest, *input + regex_matches[0].rm_so, n);
+                    token = rule->expr(lexdest, lval, n);
+                }
+            }
+            else if (rule->tok)
+            {
+                token = rule->tok;
             }
             else
             {
-                strncpy(lexdest, *input + regex_matches[0].rm_so, n);
-                token = rule->expr(lexdest, lval);
+                token = -1; // skip
             }
 
             *input += regex_matches[0].rm_eo;
@@ -66,6 +78,11 @@ int lex_next(const char** input, GrammarParser* parser, void* lval)
     }
 
     // Invalid token
-    (*input)++;
-    return -1;
+    if (**input)
+    {
+        (*input)++;
+        return -1;
+    }
+
+    return 0;
 }

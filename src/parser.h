@@ -92,6 +92,7 @@ I32 parser_parse_lr(
         void* val_table,
         size_t val_s);
 
+void parser_init(GrammarParser* self);
 void parser_free(GrammarParser* self);
 
 #endif //NEOAST_PARSER_H

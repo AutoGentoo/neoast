@@ -46,7 +46,7 @@ struct CanonicalCollection_prv
 
 CanonicalCollection* canonical_collection_init(const GrammarParser* parser);
 void canonical_collection_resolve(CanonicalCollection* self, state_compare cmp_f, state_merge cmp_m);
-U32* canonical_collection_generate(const CanonicalCollection* self, const precedence_t precedence_table[]);
+U32* canonical_collection_generate(const CanonicalCollection* self, const U8* precedence_table);
 
 void canonical_collection_free(CanonicalCollection* self);
 

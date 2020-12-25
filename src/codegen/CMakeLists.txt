@@ -1,0 +1,8 @@
+add_executable(
+        neoast-exec
+        main.c
+        lexer_gen.c codegen.h)
+
+include_directories(neoast-codegen PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../)
+
+target_link_libraries(neoast-exec neoast neoast-codegen neoast-util)

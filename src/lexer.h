@@ -13,12 +13,14 @@
 // Anything longer will be dynamically allocated
 #define NEOAST_MAX_TOK_N 1024
 
-typedef I32 (*lexer_expr) (const char* lex_text, void* lex_val);
+typedef I32 (*lexer_expr) (const char* lex_text, void* lex_val, U32 len);
 
 struct LexerRule_prv
 {
     regex_t regex;
     lexer_expr expr;
+    I32 tok;
+    const char* regex_raw;
 };
 
 /**
@@ -31,7 +33,7 @@ struct LexerRule_prv
  * @param lval destination of the lexer rule
  * @return next token in buffer
  */
-I32 lex_next(const char** input, GrammarParser* parser, void* lval);
+I32 lex_next(const char** input, const GrammarParser* parser, void* lval);
 
 /**
  * Use the lexer to get every token in a string
@@ -44,6 +46,6 @@ I32 lex_next(const char** input, GrammarParser* parser, void* lval);
  * @param val_n offset of a value (size of value union)
  * @return number of parsed tokens
  */
-U32 lexer_fill_table(const char** input, GrammarParser* parse, U32* table, void* val_table, U32 val_n, U32 table_n);
+U32 lexer_fill_table(const char** input, const GrammarParser* parse, U32* table, void* val_table, U32 val_n, U32 table_n);
 
 #endif //NEOAST_LEXER_H

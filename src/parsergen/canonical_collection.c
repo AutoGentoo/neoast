@@ -333,7 +333,7 @@ U32* cc_allocate_table(const CanonicalCollection* self)
     return calloc(self->state_n * self->parser->token_n, sizeof(U32));
 }
 
-U32* canonical_collection_generate(const CanonicalCollection* self, const precedence_t precedence_table[])
+U32* canonical_collection_generate(const CanonicalCollection* self, const U8* precedence_table)
 {
     U32 rr_conflicts = 0, sr_conflicts = 0;
     U32* table = cc_allocate_table(self); // zeroes
