@@ -6,6 +6,9 @@
 #include <alloca.h>
 #include <string.h>
 
+#ifndef NDEBUG
+#include <assert.h>
+#endif
 
 static inline
 void gs_push(ParserStack* stack, U32 item)
@@ -16,6 +19,9 @@ void gs_push(ParserStack* stack, U32 item)
 static inline
 U32 gs_pop(ParserStack* stack)
 {
+#ifndef NDEBUG
+    assert(stack->pos);
+#endif
     return stack->data[--stack->pos];
 }
 
@@ -59,8 +65,14 @@ U32 g_lr_reduce(
                val_s);
     }
 
-    U32 result_token = parser->grammar_rules[reduce_rule].expr(
-            dest, args);
+    if (parser->grammar_rules[reduce_rule].expr)
+    {
+        parser->grammar_rules[reduce_rule].expr(
+                dest,
+                args);
+    }
+
+    int result_token = parser->grammar_rules[reduce_rule].token;
 
     // Fill the result
     token_table[idx] = result_token;
@@ -72,7 +84,7 @@ U32 g_lr_reduce(
             (void*) parser->parser_table,
             stack->data[stack->pos - 1],
             result_token,
-            parser->col_count,
+            parser->token_n,
             sizeof(U32)) & TOK_MASK;
 
     gs_push(stack, idx);
@@ -102,7 +114,7 @@ I32 parser_parse_lr(
                 (void*) parser->parser_table,
                 current_state,
                 tok,
-                parser->col_count,
+                parser->token_n,
                 sizeof(U32));
 
         if (table_value == TOK_SYNTAX_ERROR)

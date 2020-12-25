@@ -12,6 +12,11 @@ typedef struct GrammarParser_prv GrammarParser;
 typedef struct GrammarRule_prv GrammarRule;
 typedef struct ParserStack_prv ParserStack;
 
+// Codegen
+typedef struct LR_1_prv LR_1;
+typedef struct GrammarState_prv GrammarState;
+typedef struct CanonicalCollection_prv CanonicalCollection;
+
 typedef uint8_t U8;
 typedef uint16_t U16;
 typedef uint32_t U32;

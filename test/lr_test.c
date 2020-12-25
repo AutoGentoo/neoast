@@ -2,10 +2,6 @@
 // Created by tumbar on 12/23/20.
 //
 
-//
-// Created by tumbar on 12/23/20.
-//
-
 #include <lexer.h>
 #include <parser.h>
 #include <cmocka.h>
@@ -30,7 +26,8 @@ enum
     TOK_a = 1,
     TOK_b,
     TOK_S,
-    TOK_A
+    TOK_A,
+    TOK_AUGMENT
 };
 
 typedef union {
@@ -59,27 +56,6 @@ I32 ll_tok_term(const char* yytext, ValUnion* yyval)
     return TOK_b;
 }
 
-U32 gg_lr_r1(ValUnion* dest, ValUnion* args)
-{
-    (void)dest;
-    (void)args;
-    return TOK_S;
-}
-
-U32 gg_lr_r2(ValUnion* dest, ValUnion* args)
-{
-    (void)dest;
-    (void)args;
-    return TOK_A;
-}
-
-U32 gg_lr_r3(ValUnion* dest, ValUnion* args)
-{
-    (void)dest;
-    (void)args;
-    return TOK_A;
-}
-
 static GrammarParser p;
 
 static const
@@ -88,9 +64,9 @@ U32 lalr_table[] = {
         LR_A( ), LR_A( ), LR_A( ), LR_E( ), LR_E( ), /* 1 */
         LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(5), /* 2 */
         LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(6), /* 3 */
-        LR_R(3), LR_R(3), LR_R(3), LR_E( ), LR_E( ), /* 4 */
-        LR_R(1), LR_E( ), LR_E( ), LR_E( ), LR_E( ), /* 5 */
-        LR_R(2), LR_R(2), LR_R(2), LR_E( ), LR_E( ), /* 6 */
+        LR_R(2), LR_R(2), LR_R(2), LR_E( ), LR_E( ), /* 4 */
+        LR_R(0), LR_E( ), LR_E( ), LR_E( ), LR_E( ), /* 5 */
+        LR_R(1), LR_R(1), LR_R(1), LR_E( ), LR_E( ), /* 6 */
 };
 
 void initialize_parser()
@@ -115,18 +91,30 @@ void initialize_parser()
             TOK_b
     };
 
-    static GrammarRule g_rules[] = {
-            {}, // Place holder for reduction offsets
-            {.tok_n = 2, .grammar = r1, .expr = (parser_expr) gg_lr_r1},
-            {.tok_n = 2, .grammar = r2, .expr = (parser_expr) gg_lr_r2},
-            {.tok_n = 1, .grammar = r3, .expr = (parser_expr) gg_lr_r3},
+    static U32 a_r[] = {
+            TOK_AUGMENT
     };
 
-    p.grammar_n = 4;
+    static GrammarRule g_rules[] = {
+            {.token = TOK_S, .tok_n = 2, .grammar = r1, .expr = NULL},
+            {.token = TOK_A, .tok_n = 2, .grammar = r2, .expr = NULL},
+            {.token = TOK_A, .tok_n = 1, .grammar = r3, .expr = NULL},
+    };
+
+    static GrammarRule augmented_rule = {
+            .token = TOK_AUGMENT,
+            .tok_n = 1,
+            .grammar = a_r,
+            .expr = NULL
+    };
+
+    p.grammar_n = 3;
     p.grammar_rules = g_rules;
+    p.augmented_rule = &augmented_rule;
     p.lex_n = 3;
     p.lexer_rules = l_rules;
-    p.col_count = 5,
+    p.token_n = TOK_AUGMENT,
+    p.action_token_n = 3,
     p.parser_table = lalr_table;
 
     // Initialize the lexer regex rules

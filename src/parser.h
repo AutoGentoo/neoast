@@ -10,7 +10,7 @@
 
 #define OFFSET_VOID_PTR(ptr, s, i) (void*)(((char*)(ptr)) + ((s) * (i)))
 
-typedef int (*parser_expr) (void* dest, void** values);
+typedef void (*parser_expr) (void* dest, void** values);
 
 enum
 {
@@ -33,10 +33,19 @@ enum
     // Tokens can have every other bit
     // enabled
     TOK_MASK = (0xFFFFFFFF) & ~(
-              TOK_ACCEPT_MASK
+            0
+            | TOK_ACCEPT_MASK
             | TOK_SHIFT_MASK
             | TOK_REDUCE_MASK
             ),
+};
+
+struct GrammarRule_prv
+{
+    U32 token;
+    U32 tok_n;
+    U32* grammar;
+    parser_expr expr;
 };
 
 struct GrammarParser_prv
@@ -45,16 +54,12 @@ struct GrammarParser_prv
     U32 grammar_n;
     LexerRule* lexer_rules;
     GrammarRule* grammar_rules;
+    GrammarRule* augmented_rule;
 
-    U32 col_count;
+    // Also number of columns
+    U32 token_n;
+    U32 action_token_n;
     const U32* parser_table;
-};
-
-struct GrammarRule_prv
-{
-    U32 tok_n;
-    U32* grammar;
-    parser_expr expr;
 };
 
 struct ParserStack_prv
