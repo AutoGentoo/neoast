@@ -9,8 +9,21 @@
 #include "parser.h"
 
 static inline
+void lr_1_free(LR_1* self)
+{
+    LR_1* next;
+    while (self)
+    {
+        next = self->next;
+        free(self);
+        self = next;
+    }
+}
+
+static inline
 void gs_free(GrammarState* self)
 {
+    lr_1_free(self->head_item);
     free(self);
 }
 

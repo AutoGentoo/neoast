@@ -304,6 +304,7 @@ CTEST(test_clr_1)
     dump_table(table, cc, token_names, 0);
     canonical_collection_free(cc);
     free(table);
+    parser_free(&p);
 }
 
 CTEST(test_lalr_1)
@@ -316,6 +317,7 @@ CTEST(test_lalr_1)
     dump_table(table, cc, token_names, 0);
     canonical_collection_free(cc);
     free(table);
+    parser_free(&p);
 }
 
 CTEST(test_lalr_1_calculator)
@@ -346,6 +348,7 @@ CTEST(test_lalr_1_calculator)
     free(stack);
     canonical_collection_free(cc);
     free(table);
+    parser_free(&p);
 }
 
 CTEST(test_lalr_1_order_of_ops)
@@ -376,6 +379,7 @@ CTEST(test_lalr_1_order_of_ops)
     free(stack);
     canonical_collection_free(cc);
     free(table);
+    parser_free(&p);
 }
 
 
