@@ -37,7 +37,7 @@ static LR_1* lr_1_init(const GrammarRule* rule, U32 item_i, U32 token_n)
     self->next = NULL;
     self->grammar = rule;
     self->item_i = item_i;
-    self->final_item = self->item_i == rule->tok_n;
+    self->final_item = self->item_i >= rule->tok_n;
     memset(self->look_ahead, 0, token_n);
 
     return self;
@@ -89,6 +89,9 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
         dirty = 0;
         for (LR_1* item = self->head_item; item; item = item->next)
         {
+            if (item->final_item)
+                continue;
+
             // Find if this rule can be expanded
             U32 potential_token = item->grammar->grammar[item->item_i];
             if (potential_token < parser->action_token_n)
@@ -238,7 +241,7 @@ void gs_resolve(
         state->action_states[next_token]->head_item = new_item;
     }
 
-    for (U32 token = 0; token < cc->parser->token_n; token++)
+    for (I32 token = cc->parser->token_n - 1; token >= 0; token--)
     {
         if (!state->action_states[token])
             continue;
@@ -286,6 +289,7 @@ void canonical_collection_resolve(
     // augmented state and applying the closure
     self->dfa = cc_generate_augmented(self);
     self->state_n = 0;
+    self->all_states[self->state_n++] = self->dfa;
 
     // Resolve the DFA
     // Repeated states are consolidated

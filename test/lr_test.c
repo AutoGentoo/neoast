@@ -115,7 +115,6 @@ void initialize_parser()
     p.lexer_rules = l_rules;
     p.token_n = TOK_AUGMENT,
     p.action_token_n = 3,
-    p.parser_table = lalr_table;
 
     // Initialize the lexer regex rules
     assert_int_equal(regcomp(&l_rules[0].regex, "^;", REG_EXTENDED), 0);
@@ -142,7 +141,7 @@ CTEST(test_parser)
 
     ParserStack* stack = malloc(sizeof(ParserStack) + (sizeof(U32) * 64));
     stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, token_table, value_table, sizeof(ValUnion));
+    I32 res_idx = parser_parse_lr(&p, stack, lalr_table, token_table, value_table, sizeof(ValUnion));
 
     free(stack);
 

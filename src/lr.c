@@ -39,6 +39,7 @@ static inline
 U32 g_lr_reduce(
         const GrammarParser* parser,
         ParserStack* stack,
+        const U32* parsing_table,
         U32 reduce_rule,
         U32* token_table,
         void* val_table,
@@ -81,7 +82,7 @@ U32 g_lr_reduce(
            val_s);
 
     U32 next_state = *(U32*) g_table_from_matrix(
-            (void*) parser->parser_table,
+            (void*) parsing_table,
             stack->data[stack->pos - 1],
             result_token,
             parser->token_n,
@@ -97,6 +98,7 @@ U32 g_lr_reduce(
 I32 parser_parse_lr(
         const GrammarParser* parser,
         ParserStack* stack,
+        const U32* parsing_table,
         U32* token_table,
         void* val_table,
         size_t val_s)
@@ -111,7 +113,7 @@ I32 parser_parse_lr(
     while (1)
     {
         U32 table_value = *(U32*) g_table_from_matrix(
-                (void*) parser->parser_table,
+                (void*)parsing_table,
                 current_state,
                 tok,
                 parser->token_n,
@@ -131,7 +133,7 @@ I32 parser_parse_lr(
         } else if (table_value & TOK_REDUCE_MASK)
         {
             // Reduce this rule
-            current_state = g_lr_reduce(parser, stack,
+            current_state = g_lr_reduce(parser, stack, parsing_table,
                                         table_value & TOK_MASK,
                                         token_table, val_table, val_s,
                                         &dest_idx);

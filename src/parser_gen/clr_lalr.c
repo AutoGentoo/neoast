@@ -44,6 +44,14 @@ int lalr_1_cmp(const GrammarState* a, const GrammarState* b, U32 tok_n)
 {
     // Make sure all items in a exist in b
     LR_1* a_item = a->head_item;
+    int a_item_n = 0;
+    int b_item_n = 0;
+    for (const LR_1* iter = a->head_item; iter; a_item_n++, iter = iter->next);
+    for (const LR_1* iter = b->head_item; iter; b_item_n++, iter = iter->next);
+
+    if (a_item_n - b_item_n)
+        return a_item_n - b_item_n;
+
     while (a_item)
     {
         U8 found_match = 0;
@@ -68,7 +76,15 @@ int lalr_1_cmp(const GrammarState* a, const GrammarState* b, U32 tok_n)
 int clr_1_cmp(const GrammarState* a, const GrammarState* b, U32 tok_n)
 {
     // Make sure all items in a exist in b
-    LR_1* a_item = a->head_item;
+    const LR_1* a_item = a->head_item;
+    int a_item_n = 0;
+    int b_item_n = 0;
+    for (const LR_1* iter = a->head_item; iter; a_item_n++, iter = iter->next);
+    for (const LR_1* iter = b->head_item; iter; b_item_n++, iter = iter->next);
+
+    if (a_item_n - b_item_n)
+        return a_item_n - b_item_n;
+
     while (a_item)
     {
         U8 found_match = 0;

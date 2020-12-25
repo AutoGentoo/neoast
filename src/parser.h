@@ -59,7 +59,6 @@ struct GrammarParser_prv
     // Also number of columns
     U32 token_n;
     U32 action_token_n;
-    const U32* parser_table;
 };
 
 struct ParserStack_prv
@@ -67,21 +66,6 @@ struct ParserStack_prv
     U32 pos;
     U32 data[];
 };
-
-/**
- * Try to reduce the token table using
- * the grammar rules stored in parser.
- * Keep reducing the table until no more operations
- * can be performed.
- *
- * @param parser reference with grammar rules
- * @param n number of tokens/values (subject to changes after return)
- * @param tokens token data
- * @param val_table table of parsed values
- * @param val_s size of each value in val_table
- * @return
- */
-void parser_parse_left_scan(const GrammarParser* parser, int* n, U32* tokens, void* val_table, U32 val_s);
 
 /**
  * Run the LR parsing algorithm
@@ -97,6 +81,7 @@ void parser_parse_left_scan(const GrammarParser* parser, int* n, U32* tokens, vo
 I32 parser_parse_lr(
         const GrammarParser* parser,
         ParserStack* stack,
+        const U32* parsing_table,
         U32* token_table,
         void* val_table,
         size_t val_s);
