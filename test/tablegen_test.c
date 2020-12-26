@@ -292,6 +292,7 @@ CTEST(test_first_of_expr)
     assert_false(first_of_items[TOK_STAR]);
     assert_false(first_of_items[TOK_SLASH]);
     assert_false(first_of_items[TOK_CARET]);
+    parser_free(&p);
 }
 
 const static struct CMUnitTest left_scan_tests[] = {

@@ -366,6 +366,10 @@ void canonical_collection_resolve(
                         }
                     }
 
+                    // Free j state
+                    gs_free(self->all_states[j]);
+                    self->all_states[j] = NULL;
+
                     // Make the original state array smaller
                     self->all_states[j] = self->all_states[--self->state_n];
                 }
