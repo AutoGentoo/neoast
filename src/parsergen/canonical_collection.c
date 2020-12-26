@@ -62,36 +62,52 @@ lookahead_copy(U8 dest[], const U8 src[], U32 n)
     memcpy(dest, src, sizeof(U8) * n);
 }
 
-static void
-lookahead_merge(U8 dest[], const U8 src[], U32 n)
+void lookahead_merge(U8 dest[], const U8 src[], U32 n)
 {
     for (U32 i = 0; i < n; i++)
         dest[i] = dest[i] || src[i];
 }
 
 
-static void lr_1_firstof(U8 dest[], U32 token, const GrammarParser* parser)
+U8 lr_1_firstof(U8 dest[], U32 token, const GrammarParser* parser)
 {
     if (token < parser->action_token_n)
     {
         // Action tokens cannot be expanded
         dest[token] = 1;
-        return;
+        return 0;
     }
+
+    U8 merge_current_lookahead = 0;
 
     // This rule can be expanded
     // Recursively get the first of this token
     for (U32 i = 0; i < parser->grammar_n; i++)
     {
         GrammarRule* rule = &parser->grammar_rules[i];
-        if (rule->grammar[0] == token)
+        if (rule->tok_n == 0)
+        {
+            // Empty rule
+            merge_current_lookahead = 1;
             continue;
+        }
+
+        // Recursive grammar rules
+        // We can skip this one
+        if (rule->grammar[0] == token)
+        {
+            continue;
+        }
 
         if (rule->token == token)
         {
-            lr_1_firstof(dest, rule->grammar[0], parser);
+            merge_current_lookahead =
+                    lr_1_firstof(dest, rule->grammar[0], parser)
+                    || merge_current_lookahead;
         }
     }
+
+    return merge_current_lookahead;
 }
 
 static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
@@ -123,6 +139,8 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
 
             // Generate the lookahead for this rule
             U8* temp_lookahead = alloca(sizeof(U8) * parser->action_token_n);
+            memset(temp_lookahead, 0, sizeof(U8) * parser->action_token_n);
+
             if (item->final_item || item->item_i + 1 >= item->grammar->tok_n)
             {
                 // This is the last item in the list
@@ -132,10 +150,22 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             else
             {
                 // The look ahead is the next item in our grammar
-                lr_1_firstof(
-                        temp_lookahead,
-                        item->grammar->grammar[item->item_i + 1],
-                        parser);
+                U32 lookahead_token = item->grammar->grammar[item->item_i + 1];
+                if (lookahead_token < parser->action_token_n)
+                {
+                    temp_lookahead[lookahead_token] = 1;
+                }
+                else
+                {
+                    U8 merge_our_lookahead = lr_1_firstof(
+                            temp_lookahead, lookahead_token,
+                            parser);
+
+                    if (merge_our_lookahead)
+                    {
+                        lookahead_merge(temp_lookahead, item->look_ahead, parser->action_token_n);
+                    }
+                }
             }
 
             if (already_expanded[potential_token - parser->action_token_n])

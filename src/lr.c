@@ -63,10 +63,12 @@ U32 g_lr_reduce(
 
     U32 next_state = *(U32*) g_table_from_matrix(
             (void*) parsing_table,
-            stack->data[stack->pos - 1],
+            STACK_PEEK(stack), // Top of stack is current state
             result_token,
             parser->token_n,
-            sizeof(U32)) & TOK_MASK;
+            sizeof(U32));
+
+    next_state &= TOK_MASK;
 
     STACK_PUSH(stack, idx);
     STACK_PUSH(stack, next_state);
@@ -75,10 +77,37 @@ U32 g_lr_reduce(
     return next_state;
 }
 
+void lr_parse_error(const U32* parsing_table,
+                    const char* token_names[],
+                    U32 current_state,
+                    U32 error_tok,
+                    U32 prev_tok,
+                    U32 tok_n)
+{
+    const char* current_token = token_names[error_tok];
+    const char* prev_token = token_names[prev_tok];
+
+    fprintf(stderr, "Invalid syntax: unexpected token '%s' after '%s' (state %d)\n",
+            current_token, prev_token, current_state);
+    fprintf(stderr, "Expected one of: ");
+
+    U32 index_off = current_state * tok_n;
+    for (U32 i = 0; i < tok_n; i++)
+    {
+        if (parsing_table[index_off + i] != TOK_SYNTAX_ERROR)
+        {
+            fprintf(stderr, "%s,", token_names[i]);
+        }
+    }
+
+    fprintf(stderr, "\n");
+}
+
 I32 parser_parse_lr(
         const GrammarParser* parser,
         Stack* stack,
         const U32* parsing_table,
+        const char* token_names[],
         U32* token_table,
         void* val_table,
         size_t val_s)
@@ -88,7 +117,8 @@ I32 parser_parse_lr(
     STACK_PUSH(stack, current_state);
 
     U32 i = 0;
-    U32 tok = token_table[i++];
+    U32 prev_tok = 0;
+    U32 tok = token_table[i];
     U32 dest_idx;
     while (1)
     {
@@ -101,15 +131,19 @@ I32 parser_parse_lr(
 
         if (table_value == TOK_SYNTAX_ERROR)
         {
-            // TODO Generate better errors
-            fprintf(stderr, "Unexpected token '%d' in state '%d'!\n", tok, current_state);
+            lr_parse_error(parsing_table,
+                           token_names, current_state,
+                           tok, prev_tok,
+                           parser->token_n);
             return -1;
         } else if (table_value & TOK_SHIFT_MASK)
         {
+            printf("S%02d '%s'\n", table_value & TOK_MASK, token_names[tok]);
             current_state = table_value & TOK_MASK;
-            STACK_PUSH(stack, i - 1);
+            STACK_PUSH(stack, i);
             STACK_PUSH(stack, current_state);
-            tok = token_table[i++];
+            prev_tok = tok;
+            tok = token_table[++i];
         } else if (table_value & TOK_REDUCE_MASK)
         {
             // Reduce this rule
@@ -117,6 +151,9 @@ I32 parser_parse_lr(
                                         table_value & TOK_MASK,
                                         token_table, val_table, val_s,
                                         &dest_idx);
+            prev_tok = parser->grammar_rules[table_value & TOK_MASK].token;
+            printf("R%02d -> %s\n", table_value & TOK_MASK, token_names[prev_tok]);
+            printf("G%02d\n", current_state);
         } else if (table_value & TOK_ACCEPT_MASK)
         {
             return dest_idx;

@@ -37,7 +37,7 @@ enum
 };
 
 static const
-char* tok_names = "$OHBDMXFR.*A";
+char* tok_names = "$ohdmxFHORMA";
 
 static I32 ll_delim(const char* lex_text, void* lex_val, U32 len, U32* ll_state)
 {
@@ -151,7 +151,7 @@ ll_macro(const char* lex_text, LexerUnion* lex_val, U32 len)
     return TOK_REGEX_MACRO;
 }
 
-static LexerRule ll_rules_s1[] = {
+static LexerRule ll_rules_s0[] = {
         {.regex_raw = "^[\n ]+"}, // skip
         {.regex_raw = "^%%", .expr = ll_delim},
         {.regex_raw = "^%option [A-z][A-z|0-9]*=\"[A-z|0-9_\\-\\+]*\"", .expr = (lexer_expr) ll_option},
@@ -159,19 +159,19 @@ static LexerRule ll_rules_s1[] = {
         {.regex_raw = "^\\+[A-z_][A-z_0-9]*[\\s]+[^\n]+", .expr = (lexer_expr) ll_macro},
 };
 
-static LexerRule ll_rules_s2[] = {
+static LexerRule ll_rules_s1[] = {
         {.regex_raw = "^%%", .expr = ll_delim},
         {.regex_raw = "^.*{(?:[^}{]+|(?R))*+}", .expr = (lexer_expr) ll_rule},
 };
 
 static LexerRule* ll_rules[] = {
-        ll_rules_s1,
-        ll_rules_s2
+        ll_rules_s0,
+        ll_rules_s1
 };
 
 static U32 ll_rules_n[] = {
-        ARR_LEN(ll_rules_s1),
-        ARR_LEN(ll_rules_s2)
+        ARR_LEN(ll_rules_s0),
+        ARR_LEN(ll_rules_s1)
 };
 
 U32 grammars[][5] = {

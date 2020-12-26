@@ -2,6 +2,7 @@
 // Created by tumbar on 12/24/20.
 //
 
+#include <assert.h>
 #include "clr_lalr.h"
 #include "canonical_collection.h"
 
@@ -119,13 +120,18 @@ void lalr_1_merge(GrammarState* target, const GrammarState* to_merge, U32 tok_n)
 {
     // Merge the lookaheads
     LR_1* iter = target->head_item;
-    const LR_1* iter_merge = to_merge->head_item;
 
-    for (; iter && iter_merge; iter_merge = iter_merge->next, iter = iter->next)
+    for (; iter; iter = iter->next)
     {
-        for (U32 i = 0; i < tok_n; i++)
+        const LR_1* iter_merge = to_merge->head_item;
+
+        // Find the correct LR_1 item to merge with
+        while (iter_merge && lalr_1_cmp_prv(iter_merge, iter, tok_n))
         {
-            iter->look_ahead[i] = iter->look_ahead[i] || iter_merge->look_ahead[i];
+            iter_merge = iter_merge->next;
         }
+
+        assert(iter_merge && "LR(1) item comparison failure during merge");
+        lookahead_merge(iter->look_ahead, iter_merge->look_ahead, tok_n);
     }
 }

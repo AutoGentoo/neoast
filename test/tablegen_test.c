@@ -33,8 +33,8 @@
 
 enum
 {
-    // 0 reserved for eof
-    TOK_NUM = 1,
+    TOK_EOF = 0,
+    TOK_NUM,
     TOK_PLUS,
     TOK_MINUS,
     TOK_STAR,
@@ -45,6 +45,21 @@ enum
     TOK_E,
     TOK_S,
     TOK_AUGMENT
+};
+
+static const char* token_error_names[] = {
+        "EOF",
+        "number",
+        "+",
+        "-",
+        "*",
+        "/",
+        "^",
+        "(",
+        ")",
+        "expression",
+        "input",
+        "augment"
 };
 
 static const char* token_names = "$N+-*/^()ES'";
@@ -208,13 +223,16 @@ CTEST(test_lalr_1_calculator)
     assert_int_equal(tok_n, 9);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
-    canonical_collection_resolve(cc, lalr_1_cmp, lalr_1_merge);
+    canonical_collection_resolve(cc, clr_1_cmp, clr_1_merge);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
 
     Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
     stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, table, token_table, value_table, sizeof(LexerUnion));
+    I32 res_idx = parser_parse_lr(&p, stack, table, token_error_names, token_table, value_table, sizeof(LexerUnion));
+
+    dump_table(table, cc, token_names, 0);
+    assert_int_not_equal(res_idx, -1);
 
     printf("%s = %lf\n", lexer_input, value_table[res_idx].number);
     assert_double_equal(value_table[res_idx].number, 1 + (5 * 9) + 2, 0.005);
@@ -245,7 +263,7 @@ CTEST(test_lalr_1_order_of_ops)
 
     Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
     stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, table, token_table, value_table, sizeof(LexerUnion));
+    I32 res_idx = parser_parse_lr(&p, stack, table, token_error_names, token_table, value_table, sizeof(LexerUnion));
 
     // This parser has no order of ops
     assert_double_equal(value_table[res_idx].number, (((1 + 5) * 9) + 4), 0.005);
@@ -257,11 +275,31 @@ CTEST(test_lalr_1_order_of_ops)
 }
 
 
+CTEST(test_first_of_expr)
+{
+    initialize_parser();
+
+    U8 first_of_items[TOK_E] = {0};
+    lr_1_firstof(first_of_items, TOK_E, &p);
+
+    assert_true(first_of_items[TOK_OPEN_P]);
+    assert_true(first_of_items[TOK_NUM]);
+
+    assert_false(first_of_items[TOK_EOF]);
+    assert_false(first_of_items[TOK_CLOSE_P]);
+    assert_false(first_of_items[TOK_PLUS]);
+    assert_false(first_of_items[TOK_MINUS]);
+    assert_false(first_of_items[TOK_STAR]);
+    assert_false(first_of_items[TOK_SLASH]);
+    assert_false(first_of_items[TOK_CARET]);
+}
+
 const static struct CMUnitTest left_scan_tests[] = {
-        cmocka_unit_test(test_clr_1),
-        cmocka_unit_test(test_lalr_1),
+        //cmocka_unit_test(test_first_of_expr),
+        //cmocka_unit_test(test_clr_1),
+        //cmocka_unit_test(test_lalr_1),
         cmocka_unit_test(test_lalr_1_calculator),
-        cmocka_unit_test(test_lalr_1_order_of_ops),
+        //cmocka_unit_test(test_lalr_1_order_of_ops),
 };
 
 int main()

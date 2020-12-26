@@ -30,6 +30,15 @@ enum
     TOK_AUGMENT
 };
 
+static const char* token_error_names[] = {
+        "EOF",
+        "a",
+        "b",
+        "S",
+        "A",
+        "augment"
+};
+
 typedef union {
     int integer;
     struct expr_ {
@@ -38,12 +47,6 @@ typedef union {
     }* expr;
 } LexerUnion;
 
-I32 ll_skip(const char* yytext, void* yyval)
-{
-    (void)yytext;
-    (void)yyval;
-    return -1; // skip
-}
 I32 ll_tok_num(const char* yytext, LexerUnion* yyval)
 {
     yyval->integer = (int)strtol(yytext, NULL, 10);
@@ -131,7 +134,7 @@ CTEST(test_parser)
 
     Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
     stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, lalr_table, token_table, value_table, sizeof(LexerUnion));
+    I32 res_idx = parser_parse_lr(&p, stack, lalr_table, token_error_names, token_table, value_table, sizeof(LexerUnion));
 
     free(stack);
     parser_free(&p);

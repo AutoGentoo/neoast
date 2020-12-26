@@ -44,6 +44,8 @@ struct CanonicalCollection_prv
     GrammarState* all_states[];
 };
 
+U8 lr_1_firstof(U8 dest[], U32 token, const GrammarParser* parser);
+void lookahead_merge(U8 dest[], const U8 src[], U32 n);
 CanonicalCollection* canonical_collection_init(const GrammarParser* parser);
 void canonical_collection_resolve(CanonicalCollection* self, state_compare cmp_f, state_merge cmp_m);
 U32* canonical_collection_generate(const CanonicalCollection* self, const U8* precedence_table);

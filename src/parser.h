@@ -83,6 +83,7 @@ I32 parser_parse_lr(
         const GrammarParser* parser,
         Stack* stack,
         const U32* parsing_table,
+        const char* token_names[],
         U32* token_table,
         void* val_table,
         size_t val_s);
