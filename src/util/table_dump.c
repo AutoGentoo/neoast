@@ -110,9 +110,13 @@ void dump_table(const U32* table,
                 printf("  E  |");
             else if (table[i] & TOK_ACCEPT_MASK)
                 printf("  A  |");
-            else if (table[i] & TOK_SHIFT_MASK)
+            else if (table[i] & TOK_SHIFT_MASK && col < cc->parser->action_token_n)
             {
                 printf(" S%02d |", table[i] & TOK_MASK);
+            }
+            else if (table[i] & TOK_SHIFT_MASK)
+            {
+                printf(" G%02d |", table[i] & TOK_MASK);
             }
             else if (table[i] & TOK_REDUCE_MASK)
             {

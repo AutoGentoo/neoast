@@ -295,11 +295,11 @@ CTEST(test_first_of_expr)
 }
 
 const static struct CMUnitTest left_scan_tests[] = {
-        //cmocka_unit_test(test_first_of_expr),
-        //cmocka_unit_test(test_clr_1),
-        //cmocka_unit_test(test_lalr_1),
+        cmocka_unit_test(test_first_of_expr),
+        cmocka_unit_test(test_clr_1),
+        cmocka_unit_test(test_lalr_1),
         cmocka_unit_test(test_lalr_1_calculator),
-        //cmocka_unit_test(test_lalr_1_order_of_ops),
+        cmocka_unit_test(test_lalr_1_order_of_ops),
 };
 
 int main()
