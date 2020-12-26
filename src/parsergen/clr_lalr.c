@@ -107,15 +107,6 @@ int clr_1_cmp(const GrammarState* a, const GrammarState* b, U32 tok_n)
     return 0;
 }
 
-void clr_1_merge(GrammarState* target, const GrammarState* to_merge, U32 tok_n)
-{
-    // No merge action is necessary for
-    // a CLR(1) merge
-    (void)target;
-    (void)to_merge;
-    (void)tok_n;
-}
-
 void lalr_1_merge(GrammarState* target, const GrammarState* to_merge, U32 tok_n)
 {
     // Merge the lookaheads

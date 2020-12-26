@@ -187,7 +187,7 @@ CTEST(test_clr_1)
 {
     initialize_parser();
     CanonicalCollection* cc = canonical_collection_init(&p);
-    canonical_collection_resolve(cc, clr_1_cmp, clr_1_merge);
+    canonical_collection_resolve(cc, CLR_1);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
     dump_table(table, cc, token_names, 0);
@@ -200,7 +200,7 @@ CTEST(test_lalr_1)
 {
     initialize_parser();
     CanonicalCollection* cc = canonical_collection_init(&p);
-    canonical_collection_resolve(cc, lalr_1_cmp, lalr_1_merge);
+    canonical_collection_resolve(cc, LALR_1);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
     dump_table(table, cc, token_names, 0);
@@ -223,7 +223,7 @@ CTEST(test_lalr_1_calculator)
     assert_int_equal(tok_n, 9);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
-    canonical_collection_resolve(cc, clr_1_cmp, clr_1_merge);
+    canonical_collection_resolve(cc, LALR_1);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
 
@@ -257,7 +257,7 @@ CTEST(test_lalr_1_order_of_ops)
     assert_int_equal(tok_n, 7);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
-    canonical_collection_resolve(cc, lalr_1_cmp, lalr_1_merge);
+    canonical_collection_resolve(cc, LALR_1);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
 

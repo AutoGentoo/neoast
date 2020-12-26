@@ -7,6 +7,7 @@
 #include <string.h>
 #include "canonical_collection.h"
 #include "parser.h"
+#include "clr_lalr.h"
 
 static inline
 void lr_1_free(LR_1* self)
@@ -241,11 +242,7 @@ cc_add_state(CanonicalCollection* cc,
 }
 
 static
-void gs_resolve(
-        CanonicalCollection* cc,
-        GrammarState* state,
-        state_compare cmp_f,
-        state_merge cmp_m)
+void gs_resolve(CanonicalCollection* cc, GrammarState* state)
 {
     // Assume we already have closure
     for (const LR_1* item = state->head_item; item; item = item->next)
@@ -290,16 +287,13 @@ void gs_resolve(
         U8 is_duplicate = 0;
         for (U32 i = 0; i < cc->state_n; i++)
         {
-            if (cmp_f(cc->all_states[i],
+            if (clr_1_cmp(cc->all_states[i],
                       state->action_states[token],
                       cc->parser->action_token_n) == 0)
             {
                 // These states match
                 // We should free the duplicate state
                 is_duplicate = 1;
-
-                cmp_m(cc->all_states[i], state->action_states[token], cc->parser->action_token_n);
-
                 gs_free(state->action_states[token]);
                 state->action_states[token] = cc->all_states[i];
 
@@ -313,14 +307,13 @@ void gs_resolve(
         // We haven't seen this state yet
         // We need to register this state
         cc_add_state(cc, state->action_states[token]);
-        gs_resolve(cc, state->action_states[token], cmp_f, cmp_m);
+        gs_resolve(cc, state->action_states[token]);
     }
 }
 
 void canonical_collection_resolve(
         CanonicalCollection* self,
-        state_compare cmp_f,
-        state_merge cmp_m)
+        parser_t p_type)
 {
     // Generate the initial by create an
     // augmented state and applying the closure
@@ -329,8 +322,56 @@ void canonical_collection_resolve(
     self->all_states[self->state_n++] = self->dfa;
 
     // Resolve the DFA
-    // Repeated states are consolidated
-    gs_resolve(self, self->dfa, cmp_f, cmp_m);
+    // Repeated states are consolidated -- CLR(1)
+    gs_resolve(self, self->dfa);
+
+    // LALR(1) tables do no distinguish states by different
+    // lookaheads. We can't merge these states during resolution
+    // because states are subject to change during resolution
+    // This means we need to delay LALR(1) consolidation here.
+    // As of right now, we have a valid CLR(1) DFA
+    if (p_type == LALR_1)
+    {
+        // We need to consolidate states that have
+        // the LR(1) items but different lookaheads
+        for (U32 i = 0; i < self->state_n; i++)
+        {
+            for (U32 j = i + 1; j < self->state_n; j++)
+            {
+                // If states at i and j match, we need
+                // to merge j into i.
+                // After we merge j into i we need to
+                // replace all uses of j with i
+                // We will move the state in the final slot
+                // into this slot to consolidate to array
+
+                if (lalr_1_cmp(self->all_states[i],
+                               self->all_states[j],
+                               self->parser->token_n) == 0)
+                {
+                    // i and j match
+
+                    lalr_1_merge(self->all_states[i], self->all_states[j], self->parser->token_n);
+
+                    // Find all uses of j in all states
+                    for (U32 k = 0; k < self->state_n; k++)
+                    {
+                        for (U32 action_i = 0; action_i < self->parser->token_n; action_i++)
+                        {
+                            if (self->all_states[k]->action_states[action_i] == self->all_states[j])
+                            {
+                                // State j is used here, replace it with i
+                                self->all_states[k]->action_states[action_i] = self->all_states[i];
+                            }
+                        }
+                    }
+
+                    // Make the original state array smaller
+                    self->all_states[j] = self->all_states[--self->state_n];
+                }
+            }
+        }
+    }
 }
 
 static inline

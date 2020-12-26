@@ -8,6 +8,11 @@
 #include "common.h"
 #include "parser.h"
 
+typedef enum {
+    LALR_1,  // Highly recommended!!
+    CLR_1,
+} parser_t;
+
 typedef int (*state_compare)(
         const GrammarState* original_state,
         const GrammarState* potential_duplicate,
@@ -47,7 +52,7 @@ struct CanonicalCollection_prv
 U8 lr_1_firstof(U8 dest[], U32 token, const GrammarParser* parser);
 void lookahead_merge(U8 dest[], const U8 src[], U32 n);
 CanonicalCollection* canonical_collection_init(const GrammarParser* parser);
-void canonical_collection_resolve(CanonicalCollection* self, state_compare cmp_f, state_merge cmp_m);
+void canonical_collection_resolve(CanonicalCollection* self, parser_t p_type);
 U32* canonical_collection_generate(const CanonicalCollection* self, const U8* precedence_table);
 
 void canonical_collection_free(CanonicalCollection* self);
