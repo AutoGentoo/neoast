@@ -265,7 +265,7 @@ void gen_parser_init(GrammarParser* self)
 
     // Generate the parsing table
     CanonicalCollection* cc = canonical_collection_init(self);
-    canonical_collection_resolve(cc, lalr_1_cmp, lalr_1_merge);
+    canonical_collection_resolve(cc, LALR_1);
 
     GEN_lexer_table = canonical_collection_generate(cc, precedence_table);
     dump_table(GEN_lexer_table, cc, tok_names, 0);

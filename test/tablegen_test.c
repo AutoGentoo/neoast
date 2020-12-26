@@ -214,12 +214,12 @@ CTEST(test_lalr_1_calculator)
     const char* lexer_input = "1 + (5 * 9) + 2";
     initialize_parser();
 
-    const char** yyinput = &lexer_input;
+    const char* yyinput = lexer_input;
 
     U32 token_table[32];
     LexerUnion value_table[32];
 
-    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(LexerUnion), 32);
+    int tok_n = lexer_fill_table(&yyinput, &p, token_table, value_table, sizeof(LexerUnion), 32);
     assert_int_equal(tok_n, 9);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
