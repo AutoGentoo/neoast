@@ -13,7 +13,8 @@ U32 lexer_fill_table(const char** input, const GrammarParser* parse, U32* table,
 {
     void* current_val = val_table;
     int i = 0;
-    while ((table[i] = lex_next(input, parse, current_val)) && i < table_n) // While not EOF
+    U32 lex_state = 0;
+    while ((table[i] = lex_next(input, parse, current_val, &lex_state)) && i < table_n) // While not EOF
     {
         if (table[i] == -1)
         {
@@ -27,18 +28,20 @@ U32 lexer_fill_table(const char** input, const GrammarParser* parse, U32* table,
     return i;
 }
 
-int lex_next(const char** input, const GrammarParser* parser, void* lval)
+int lex_next(const char** input, const GrammarParser* parser, void* lval, U32* lex_state)
 {
     if (!**input)
         return 0;
 
     regmatch_t regex_matches[1];
     LexerRule* rule;
+    LexerRule* state;
 
     int i = 0;
-    while(i < parser->lex_n)
+    while(i < parser->lex_n[*lex_state])
     {
-        rule = &parser->lexer_rules[i++];
+        state = parser->lexer_rules[*lex_state];
+        rule = &state[i++];
         if (regexec(&rule->regex, *input, 1, regex_matches, 0) == 0)
         {
             // Match found
@@ -51,13 +54,13 @@ int lex_next(const char** input, const GrammarParser* parser, void* lval)
                 if (n > NEOAST_MAX_TOK_N)
                 {
                     char* dest = strndup(*input + regex_matches[0].rm_so, n);
-                    token = rule->expr(dest, lval, n);
+                    token = rule->expr(dest, lval, n, lex_state);
                     free(dest);
                 }
                 else
                 {
                     strncpy(lexdest, *input + regex_matches[0].rm_so, n);
-                    token = rule->expr(lexdest, lval, n);
+                    token = rule->expr(lexdest, lval, n, lex_state);
                 }
             }
             else if (rule->tok)

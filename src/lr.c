@@ -6,30 +6,10 @@
 #include <alloca.h>
 #include <string.h>
 
-#ifndef NDEBUG
-#include <assert.h>
-#endif
-
-static inline
-void gs_push(ParserStack* stack, U32 item)
-{
-    stack->data[stack->pos++] = item;
-}
-
-static inline
-U32 gs_pop(ParserStack* stack)
-{
-#ifndef NDEBUG
-    assert(stack->pos);
-#endif
-    return stack->data[--stack->pos];
-}
-
 static inline
 void* g_table_from_matrix(void* table,
                           size_t row, size_t col,
-                          size_t col_n, size_t s
-)
+                          size_t col_n, size_t s)
 {
     size_t off = s * ((row * col_n) + (col));
     return ((char*) table) + off;
@@ -38,7 +18,7 @@ void* g_table_from_matrix(void* table,
 static inline
 U32 g_lr_reduce(
         const GrammarParser* parser,
-        ParserStack* stack,
+        Stack* stack,
         const U32* parsing_table,
         U32 reduce_rule,
         U32* token_table,
@@ -57,8 +37,8 @@ U32 g_lr_reduce(
     U32 idx;
     for (U32 i = 0; i < arg_count; i++)
     {
-        (void) gs_pop(stack); // Pop the state
-        idx = gs_pop(stack); // Pop the index of the token/value
+        STACK_POP(stack); // Pop the state
+        idx = STACK_POP(stack); // Pop the index of the token/value
 
         // Fill the argument
         memcpy(OFFSET_VOID_PTR(args, val_s, i),
@@ -88,8 +68,8 @@ U32 g_lr_reduce(
             parser->token_n,
             sizeof(U32)) & TOK_MASK;
 
-    gs_push(stack, idx);
-    gs_push(stack, next_state);
+    STACK_PUSH(stack, idx);
+    STACK_PUSH(stack, next_state);
 
     *dest_idx = idx;
     return next_state;
@@ -97,7 +77,7 @@ U32 g_lr_reduce(
 
 I32 parser_parse_lr(
         const GrammarParser* parser,
-        ParserStack* stack,
+        Stack* stack,
         const U32* parsing_table,
         U32* token_table,
         void* val_table,
@@ -105,7 +85,7 @@ I32 parser_parse_lr(
 {
     // Push the initial state to the stack
     U32 current_state = 0;
-    gs_push(stack, current_state);
+    STACK_PUSH(stack, current_state);
 
     U32 i = 0;
     U32 tok = token_table[i++];
@@ -127,8 +107,8 @@ I32 parser_parse_lr(
         } else if (table_value & TOK_SHIFT_MASK)
         {
             current_state = table_value & TOK_MASK;
-            gs_push(stack, i - 1);
-            gs_push(stack, current_state);
+            STACK_PUSH(stack, i - 1);
+            STACK_PUSH(stack, current_state);
             tok = token_table[i++];
         } else if (table_value & TOK_REDUCE_MASK)
         {

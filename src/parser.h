@@ -57,20 +57,15 @@ struct GrammarRule_prv
 
 struct GrammarParser_prv
 {
-    U32 lex_n;
     U32 grammar_n;
-    LexerRule* lexer_rules;
+    U32 lex_state_n;
+    U32* lex_n;
+    LexerRule** lexer_rules;
     GrammarRule* grammar_rules;
 
     // Also number of columns
     U32 token_n;
     U32 action_token_n;
-};
-
-struct ParserStack_prv
-{
-    U32 pos;
-    U32 data[];
 };
 
 /**
@@ -86,7 +81,7 @@ struct ParserStack_prv
  */
 I32 parser_parse_lr(
         const GrammarParser* parser,
-        ParserStack* stack,
+        Stack* stack,
         const U32* parsing_table,
         U32* token_table,
         void* val_table,

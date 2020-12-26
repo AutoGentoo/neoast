@@ -13,7 +13,7 @@ CUnitTest(lr)
 
 add_mocked_test(tablegen_C
         SOURCES tablegen_test.c
-        LINK_LIBRARIES neoast neoast-codegen m
+        LINK_LIBRARIES neoast neoast-codegen m neoast-util
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT ${EXEC_ENV}
         )

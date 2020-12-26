@@ -8,16 +8,22 @@
 
 void parser_init(GrammarParser* self)
 {
-    for (U32 i = 0; i < self->lex_n; i++)
+    for (U32 i = 0; i < self->lex_state_n; i++)
     {
-        regcomp(&self->lexer_rules[i].regex, self->lexer_rules[i].regex_raw, REG_EXTENDED);
+        for (U32 j = 0; j < self->lex_n[i]; j++)
+        {
+            regcomp(&self->lexer_rules[i][j].regex, self->lexer_rules[i][j].regex_raw, REG_EXTENDED);
+        }
     }
 }
 
 void parser_free(GrammarParser* self)
 {
-    for (U32 i = 0; i < self->lex_n; i++)
+    for (U32 i = 0; i < self->lex_state_n; i++)
     {
-        regfree(&self->lexer_rules[i].regex);
+        for (U32 j = 0; j < self->lex_n[i]; j++)
+        {
+            regfree(&self->lexer_rules[i][j].regex);
+        }
     }
 }

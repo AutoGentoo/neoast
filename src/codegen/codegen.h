@@ -13,6 +13,20 @@ typedef union {
         struct Option* next;
     } option;
 
+    struct Rule
+    {
+        char* regex;
+        char* expr;
+        struct Rule* next;
+    } rule;
+
+    struct File
+    {
+        struct Option* options;
+        char* header;
+        struct Rule* rules;
+    } file;
+
     char* string;
 } LexerUnion;
 

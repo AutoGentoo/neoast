@@ -53,12 +53,6 @@ typedef union {
     }* expr;
 } LexerUnion;
 
-I32 ll_skip(const char* yytext, void* yyval)
-{
-    (void)yytext;
-    (void)yyval;
-    return -1;
-}
 I32 ll_tok_num(const char* yytext, LexerUnion* yyval)
 {
     yyval->integer = (int)strtol(yytext, NULL, 10);
@@ -70,15 +64,23 @@ static GrammarParser p;
 void initialize_parser()
 {
     static LexerRule l_rules[] = {
-            {.expr = ll_skip, .regex_raw = "^[ ]+"},
+            {.regex_raw = "^[ ]+", .tok = -1},
             {.expr = (lexer_expr) ll_tok_num, .regex_raw = "^[0-9]+"}
 
     };
 
+    static LexerRule* ll_rules[] = {
+            l_rules
+    };
+
     p.grammar_n = 0;
     p.grammar_rules = 0;
-    p.lex_n = 2;
-    p.lexer_rules = l_rules;
+
+    static U32 lex_n = ARR_LEN(l_rules);
+
+    p.lex_state_n = 1;
+    p.lex_n = &lex_n;
+    p.lexer_rules = ll_rules;
 
     // Initialize the lexer regex rules
     parser_init(&p);
@@ -93,14 +95,16 @@ CTEST(test_lexer)
 
     LexerUnion llval;
 
-    assert_int_equal(lex_next(yyinput, &p, &llval), 1);
+    U32 lex_state = 0;
+
+    assert_int_equal(lex_next(yyinput, &p, &llval, &lex_state), 1);
     assert_int_equal(llval.integer, 10);
-    assert_int_equal(lex_next(yyinput, &p, &llval), 1);
+    assert_int_equal(lex_next(yyinput, &p, &llval, &lex_state), 1);
     assert_int_equal(llval.integer, 20);
-    assert_int_equal(lex_next(yyinput, &p, &llval), 1);
+    assert_int_equal(lex_next(yyinput, &p, &llval, &lex_state), 1);
     assert_int_equal(llval.integer, 30);
-    assert_int_equal(lex_next(yyinput, &p, &llval), -1); // Unhandled 'a'
-    assert_int_equal(lex_next(yyinput, &p, &llval), 0);
+    assert_int_equal(lex_next(yyinput, &p, &llval, &lex_state), -1); // Unhandled 'a'
+    assert_int_equal(lex_next(yyinput, &p, &llval, &lex_state), 0);
 
     parser_free(&p);
 }

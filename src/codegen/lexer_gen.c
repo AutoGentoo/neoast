@@ -18,20 +18,45 @@ enum
     // -1 = skip, 0 = EOF
     TOK_OPTION = 1,
     TOK_HEADER,
-    TOK_BRACKET_STMT,
     TOK_DELIMITER,
     TOK_REGEX_MACRO,
     TOK_REGEX_RULE,
     TOK_LL_FILE,
+    TOK_LL_HEADER,
     TOK_LL_OPTIONS,
-    TOK_LL_LEX_RULE,
     TOK_LL_LEX_RULES,
     TOK_LL_MACROS,
     TOK_AUGMENT,
 };
 
+enum
+{
+    LEX_STATE_DEFAULT,
+    LEX_STATE_RULES,
+    LEX_STATE_N
+};
+
 static const
 char* tok_names = "$OHBDMXFR.*A";
+
+static I32 ll_delim(const char* lex_text, void* lex_val, U32 len, U32* ll_state)
+{
+    (void) lex_text;
+    (void) lex_val;
+    (void) len;
+
+    // Toggle the lexer state
+    if (*ll_state == LEX_STATE_DEFAULT)
+    {
+        *ll_state = LEX_STATE_RULES;
+    }
+    else
+    {
+        *ll_state = LEX_STATE_DEFAULT;
+    }
+
+    return TOK_DELIMITER;
+}
 
 static I32 ll_option(const char* lex_text, LexerUnion* lex_val)
 {
@@ -56,21 +81,63 @@ ll_header(const char* lex_text, LexerUnion* lex_val, U32 len)
 }
 
 static I32
-ll_braces(const char* lex_text, LexerUnion* lex_val, U32 len)
+ll_rule(const char* lex_text, LexerUnion* lex_val, U32 len)
 {
-    lex_val->string = malloc(len - 1);
-    memcpy(lex_val->string, lex_text + 1, len - 2);
-    lex_val->string[len - 2] = 0;
-    return TOK_BRACKET_STMT;
-}
+    // Bracket counters
+    U8 p_c = 0, s_c = 0, c_c = 0, double_c = 0, single_c = 0;
+    U8 is_escaped = 0;
 
-static I32
-ll_regex(const char* lex_text, LexerUnion* lex_val, U32 len)
-{
-    printf("Found regex %s\n", lex_text);
-    lex_val->string = malloc(len + 1);
-    memcpy(lex_val->string, lex_text, len);
-    lex_val->string[len] = 0;
+    U8 done = 0;
+    U32 i;
+    for (i = 0; i < len && !done; i++)
+    {
+        if (is_escaped)
+        {
+            is_escaped = 0;
+            continue;
+        }
+
+        switch(lex_text[i])
+        {
+            case '\\': is_escaped = 1; break;
+            case '[': s_c++; break;
+            case ']': s_c--; break;
+            case '{': c_c++; break;
+            case '}': c_c--; break;
+            case '(': p_c++; break;
+            case ')': p_c--; break;
+            case '"': double_c = !double_c; break;
+            case '\'': single_c = !single_c; break;
+
+            case ' ':
+            case '\t':
+            case '\n':
+                if (!s_c && !c_c && !p_c && !double_c && !single_c)
+                {
+                    done = 1;
+                }
+                break;
+        }
+
+        if (s_c < 0 || c_c < 0 || p_c < 0)
+        {
+            char* t = strndup(lex_text, i + 1);
+            fprintf(stderr, "Failed to parse regular expression %s (failed to match starting brace)\n", t);
+            free(t);
+            return -1;
+        }
+    }
+
+    lex_val->rule.regex = strndup(lex_text, i);
+
+    // Find the brace
+    for (; i < len; i++)
+    {
+        if (lex_text[i] == '{')
+            break;
+    }
+
+    lex_val->rule.expr = strdup(lex_text + i);
     return TOK_REGEX_RULE;
 }
 
@@ -84,14 +151,27 @@ ll_macro(const char* lex_text, LexerUnion* lex_val, U32 len)
     return TOK_REGEX_MACRO;
 }
 
-static LexerRule ll_rules[] = {
+static LexerRule ll_rules_s1[] = {
         {.regex_raw = "^[\n ]+"}, // skip
-        {.regex_raw = "%%", .tok = TOK_DELIMITER},
+        {.regex_raw = "^%%", .expr = ll_delim},
         {.regex_raw = "^%option [A-z][A-z|0-9]*=\"[A-z|0-9_\\-\\+]*\"", .expr = (lexer_expr) ll_option},
         {.regex_raw = "^%{(.*[\n])+%}", .expr = (lexer_expr) ll_header},
-        {.regex_raw = "^{(?:[^}{]+|(?R))*+}", .expr = (lexer_expr) ll_braces},
-        {.regex_raw = "^[A-z_]+[\\s]+(\\[(?:[^\\]\\[]+|(?R))*+\\][^\\s]*)+", .expr = (lexer_expr) ll_macro},
-        {.regex_raw = "^(\\[(?:[^\\]\\[]+|(?R))*+\\][^\\s]*)+", .expr = (lexer_expr) ll_regex}
+        {.regex_raw = "^\\+[A-z_][A-z_0-9]*[\\s]+[^\n]+", .expr = (lexer_expr) ll_macro},
+};
+
+static LexerRule ll_rules_s2[] = {
+        {.regex_raw = "^%%", .expr = ll_delim},
+        {.regex_raw = "^.*{(?:[^}{]+|(?R))*+}", .expr = (lexer_expr) ll_rule},
+};
+
+static LexerRule* ll_rules[] = {
+        ll_rules_s1,
+        ll_rules_s2
+};
+
+static U32 ll_rules_n[] = {
+        ARR_LEN(ll_rules_s1),
+        ARR_LEN(ll_rules_s2)
 };
 
 U32 grammars[][5] = {
@@ -106,19 +186,19 @@ U32 grammars[][5] = {
         {TOK_OPTION},
         {TOK_LL_OPTIONS, TOK_OPTION},
 
-        /* TOK_LL_LEX_RULE -> */
-        {TOK_BRACKET_STMT, TOK_BRACKET_STMT},
-        {TOK_REGEX_RULE, TOK_BRACKET_STMT},
-
         /* Rules */
-        {TOK_LL_LEX_RULE},
-        {TOK_LL_LEX_RULES, TOK_LL_LEX_RULE},
+        {TOK_REGEX_RULE},
+        {TOK_LL_LEX_RULES, TOK_REGEX_RULE},
+
+        /* LL Header */
+        {TOK_LL_OPTIONS},
+        {TOK_LL_OPTIONS, TOK_HEADER},
+        {TOK_HEADER},
 
         /* File */
-        {TOK_DELIMITER, TOK_LL_LEX_RULES, TOK_DELIMITER},
-        {TOK_LL_OPTIONS, TOK_DELIMITER, TOK_LL_LEX_RULES, TOK_DELIMITER},
-        {TOK_HEADER, TOK_DELIMITER, TOK_LL_LEX_RULES, TOK_DELIMITER},
-        {TOK_LL_OPTIONS, TOK_HEADER, TOK_DELIMITER, TOK_LL_LEX_RULES, TOK_DELIMITER},
+        {TOK_LL_HEADER, TOK_DELIMITER, TOK_LL_LEX_RULES, TOK_DELIMITER},
+        {TOK_LL_MACROS, TOK_DELIMITER, TOK_LL_LEX_RULES, TOK_DELIMITER},
+        {TOK_LL_HEADER, TOK_LL_MACROS, TOK_DELIMITER, TOK_LL_LEX_RULES, TOK_DELIMITER},
 };
 
 static void
@@ -137,26 +217,33 @@ gg_option_add_next(LexerUnion* dest, LexerUnion* args)
     next->next = NULL;
     next->value = args[1].option.value;
     next->option_name = args[1].option.option_name;
+    dest->option.next = next;
 }
 
 static void
-gg_lex_rule_bracket_build(LexerUnion* dest, LexerUnion* args)
+gg_lex_rule_build(LexerUnion* dest, LexerUnion* args)
 {
-    // args => {TOK_BRACKET_STMT, TOK_BRACKET_STMT}
+    // args => {TOK_LL_RULES, TOK_RULE}
+    dest->rule = args[0].rule;
 
+    struct Rule* next = malloc(sizeof(struct Rule));
+    next->next = NULL;
+    next->regex = args[1].rule.regex;
+    next->expr = args[1].rule.expr;
+    dest->rule.next = next;
 }
 
 static GrammarRule gg_rules[] = {
-        {.token=TOK_AUGMENT, .tok_n=1, .grammar=grammars[0],    (parser_expr) gg_copy},
-        {.token=TOK_LL_MACROS, .tok_n=1, .grammar=grammars[1], (parser_expr) gg_copy},
-        {.token=TOK_LL_MACROS, .tok_n=2, .grammar=grammars[2]}, // TODO
-        {.token=TOK_LL_OPTIONS, .tok_n=1, .grammar=grammars[3], (parser_expr) gg_copy},
-        {.token=TOK_LL_OPTIONS, .tok_n=2, .grammar=grammars[4], (parser_expr) gg_option_add_next},
-        {.token=TOK_LL_LEX_RULE, .tok_n=2, .grammar=grammars[5]},
-        {.token=TOK_LL_LEX_RULE, .tok_n=2, .grammar=grammars[6]},
-        {.token=TOK_LL_LEX_RULES, .tok_n=1, .grammar=grammars[7]},
-        {.token=TOK_LL_LEX_RULES, .tok_n=2, .grammar=grammars[8]},
-        {.token=TOK_LL_FILE, .tok_n=3, .grammar=grammars[9]},
+        {.token=TOK_AUGMENT, .tok_n=1, .grammar=grammars[0],      (parser_expr) gg_copy},
+        {.token=TOK_LL_MACROS, .tok_n=1, .grammar=grammars[1],    (parser_expr) gg_copy},
+        {.token=TOK_LL_MACROS, .tok_n=2, .grammar=grammars[2]},   // TODO
+        {.token=TOK_LL_OPTIONS, .tok_n=1, .grammar=grammars[3],   (parser_expr) gg_copy},
+        {.token=TOK_LL_OPTIONS, .tok_n=2, .grammar=grammars[4],   (parser_expr) gg_option_add_next},
+        {.token=TOK_LL_LEX_RULES, .tok_n=1, .grammar=grammars[5], (parser_expr) gg_copy},
+        {.token=TOK_LL_LEX_RULES, .tok_n=2, .grammar=grammars[6], (parser_expr) gg_lex_rule_build},
+        {.token=TOK_LL_HEADER, .tok_n=1, .grammar=grammars[7]},
+        {.token=TOK_LL_HEADER, .tok_n=2, .grammar=grammars[8]},
+        {.token=TOK_LL_HEADER, .tok_n=1, .grammar=grammars[9]},
         {.token=TOK_LL_FILE, .tok_n=4, .grammar=grammars[10]},
         {.token=TOK_LL_FILE, .tok_n=4, .grammar=grammars[11]},
         {.token=TOK_LL_FILE, .tok_n=5, .grammar=grammars[12]},
@@ -168,7 +255,8 @@ void gen_parser_init(GrammarParser* self)
 {
     self->lexer_rules = ll_rules;
     self->grammar_rules = gg_rules;
-    self->lex_n = ARR_LEN(ll_rules);
+    self->lex_state_n = LEX_STATE_N;
+    self->lex_n = ll_rules_n;
     self->grammar_n = ARR_LEN(gg_rules);
     self->action_token_n = TOK_LL_FILE;
     self->token_n = TOK_AUGMENT;

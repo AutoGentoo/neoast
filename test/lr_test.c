@@ -96,10 +96,15 @@ void initialize_parser()
             {.token = TOK_A, .tok_n = 1, .grammar = r3},
     };
 
+    static LexerRule* rules[] = {l_rules};
+
+    static U32 lex_n = ARR_LEN(l_rules);
+
     p.grammar_n = 4;
     p.grammar_rules = g_rules;
-    p.lex_n = 3;
-    p.lexer_rules = l_rules;
+    p.lex_n = &lex_n;
+    p.lex_state_n = 1;
+    p.lexer_rules = rules;
     p.token_n = TOK_AUGMENT;
     p.action_token_n = 3;
 
@@ -124,7 +129,7 @@ CTEST(test_parser)
     int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(LexerUnion), 32);
     assert_int_equal(tok_n, 5);
 
-    ParserStack* stack = malloc(sizeof(ParserStack) + (sizeof(U32) * 64));
+    Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
     stack->pos = 0;
     I32 res_idx = parser_parse_lr(&p, stack, lalr_table, token_table, value_table, sizeof(LexerUnion));
 

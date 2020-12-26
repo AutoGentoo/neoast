@@ -103,7 +103,7 @@ static GrammarParser p;
 
 void initialize_parser()
 {
-    static LexerRule l_rules[] = {
+    static LexerRule l_rules_s0[] = {
             {.regex_raw = "^[ ]+"},
             {.expr = (lexer_expr) ll_tok_num, .regex_raw = "^[0-9]+"},
             {.expr = (lexer_expr) ll_tok_operator, .regex_raw = "^[\\(\\)\\+\\-\\*\\/\\^]"}
@@ -150,9 +150,16 @@ void initialize_parser()
             {.token = TOK_E, .tok_n = 3, .grammar = r2, .expr = (parser_expr) binary_op},
     };
 
+    static LexerRule* l_rules[] = {
+            l_rules_s0
+    };
+
+    static U32 lex_n = ARR_LEN(l_rules_s0);
+
     p.grammar_n = 10;
     p.grammar_rules = g_rules;
-    p.lex_n = 3;
+    p.lex_state_n = 1;
+    p.lex_n = &lex_n;
     p.lexer_rules = l_rules;
     p.action_token_n = 9;
     p.token_n = TOK_AUGMENT;
@@ -205,7 +212,7 @@ CTEST(test_lalr_1_calculator)
 
     U32* table = canonical_collection_generate(cc, precedence_table);
 
-    ParserStack* stack = malloc(sizeof(ParserStack) + (sizeof(U32) * 64));
+    Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
     stack->pos = 0;
     I32 res_idx = parser_parse_lr(&p, stack, table, token_table, value_table, sizeof(LexerUnion));
 
@@ -236,7 +243,7 @@ CTEST(test_lalr_1_order_of_ops)
 
     U32* table = canonical_collection_generate(cc, precedence_table);
 
-    ParserStack* stack = malloc(sizeof(ParserStack) + (sizeof(U32) * 64));
+    Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
     stack->pos = 0;
     I32 res_idx = parser_parse_lr(&p, stack, table, token_table, value_table, sizeof(LexerUnion));
 
