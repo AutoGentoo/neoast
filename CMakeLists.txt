@@ -18,6 +18,12 @@ endif()
 # Unit and integration testing
 include(cmake/test.cmake)
 
+find_library(HYPERSCAN_LIBRARY NAMES hs hyperscan)
+message(STATUS "Found Hyperscan library ${HYPERSCAN_LIBRARY}")
+
+find_path(HYPERSCAN_INCLUDE_DIR hs/hs.h)
+message(STATUS "Found Hyperscan header in ${HYPERSCAN_INCLUDE}/hs/hs.h")
+
 add_subdirectory(src)
 add_subdirectory(third_party)
 add_subdirectory(test)
