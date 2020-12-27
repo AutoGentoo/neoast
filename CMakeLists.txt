@@ -10,8 +10,8 @@ add_compile_options(-g -fno-omit-frame-pointer)
 add_link_options(-fno-omit-frame-pointer)
 
 if (SANITIZER_BUILD)
-    add_compile_options(-fsanitize=address)
-    add_link_options(-fsanitize=address)
+    add_compile_options(-fsanitize=address -fsanitize=leak)
+    add_link_options(-fsanitize=address -fsanitize=leak)
     message(STATUS "Building with AddressSanitizer")
 endif()
 
