@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Install hyperscan
+      run: sudo apt-get install libhyperscan-dev
+
     - uses: actions/checkout@v2
     - name: Submodules
       # We need to clone the third-party repostitories
