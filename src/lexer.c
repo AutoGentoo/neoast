@@ -2,23 +2,22 @@
 // Created by tumbar on 12/22/20.
 //
 
-#include <stdlib.h>
 #include "string.h"
 #include "parser.h"
 #include "lexer.h"
 
-static __thread char lexdest[NEOAST_MAX_TOK_N];
-
-U32 lexer_fill_table(const char** input, const GrammarParser* parse, U32* table, void* val_table, U32 val_n, U32 table_n)
+U32 lexer_fill_table(const char* input, const GrammarParser* parse, U32* table, void* val_table, U32 val_n, U32 table_n)
 {
     void* current_val = val_table;
     int i = 0;
     U32 lex_state = 0;
-    while ((table[i] = lex_next(input, parse, current_val, &lex_state)) && i < table_n) // While not EOF
+    U32 length = strlen(input);
+    U32 offset = 0;
+    while ((table[i] = lex_next(input, parse, current_val, length, &offset, &lex_state)) && i < table_n) // While not EOF
     {
         if (table[i] == -1)
         {
-            fprintf(stderr, "Invalid character '%c'\n", *((*input) - 1));
+            fprintf(stderr, "Invalid character '%c'\n", input[offset - 1]);
         }
 
         current_val += val_n;
@@ -28,12 +27,17 @@ U32 lexer_fill_table(const char** input, const GrammarParser* parse, U32* table,
     return i;
 }
 
-int lex_next(const char** input, const GrammarParser* parser, void* lval, U32* lex_state)
+int lex_next(const char* input,
+             const GrammarParser* parser,
+             void* lval,
+             U32 len,
+             U32* offset,
+             U32* lex_state)
 {
-    if (!**input)
+    if (*offset >= len)
         return 0;
 
-    regmatch_t regex_matches[1];
+    cre2_string_t match;
     LexerRule* rule;
     LexerRule* state;
 
@@ -42,26 +46,16 @@ int lex_next(const char** input, const GrammarParser* parser, void* lval, U32* l
     {
         state = parser->lexer_rules[*lex_state];
         rule = &state[i++];
-        if (regexec(&rule->regex, *input, 1, regex_matches, 0) == 0)
+
+        if (cre2_match(rule->regex, input, len,
+                        *offset, len, CRE2_ANCHOR_START,
+                        &match, 1))
         {
-            // Match found
-            // Build the destination
-            size_t n = regex_matches[0].rm_eo - regex_matches[0].rm_so;
             I32 token;
 
             if (rule->expr)
             {
-                if (n > NEOAST_MAX_TOK_N)
-                {
-                    char* dest = strndup(*input + regex_matches[0].rm_so, n);
-                    token = rule->expr(dest, lval, n, lex_state);
-                    free(dest);
-                }
-                else
-                {
-                    strncpy(lexdest, *input + regex_matches[0].rm_so, n);
-                    token = rule->expr(lexdest, lval, n, lex_state);
-                }
+                token = rule->expr(match.data, lval, match.length, lex_state);
             }
             else if (rule->tok)
             {
@@ -72,7 +66,7 @@ int lex_next(const char** input, const GrammarParser* parser, void* lval, U32* l
                 token = -1; // skip
             }
 
-            *input += regex_matches[0].rm_eo;
+            *offset += match.length;
             if (token > 0)
                 return token;
 
@@ -81,9 +75,9 @@ int lex_next(const char** input, const GrammarParser* parser, void* lval, U32* l
     }
 
     // Invalid token
-    if (**input)
+    if (*offset < len)
     {
-        (*input)++;
+        (*offset)++;
         return -1;
     }
 

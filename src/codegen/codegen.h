@@ -10,6 +10,10 @@ typedef enum
     KEY_VAL_HEADER, // Key not filled
     KEY_VAL_OPTION,
     KEY_VAL_TOKEN,
+    KEY_VAL_TOKEN_TYPE,
+    KEY_VAL_TYPE,
+    KEY_VAL_LEFT,
+    KEY_VAL_RIGHT,
     KEY_VAL_MACRO
 } key_val_t;
 
@@ -19,13 +23,6 @@ enum
     TOK_OPTION = 1,
     TOK_HEADER,
     TOK_DELIMITER,
-    /* Header tokens */
-    TOK_TOKEN,
-    TOK_START,
-    TOK_LEFT,
-    TOK_RIGHT,
-    TOK_UNION,
-    TOK_REGEX_MACRO,
 
     /* Lexer tokens */
     TOK_REGEX_RULE,

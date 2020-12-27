@@ -58,8 +58,8 @@ static GrammarParser p;
 void initialize_parser()
 {
     static LexerRule l_rules[] = {
-            {.regex_raw = "^[ ]+", .tok = -1},
-            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "^[0-9]+"}
+            {.regex_raw = "[ ]+", .tok = -1},
+            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "[0-9]+"}
 
     };
 
@@ -85,20 +85,22 @@ CTEST(test_lexer)
     const char* lexer_input = "10 20 30 a";
     initialize_parser();
 
-    const char** yyinput = &lexer_input;
+    const char* yyinput = lexer_input;
 
     CodegenUnion llval;
 
     U32 lex_state = 0;
 
-    assert_int_equal(lex_next(yyinput, &p, &llval, &lex_state), 1);
+    U32 len = strlen(lexer_input);
+    U32 offset = 0;
+    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, &lex_state), 1);
     assert_int_equal(llval.integer, 10);
-    assert_int_equal(lex_next(yyinput, &p, &llval, &lex_state), 1);
+    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, &lex_state), 1);
     assert_int_equal(llval.integer, 20);
-    assert_int_equal(lex_next(yyinput, &p, &llval, &lex_state), 1);
+    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, &lex_state), 1);
     assert_int_equal(llval.integer, 30);
-    assert_int_equal(lex_next(yyinput, &p, &llval, &lex_state), -1); // Unhandled 'a'
-    assert_int_equal(lex_next(yyinput, &p, &llval, &lex_state), 0);
+    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, &lex_state), -1); // Unhandled 'a'
+    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, &lex_state), 0);
 
     parser_free(&p);
 }

@@ -69,9 +69,9 @@ U32 lalr_table[] = {
 void initialize_parser()
 {
     static LexerRule l_rules[] = {
-            {.tok = TOK_b, .regex_raw = "^;"},
-            {.regex_raw = "^[ ]+"},
-            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "^[0-9]+"}
+            {.tok = TOK_b, .regex_raw = ";"},
+            {.regex_raw = "[ ]+"},
+            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "[0-9]+"}
     };
 
     static U32 r1[] = {
@@ -124,12 +124,10 @@ CTEST(test_parser)
                               ";";  // b
     initialize_parser();
 
-    const char** yyinput = &lexer_input;
-
     U32 token_table[32];
     CodegenUnion value_table[32];
 
-    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(CodegenUnion), 32);
+    int tok_n = lexer_fill_table(lexer_input, &p, token_table, value_table, sizeof(CodegenUnion), 32);
     assert_int_equal(tok_n, 5);
 
     Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
