@@ -68,9 +68,9 @@ static U8 precedence_table[TOK_AUGMENT] = {PRECEDENCE_NONE};
 typedef union {
     double number;
     char operator;
-} CodegenUnion;
+} CalculatorUnion;
 
-I32 ll_tok_operator(const char* yytext, CodegenUnion* yyval)
+I32 ll_tok_operator(const char* yytext, CalculatorUnion* yyval)
 {
     yyval->operator = *yytext;
     switch (*yytext)
@@ -86,13 +86,13 @@ I32 ll_tok_operator(const char* yytext, CodegenUnion* yyval)
 
     return -1;
 }
-I32 ll_tok_num(const char* yytext, CodegenUnion* yyval)
+I32 ll_tok_num(const char* yytext, CalculatorUnion* yyval)
 {
     yyval->number = strtod(yytext, NULL);
     return TOK_NUM;
 }
 
-void binary_op(CodegenUnion* dest, CodegenUnion* args)
+void binary_op(CalculatorUnion* dest, CalculatorUnion* args)
 {
     switch (args[1].operator)
     {
@@ -104,12 +104,12 @@ void binary_op(CodegenUnion* dest, CodegenUnion* args)
     }
 }
 
-void group_op(CodegenUnion* dest, CodegenUnion* args)
+void group_op(CalculatorUnion* dest, CalculatorUnion* args)
 {
     dest->number = args[1].number;
 }
 
-void copy_op(CodegenUnion* dest, CodegenUnion* args)
+void copy_op(CalculatorUnion* dest, CalculatorUnion* args)
 {
     dest->number = args[0].number;
 }
@@ -217,9 +217,9 @@ CTEST(test_lalr_1_calculator)
     const char* yyinput = lexer_input;
 
     U32 token_table[32];
-    CodegenUnion value_table[32];
+    CalculatorUnion value_table[32];
 
-    int tok_n = lexer_fill_table(&yyinput, &p, token_table, value_table, sizeof(CodegenUnion), 32);
+    int tok_n = lexer_fill_table(&yyinput, &p, token_table, value_table, sizeof(CalculatorUnion), 32);
     assert_int_equal(tok_n, 9);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
@@ -229,7 +229,7 @@ CTEST(test_lalr_1_calculator)
 
     Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
     stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, table, token_error_names, token_table, value_table, sizeof(CodegenUnion));
+    I32 res_idx = parser_parse_lr(&p, stack, table, token_error_names, token_table, value_table, sizeof(CalculatorUnion));
 
     dump_table(table, cc, token_names, 0);
     assert_int_not_equal(res_idx, -1);
@@ -251,9 +251,9 @@ CTEST(test_lalr_1_order_of_ops)
     const char** yyinput = &lexer_input;
 
     U32 token_table[32];
-    CodegenUnion value_table[32];
+    CalculatorUnion value_table[32];
 
-    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(CodegenUnion), 32);
+    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(CalculatorUnion), 32);
     assert_int_equal(tok_n, 7);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
@@ -263,7 +263,7 @@ CTEST(test_lalr_1_order_of_ops)
 
     Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
     stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, table, token_error_names, token_table, value_table, sizeof(CodegenUnion));
+    I32 res_idx = parser_parse_lr(&p, stack, table, token_error_names, token_table, value_table, sizeof(CalculatorUnion));
 
     // This parser has no order of ops
     assert_double_equal(value_table[res_idx].number, (((1 + 5) * 9) + 4), 0.005);
