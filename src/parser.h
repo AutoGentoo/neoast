@@ -51,7 +51,7 @@ struct GrammarRule_prv
 {
     U32 token;
     U32 tok_n;
-    U32* grammar;
+    const U32* grammar;
     parser_expr expr;
 };
 
@@ -59,9 +59,9 @@ struct GrammarParser_prv
 {
     U32 grammar_n;
     U32 lex_state_n;
-    U32* lex_n;
-    LexerRule** lexer_rules;
-    GrammarRule* grammar_rules;
+    const U32* lex_n;
+    LexerRule* const* lexer_rules;
+    const GrammarRule* grammar_rules;
 
     // Also number of columns
     U32 token_n;
@@ -88,7 +88,7 @@ I32 parser_parse_lr(
         void* val_table,
         size_t val_s);
 
-void parser_init(GrammarParser* self);
+U32 parser_init(GrammarParser* self);
 void parser_free(GrammarParser* self);
 
 #endif //NEOAST_PARSER_H

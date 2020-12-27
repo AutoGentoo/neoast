@@ -45,9 +45,9 @@ typedef union {
         int val;
         struct expr_* next;
     }* expr;
-} LexerUnion;
+} CodegenUnion;
 
-I32 ll_tok_num(const char* yytext, LexerUnion* yyval)
+I32 ll_tok_num(const char* yytext, CodegenUnion* yyval)
 {
     yyval->integer = (int)strtol(yytext, NULL, 10);
     return TOK_a;
@@ -127,14 +127,14 @@ CTEST(test_parser)
     const char** yyinput = &lexer_input;
 
     U32 token_table[32];
-    LexerUnion value_table[32];
+    CodegenUnion value_table[32];
 
-    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(LexerUnion), 32);
+    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(CodegenUnion), 32);
     assert_int_equal(tok_n, 5);
 
     Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
     stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, lalr_table, token_error_names, token_table, value_table, sizeof(LexerUnion));
+    I32 res_idx = parser_parse_lr(&p, stack, lalr_table, token_error_names, token_table, value_table, sizeof(CodegenUnion));
 
     free(stack);
     parser_free(&p);

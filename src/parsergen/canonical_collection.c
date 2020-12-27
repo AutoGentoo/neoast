@@ -85,7 +85,7 @@ U8 lr_1_firstof(U8 dest[], U32 token, const GrammarParser* parser)
     // Recursively get the first of this token
     for (U32 i = 0; i < parser->grammar_n; i++)
     {
-        GrammarRule* rule = &parser->grammar_rules[i];
+        const GrammarRule* rule = &parser->grammar_rules[i];
         if (rule->tok_n == 0)
         {
             // Empty rule
@@ -190,7 +190,7 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             for (U32 i = 0; i < parser->grammar_n; i++)
             {
                 // Check if this token is the result of any grammar rule
-                GrammarRule* rule = &parser->grammar_rules[i];
+                const GrammarRule* rule = &parser->grammar_rules[i];
                 if (rule->token == potential_token)
                 {
                     LR_1* new_rule = lr_1_init(rule, 0, parser->action_token_n);

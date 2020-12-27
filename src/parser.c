@@ -6,15 +6,22 @@
 #include "lexer.h"
 #include "parser.h"
 
-void parser_init(GrammarParser* self)
+U32 parser_init(GrammarParser* self)
 {
+    U32 error = 0;
     for (U32 i = 0; i < self->lex_state_n; i++)
     {
         for (U32 j = 0; j < self->lex_n[i]; j++)
         {
-            regcomp(&self->lexer_rules[i][j].regex, self->lexer_rules[i][j].regex_raw, REG_EXTENDED);
+            if (regcomp(&self->lexer_rules[i][j].regex, self->lexer_rules[i][j].regex_raw, REG_EXTENDED) != 0)
+            {
+                error++;
+                fprintf(stderr, "Failed to compile regular expression '%s'\n", self->lexer_rules[i][j].regex_raw);
+            }
         }
     }
+
+    return error;
 }
 
 void parser_free(GrammarParser* self)

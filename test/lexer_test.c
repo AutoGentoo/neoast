@@ -39,24 +39,18 @@ CTEST(test_regexec)
     regfree(&c);
 }
 
-enum {
-    TOK_TERM,
-    TOK_NUMBER,
-    TOK_EXPR
-};
-
 typedef union {
     int integer;
     struct expr_ {
         int val;
         struct expr_* next;
     }* expr;
-} LexerUnion;
+} CodegenUnion;
 
-I32 ll_tok_num(const char* yytext, LexerUnion* yyval)
+I32 ll_tok_num(const char* yytext, CodegenUnion* yyval)
 {
     yyval->integer = (int)strtol(yytext, NULL, 10);
-    return TOK_NUMBER;
+    return 1;
 }
 
 static GrammarParser p;
@@ -93,7 +87,7 @@ CTEST(test_lexer)
 
     const char** yyinput = &lexer_input;
 
-    LexerUnion llval;
+    CodegenUnion llval;
 
     U32 lex_state = 0;
 

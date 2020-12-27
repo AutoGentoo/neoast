@@ -13,7 +13,7 @@
 // Anything longer will be dynamically allocated
 #define NEOAST_MAX_TOK_N 1024
 
-typedef I32 (*lexer_expr) (const char* lex_text, void* lex_val, U32 len, U32* ll_state);
+typedef I32 (*lexer_expr) (char* lex_text, void* lex_val, U32 len, U32* ll_state);
 
 struct LexerRule_prv
 {
