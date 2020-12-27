@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include "common.h"
+#include <cre2.h>
 
 #define OFFSET_VOID_PTR(ptr, s, i) (void*)(((char*)(ptr)) + ((s) * (i)))
 
@@ -57,6 +58,7 @@ struct GrammarRule_prv
 
 struct GrammarParser_prv
 {
+    cre2_options_t* regex_opts;
     U32 grammar_n;
     U32 lex_state_n;
     const U32* lex_n;
@@ -90,5 +92,8 @@ I32 parser_parse_lr(
 
 U32 parser_init(GrammarParser* self);
 void parser_free(GrammarParser* self);
+
+Stack* parser_allocate_stack(GrammarParser* self, U64 stack_n);
+void parser_free_stack(Stack* self);
 
 #endif //NEOAST_PARSER_H

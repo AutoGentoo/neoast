@@ -10,19 +10,15 @@ add_compile_options(-g -fno-omit-frame-pointer)
 add_link_options(-fno-omit-frame-pointer)
 
 if (SANITIZER_BUILD)
-    add_compile_options(-fsanitize=address -fsanitize=leak)
-    add_link_options(-fsanitize=address -fsanitize=leak)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
     message(STATUS "Building with AddressSanitizer")
 endif()
 
 # Unit and integration testing
 include(cmake/test.cmake)
 
-find_library(HYPERSCAN_LIBRARY NAMES hs hyperscan REQUIRED)
-message(STATUS "Found Hyperscan library ${HYPERSCAN_LIBRARY}")
-
-find_path(HYPERSCAN_INCLUDE_DIR hs/hs.h REQUIRED)
-message(STATUS "Found Hyperscan header in ${HYPERSCAN_INCLUDE}/hs/hs.h")
+include_directories(${PROJECT_SOURCE_DIR}/third_party/cre2/src)
 
 add_subdirectory(src)
 add_subdirectory(third_party)

@@ -22,11 +22,10 @@ int main(int argc, const char* argv[])
     if (gen_parser_init(&parser))
         return 1;
 
-    const char** input = (const char**) &test_input;
     U32 token_table[1024];
     CodegenUnion value_table[1024];
 
-    int tok_n = lexer_fill_table(input, &parser, token_table,
+    int tok_n = lexer_fill_table(test_input, &parser, token_table,
                      value_table, 1024, 1024);
 
     printf("tokens: %d\n", tok_n);

@@ -6,6 +6,7 @@ add_library(neoast STATIC
         lr.c parser.c)
 
 target_include_directories(neoast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(neoast cre2 re2 pthread)
 
 add_subdirectory(parsergen)
 add_subdirectory(codegen)

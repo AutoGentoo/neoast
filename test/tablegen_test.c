@@ -119,9 +119,9 @@ static GrammarParser p;
 void initialize_parser()
 {
     static LexerRule l_rules_s0[] = {
-            {.regex_raw = "^[ ]+"},
-            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "^[0-9]+"},
-            {.expr = (lexer_expr) ll_tok_operator, .regex_raw = "^[\\(\\)\\+\\-\\*\\/\\^]"}
+            {.regex_raw = "[ ]+"},
+            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "[0-9]+"},
+            {.expr = (lexer_expr) ll_tok_operator, .regex_raw = "[\\(\\)\\+\\-\\*\\/\\^]"}
     };
 
     /*
@@ -214,12 +214,10 @@ CTEST(test_lalr_1_calculator)
     const char* lexer_input = "1 + (5 * 9) + 2";
     initialize_parser();
 
-    const char* yyinput = lexer_input;
-
     U32 token_table[32];
     CalculatorUnion value_table[32];
 
-    int tok_n = lexer_fill_table(&yyinput, &p, token_table, value_table, sizeof(CalculatorUnion), 32);
+    int tok_n = lexer_fill_table(lexer_input, &p, token_table, value_table, sizeof(CalculatorUnion), 32);
     assert_int_equal(tok_n, 9);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
@@ -248,12 +246,10 @@ CTEST(test_lalr_1_order_of_ops)
     const char* lexer_input = "1 + 5 * 9 + 4";
     initialize_parser();
 
-    const char** yyinput = &lexer_input;
-
     U32 token_table[32];
     CalculatorUnion value_table[32];
 
-    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(CalculatorUnion), 32);
+    int tok_n = lexer_fill_table(lexer_input, &p, token_table, value_table, sizeof(CalculatorUnion), 32);
     assert_int_equal(tok_n, 7);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
