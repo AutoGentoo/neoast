@@ -42,9 +42,9 @@ void parser_free(GrammarParser* self)
     cre2_opt_delete(self->regex_opts);
 }
 
-Stack* parser_allocate_stack(GrammarParser* self, U64 stack_n)
+Stack* parser_allocate_stack(U64 stack_n)
 {
-    Stack* out = malloc(sizeof(Stack) + stack_n);
+    Stack* out = malloc(sizeof(Stack) + sizeof(U32) * stack_n);
     out->pos = 0;
     return out;
 }

@@ -14,52 +14,57 @@ typedef enum
     KEY_VAL_TYPE,
     KEY_VAL_LEFT,
     KEY_VAL_RIGHT,
-    KEY_VAL_MACRO
+    KEY_VAL_MACRO,
+    KEY_VAL_START,
 } key_val_t;
 
 enum
 {
     // -1 = skip, 0 = EOF
     TOK_OPTION = 1,
-    TOK_HEADER,
-    TOK_DELIMITER,
+    TOK_HEADER, // 2
+    TOK_DELIMITER, // 3
 
     /* Lexer tokens */
-    TOK_REGEX_RULE,
+    TOK_REGEX_RULE, // 4
 
     /* Grammar tokens */
-    TOK_G_EXPR_DEF,
-    TOK_G_TOK,
-    TOK_G_OR,
-    TOK_G_TERM,
-    TOK_G_ACTION,
+    TOK_G_EXPR_DEF, // 5
+    TOK_G_TOK, // 6
+    TOK_G_OR, // 7
+    TOK_G_TERM, // 8
+    TOK_G_ACTION, // 9
 
     /* Grammar rules */
-    TOK_GG_FILE,
+    TOK_GG_FILE, // 10
 
     /* Header grammar */
-    TOK_GG_KEY_VALS,
-    TOK_GG_HEADER,
+    TOK_GG_KEY_VALS, // 11
+    TOK_GG_HEADER, // 12
 
     /* Lexing grammar */
-    TOK_GG_LEX_RULES,
+    TOK_GG_LEX_RULE, // 13
+    TOK_GG_LEX_RULES, // 14
 
     /* Grammar grammar :) */
-    TOK_GG_GRAMMARS,
-    TOK_GG_GRAMMAR,
-    TOK_GG_TOKENS,
-    TOK_GG_SINGLE_GRAMMAR,
-    TOK_GG_MULTI_GRAMMAR,
+    TOK_GG_GRAMMARS, // 15
+    TOK_GG_GRAMMAR, // 16
+    TOK_GG_TOKENS, // 17
+    TOK_GG_SINGLE_GRAMMAR, // 18
+    TOK_GG_MULTI_GRAMMAR, // 19
 
     /* Artificial grammar */
-    TOK_AUGMENT,
+    TOK_AUGMENT, // 20
 };
 
 enum
 {
-    LEX_STATE_DEFAULT,
-    LEX_STATE_LEXER_RULES,
+    LEX_STATE_LEXER_RULES = 1,
     LEX_STATE_GRAMMAR_RULES,
+    LEX_STATE_MATCH_BRACE,
+    LEX_STATE_REGEX,
+    LEX_STATE_HEADER,
+    LEX_STATE_N
 };
 
 struct KeyVal
@@ -117,5 +122,6 @@ typedef union {
 int gen_parser_init(GrammarParser* self);
 
 extern U32* GEN_parsing_table;
+extern const char* tok_names_errors[];
 
 #endif //NEOAST_CODEGEN_H

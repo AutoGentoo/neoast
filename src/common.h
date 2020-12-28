@@ -15,7 +15,6 @@
 typedef struct LexerRule_prv LexerRule;
 typedef struct GrammarParser_prv GrammarParser;
 typedef struct GrammarRule_prv GrammarRule;
-typedef struct ParserBuffers_prv ParserBuffers;
 typedef struct Stack_prv Stack;
 
 // Codegen

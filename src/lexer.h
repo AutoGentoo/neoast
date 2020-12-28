@@ -9,11 +9,11 @@
 #include <cre2.h>
 #include "common.h"
 
-// Length of the token buffer
-// Anything longer will be dynamically allocated
-#define NEOAST_MAX_TOK_N 1024
-
-typedef I32 (*lexer_expr) (const char* lex_text, void* lex_val, U32 len, U32* ll_state);
+typedef I32 (*lexer_expr) (
+        const char* lex_text,
+        void* lex_val,
+        U32 len,
+        Stack* ll_state);
 
 struct LexerRule_prv
 {
@@ -39,7 +39,7 @@ lex_next(const char* input,
          void* lval,
          U32 len,
          U32* offset,
-         U32* lex_state);
+         Stack* lex_state);
 
 /**
  * Use the lexer to get every token in a string
@@ -52,6 +52,7 @@ lex_next(const char* input,
  * @param val_n offset of a value (size of value union)
  * @return number of parsed tokens
  */
-U32 lexer_fill_table(const char* input, const GrammarParser* parse, U32* table, void* val_table, U32 val_n, U32 table_n);
+U32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, U32* table, void* val_table, U32 val_n,
+                     U32 table_n);
 
 #endif //NEOAST_LEXER_H

@@ -13,16 +13,6 @@ typedef enum {
     CLR_1,
 } parser_t;
 
-typedef int (*state_compare)(
-        const GrammarState* original_state,
-        const GrammarState* potential_duplicate,
-        U32 tok_n);
-
-typedef void (*state_merge)(
-        GrammarState* target,
-        const GrammarState* to_merge,
-        U32 tok_n);
-
 struct LR_1_prv
 {
     const GrammarRule* grammar;

@@ -10,6 +10,7 @@
 #include <parsergen/clr_lalr.h>
 #include <math.h>
 #include <util/util.h>
+#include <string.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -217,7 +218,7 @@ CTEST(test_lalr_1_calculator)
     U32 token_table[32];
     CalculatorUnion value_table[32];
 
-    int tok_n = lexer_fill_table(lexer_input, &p, token_table, value_table, sizeof(CalculatorUnion), 32);
+    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, token_table, value_table, sizeof(CalculatorUnion), 32);
     assert_int_equal(tok_n, 9);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
@@ -249,7 +250,7 @@ CTEST(test_lalr_1_order_of_ops)
     U32 token_table[32];
     CalculatorUnion value_table[32];
 
-    int tok_n = lexer_fill_table(lexer_input, &p, token_table, value_table, sizeof(CalculatorUnion), 32);
+    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, token_table, value_table, sizeof(CalculatorUnion), 32);
     assert_int_equal(tok_n, 7);
 
     CanonicalCollection* cc = canonical_collection_init(&p);

@@ -93,7 +93,7 @@ I32 parser_parse_lr(
 U32 parser_init(GrammarParser* self);
 void parser_free(GrammarParser* self);
 
-Stack* parser_allocate_stack(GrammarParser* self, U64 stack_n);
+Stack* parser_allocate_stack(U64 stack_n);
 void parser_free_stack(Stack* self);
 
 #endif //NEOAST_PARSER_H

@@ -187,6 +187,7 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             dirty = 1;
             already_expanded[potential_token - parser->action_token_n] = 1;
 
+            U32 expand_count = 0;
             for (U32 i = 0; i < parser->grammar_n; i++)
             {
                 // Check if this token is the result of any grammar rule
@@ -198,7 +199,16 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
                     new_rule->next = item->next;
                     item->next = new_rule;
                     lookahead_copy(new_rule->look_ahead, temp_lookahead, parser->action_token_n);
+                    expand_count++;
                 }
+            }
+
+            // Make sure there is at least one
+            // rule describing this expression
+            if (!expand_count)
+            {
+                fprintf(stderr, "Could not find a rule to describe token '%d'\n", potential_token);
+                exit(1);
             }
         }
     }

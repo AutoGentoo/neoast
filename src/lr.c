@@ -41,26 +41,26 @@ U32 g_lr_reduce(
         idx = STACK_POP(stack); // Pop the index of the token/value
 
         // Fill the argument
-        memcpy(OFFSET_VOID_PTR(args, val_s, i),
+        memcpy(OFFSET_VOID_PTR(args, val_s, arg_count - i - 1),
                OFFSET_VOID_PTR(val_table, val_s, idx),
                val_s);
     }
 
+    int result_token = parser->grammar_rules[reduce_rule].token;
     if (parser->grammar_rules[reduce_rule].expr)
     {
         parser->grammar_rules[reduce_rule].expr(
                 dest,
                 args);
+        memcpy(OFFSET_VOID_PTR(val_table, val_s, idx),
+               dest,
+               val_s);
     }
-
-    int result_token = parser->grammar_rules[reduce_rule].token;
 
     // Fill the result
     token_table[idx] = result_token;
-    memcpy(OFFSET_VOID_PTR(val_table, val_s, idx),
-           dest,
-           val_s);
 
+    // Check the goto
     U32 next_state = *(U32*) g_table_from_matrix(
             (void*) parsing_table,
             STACK_PEEK(stack), // Top of stack is current state
@@ -119,7 +119,7 @@ I32 parser_parse_lr(
     U32 i = 0;
     U32 prev_tok = 0;
     U32 tok = token_table[i];
-    U32 dest_idx;
+    U32 dest_idx; // index of the last reduction
     while (1)
     {
         U32 table_value = *(U32*) g_table_from_matrix(
@@ -138,7 +138,6 @@ I32 parser_parse_lr(
             return -1;
         } else if (table_value & TOK_SHIFT_MASK)
         {
-            printf("S%02d '%s'\n", table_value & TOK_MASK, token_names[tok]);
             current_state = table_value & TOK_MASK;
             STACK_PUSH(stack, i);
             STACK_PUSH(stack, current_state);
@@ -152,8 +151,6 @@ I32 parser_parse_lr(
                                         token_table, val_table, val_s,
                                         &dest_idx);
             prev_tok = parser->grammar_rules[table_value & TOK_MASK].token;
-            printf("R%02d -> %s\n", table_value & TOK_MASK, token_names[prev_tok]);
-            printf("G%02d\n", current_state);
         } else if (table_value & TOK_ACCEPT_MASK)
         {
             return dest_idx;

@@ -1,12 +1,8 @@
-%{
+%top {
 #include <stdio.h>
 #include <math.h>
 
 // This is a calculator test program
-%}
-
-%union {
-    double number;
 }
 
 %token<integer> TOK_N
@@ -30,24 +26,24 @@
 
 ==
 
-[0-9]+      {$$.integer = strtod(yytext, NULL, 10); return TOK_N;}
-\+          {return TOK_PLUS;}
-\-          {return TOK_MINUS;}
-\/          {return TOK_SLASH;}
-\*          {return TOK_STAR;}
-\^          {return TOK_CARET;}
-\(          {return TOK_P_OPEN;}
-\)          {return TOK_P_CLOSE;}
+"[0-9]+"      {$$.integer = strtod(yytext, NULL, 10); return TOK_N;}
+"\+"          {return TOK_PLUS;}
+"\-"          {return TOK_MINUS;}
+"\/"          {return TOK_SLASH;}
+"\*"          {return TOK_STAR;}
+"\^"          {return TOK_CARET;}
+"\("          {return TOK_P_OPEN;}
+"\)"          {return TOK_P_CLOSE;}
 
 ==
 
 %%
 
 start: expr     {$$ = $1;}
-     |          {$$ = 0;}
+     |  MT      {$$ = 0;}
      ;
 
-expr: TOK_N
+expr: TOK_N                             {$$ = $1}
     | expr TOK_PLUS expr                {$$ = $1 + $3;}
     | expr TOK_MINUS expr               {$$ = $1 - $3;}
     | expr TOK_SLASH expr               {$$ = $1 / $3;}
