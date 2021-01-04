@@ -65,7 +65,7 @@ int lex_next(const char* input,
                 {
                     memcpy(lex_buffer, input + *offset, match.length);
                     lex_buffer[match.length] = 0;
-                    token = rule->expr(match.data, lval, match.length, lex_state);
+                    token = rule->expr(lex_buffer, lval, match.length, lex_state);
                 }
                 else
                 {

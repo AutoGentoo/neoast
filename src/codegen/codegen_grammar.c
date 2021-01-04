@@ -13,7 +13,7 @@
 
 #define WS_X "[\\s]+"
 #define WS_OPT "[\\s]*"
-#define ID_X "[A-z][A-z|0-9]*"
+#define ID_X "[A-z][A-z0-9]*"
 
 U32* GEN_parsing_table = NULL;
 const char* tok_names = "$ohdxei|;{FKHlLGMTSMA";
@@ -169,7 +169,7 @@ static I32 ll_type(const char* lex_text, CodegenUnion* lex_val)
         find_token_start++;
 
     lex_val->key_val = key_val_build(KEY_VAL_TYPE,
-                                     strndup(type_start + 1, type_end - type_start - 2),
+                                     strndup(type_start + 1, type_end - type_start - 1),
                                      strdup(find_token_start));
     return TOK_OPTION;
 }
@@ -183,7 +183,7 @@ static I32 ll_token_with_type(const char* lex_text, CodegenUnion* lex_val, U32 l
 
     lex_val->key_val = key_val_build(KEY_VAL_TOKEN_TYPE,
                                      strndup(type_start + 1, type_end - type_start - 1),
-                                     strndup(find_token_start, len - (lex_text - find_token_start)));
+                                     strdup(find_token_start));
     return TOK_OPTION;
 }
 static I32 ll_left(const char* lex_text, CodegenUnion* lex_val)
@@ -210,9 +210,9 @@ static I32 ll_g_rule(const char* lex_text, CodegenUnion* lex_val, U32 len)
     lex_val->string = strndup(lex_text, len - 1);
     return TOK_G_EXPR_DEF;
 }
-static I32 ll_g_tok (const char* lex_text, CodegenUnion* lex_val, U32 len)
+static I32 ll_g_tok (const char* lex_text, CodegenUnion* lex_val)
 {
-    lex_val->token = token_build(strndup(lex_text, len));
+    lex_val->token = token_build(strdup(lex_text));
     return TOK_G_TOK;
 }
 
@@ -419,7 +419,7 @@ const U32 grammars[][7] = {
 
         /* TOK_GG_KEY_VALS => */
         {TOK_OPTION},
-        {TOK_GG_KEY_VALS, TOK_OPTION},
+        {TOK_OPTION, TOK_GG_KEY_VALS},
 
         // TOK_GG_HEADER =>
         {TOK_HEADER, TOK_GG_KEY_VALS},
@@ -428,12 +428,12 @@ const U32 grammars[][7] = {
         /* Lexer Rules */
         {TOK_REGEX_RULE, TOK_G_ACTION},
         {TOK_GG_LEX_RULE},
-        {TOK_GG_LEX_RULES, TOK_GG_LEX_RULE},
+        {TOK_GG_LEX_RULE, TOK_GG_LEX_RULES},
 
         /* Grammar rules */
         // TOK_GG_TOKENS =>
         {TOK_G_TOK},
-        {TOK_GG_TOKENS, TOK_G_TOK},
+        {TOK_G_TOK, TOK_GG_TOKENS},
 
         // TOK_GG_SINGLE_GRAMMAR =>
         {TOK_GG_TOKENS, TOK_G_ACTION},
@@ -447,7 +447,7 @@ const U32 grammars[][7] = {
 
         // TOK_GG_GRAMMARS =>
         {TOK_GG_GRAMMAR},
-        {TOK_GG_GRAMMARS, TOK_GG_GRAMMAR},
+        {TOK_GG_GRAMMAR, TOK_GG_GRAMMARS},
 
         // TOK_GG_FILE =>
         {TOK_GG_HEADER, TOK_DELIMITER, TOK_GG_LEX_RULES, TOK_DELIMITER, TOK_DELIMITER, TOK_GG_GRAMMARS, TOK_DELIMITER}
