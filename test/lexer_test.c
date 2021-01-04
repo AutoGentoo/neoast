@@ -89,20 +89,21 @@ CTEST(test_lexer)
 
     CodegenUnion llval;
 
-    U32 lex_state = 0;
+    Stack* lex_state = parser_allocate_stack(32);
 
     U32 len = strlen(lexer_input);
     U32 offset = 0;
-    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, &lex_state), 1);
+    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, lex_state), 1);
     assert_int_equal(llval.integer, 10);
-    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, &lex_state), 1);
+    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, lex_state), 1);
     assert_int_equal(llval.integer, 20);
-    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, &lex_state), 1);
+    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, lex_state), 1);
     assert_int_equal(llval.integer, 30);
-    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, &lex_state), -1); // Unhandled 'a'
-    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, &lex_state), 0);
+    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, lex_state), -1); // Unhandled 'a'
+    assert_int_equal(lex_next(yyinput, &p, &llval, len, &offset, lex_state), 0);
 
     parser_free(&p);
+    parser_free_stack(lex_state);
 }
 
 const static struct CMUnitTest lexer_tests[] = {

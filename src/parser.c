@@ -46,6 +46,9 @@ Stack* parser_allocate_stack(U64 stack_n)
 {
     Stack* out = malloc(sizeof(Stack) + sizeof(U32) * stack_n);
     out->pos = 0;
+
+    STACK_PUSH(out, 0);
+
     return out;
 }
 

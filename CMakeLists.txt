@@ -15,6 +15,8 @@ if (SANITIZER_BUILD)
     message(STATUS "Building with AddressSanitizer")
 endif()
 
+include(cmake/policy.cmake)
+
 # Unit and integration testing
 include(cmake/test.cmake)
 

@@ -2,6 +2,8 @@
 // Created by tumbar on 12/22/20.
 //
 
+#include <string.h>
+#include <stdlib.h>
 #include "parser.h"
 #include "lexer.h"
 
@@ -43,6 +45,8 @@ int lex_next(const char* input,
     cre2_string_t match;
     LexerRule* rule;
 
+    static __thread char lex_buffer[1024];
+
     int i = 0;
     U32 state_index = STACK_PEEK(lex_state);
     while(i < parser->lex_n[state_index])
@@ -57,11 +61,18 @@ int lex_next(const char* input,
 
             if (rule->expr)
             {
-                char save_char = input[*offset + match.length];
-                char* term = (char*)match.data + match.length;
-                *term = 0;
-                token = rule->expr(match.data, lval, match.length, lex_state);
-                *term = save_char;
+                if (match.length < 1024)
+                {
+                    memcpy(lex_buffer, input + *offset, match.length);
+                    lex_buffer[match.length] = 0;
+                    token = rule->expr(match.data, lval, match.length, lex_state);
+                }
+                else
+                {
+                    char* m_buff = strndup(match.data, match.length);
+                    token = rule->expr(m_buff, lval, match.length, lex_state);
+                    free(m_buff);
+                }
             }
             else if (rule->tok)
             {
