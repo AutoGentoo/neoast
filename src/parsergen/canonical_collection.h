@@ -36,7 +36,7 @@ struct CanonicalCollection_prv
 
     U32 state_s;
     U32 state_n;
-    GrammarState* all_states[];
+    GrammarState** all_states;
 };
 
 U8 lr_1_firstof(U8 dest[], U32 token, const GrammarParser* parser);

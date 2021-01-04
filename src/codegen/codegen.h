@@ -5,6 +5,8 @@
 #ifndef NEOAST_CODEGEN_H
 #define NEOAST_CODEGEN_H
 
+#include <common.h>
+
 typedef enum
 {
     KEY_VAL_HEADER, // Key not filled
@@ -16,6 +18,8 @@ typedef enum
     KEY_VAL_RIGHT,
     KEY_VAL_MACRO,
     KEY_VAL_START,
+    KEY_VAL_STATE,
+    KEY_VAL_UNION,
 } key_val_t;
 
 enum
@@ -23,38 +27,40 @@ enum
     // -1 = skip, 0 = EOF
     TOK_OPTION = 1,
     TOK_HEADER, // 2
-    TOK_DELIMITER, // 3
+    TOK_UNION, // 3
+    TOK_DELIMITER, // 4
 
     /* Lexer tokens */
-    TOK_REGEX_RULE, // 4
+    TOK_LEX_STATE, // 5
+    TOK_REGEX_RULE, // 6
 
     /* Grammar tokens */
-    TOK_G_EXPR_DEF, // 5
-    TOK_G_TOK, // 6
-    TOK_G_OR, // 7
-    TOK_G_TERM, // 8
-    TOK_G_ACTION, // 9
+    TOK_G_EXPR_DEF, // 7
+    TOK_G_TOK, // 8
+    TOK_G_OR, // 9
+    TOK_G_TERM, // 10
+    TOK_G_ACTION, // 11
 
     /* Grammar rules */
-    TOK_GG_FILE, // 10
+    TOK_GG_FILE, // 12
 
     /* Header grammar */
-    TOK_GG_KEY_VALS, // 11
-    TOK_GG_HEADER, // 12
+    TOK_GG_KEY_VALS, // 13
+    TOK_GG_HEADER, // 14
 
     /* Lexing grammar */
-    TOK_GG_LEX_RULE, // 13
-    TOK_GG_LEX_RULES, // 14
+    TOK_GG_LEX_RULE, // 15
+    TOK_GG_LEX_RULES, // 16
 
     /* Grammar grammar :) */
-    TOK_GG_GRAMMARS, // 15
-    TOK_GG_GRAMMAR, // 16
-    TOK_GG_TOKENS, // 17
-    TOK_GG_SINGLE_GRAMMAR, // 18
-    TOK_GG_MULTI_GRAMMAR, // 19
+    TOK_GG_GRAMMARS, // 17
+    TOK_GG_GRAMMAR, // 18
+    TOK_GG_TOKENS, // 19
+    TOK_GG_SINGLE_GRAMMAR, // 20
+    TOK_GG_MULTI_GRAMMAR, // 21
 
     /* Artificial grammar */
-    TOK_AUGMENT, // 20
+    TOK_AUGMENT, // 22
 };
 
 enum
@@ -63,8 +69,7 @@ enum
     LEX_STATE_GRAMMAR_RULES,
     LEX_STATE_MATCH_BRACE,
     LEX_STATE_REGEX,
-    LEX_STATE_HEADER,
-    LEX_STATE_N
+    LEX_STATE_LEX_STATE,
 };
 
 struct KeyVal
@@ -77,6 +82,7 @@ struct KeyVal
 
 struct LexerRuleProto
 {
+    char* lexer_state; // NULL for default
     char* regex;
     char* function;
     struct LexerRuleProto* next;
@@ -120,6 +126,7 @@ typedef union {
 } CodegenUnion;
 
 int gen_parser_init(GrammarParser* self);
+int codegen_write(const struct File* self, FILE* fp);
 
 extern U32* GEN_parsing_table;
 extern const char* tok_names_errors[];

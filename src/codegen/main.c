@@ -12,9 +12,9 @@
 
 int main(int argc, const char* argv[])
 {
-    if (argc < 2)
+    if (argc < 3)
     {
-        fprintf(stderr, "usage: %s [INPUT_FILE]\n", argv[0]);
+        fprintf(stderr, "usage: %s [INPUT_FILE] [OUTPUT_FILE]\n", argv[0]);
         return 1;
     }
 
@@ -34,6 +34,7 @@ int main(int argc, const char* argv[])
     input = malloc(file_size + 1);
     assert(fread(input, 1, file_size, fp) == file_size);
     input[file_size] = 0;
+    fclose(fp);
 
     GrammarParser parser;
     if (gen_parser_init(&parser))
@@ -55,7 +56,16 @@ int main(int argc, const char* argv[])
         fprintf(stderr, "Failed to parse file '%s'\n", argv[1]);
         return 1;
     }
-    struct File* f = value_table[result_idx].file;
+
+    fp = fopen(argv[2], "w+");
+    if (!fp)
+    {
+        fprintf(stderr, "Failed to open '%s': %s\n", argv[1], strerror(errno));
+        return 1;
+    }
+
+    codegen_write(value_table[result_idx].file, fp);
+    fclose(fp);
 
     parser_free_stack(p_stack);
     parser_free(&parser);

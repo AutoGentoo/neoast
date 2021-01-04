@@ -24,22 +24,26 @@
 %left TOK_SLASH
 %right TOK_CARET
 
+%union {
+    double number;
+}
+
 ==
 
-"[0-9]+"      {$$.integer = strtod(yytext, NULL, 10); return TOK_N;}
-"\+"          {return TOK_PLUS;}
-"\-"          {return TOK_MINUS;}
-"\/"          {return TOK_SLASH;}
-"\*"          {return TOK_STAR;}
-"\^"          {return TOK_CARET;}
-"\("          {return TOK_P_OPEN;}
-"\)"          {return TOK_P_CLOSE;}
+"[0-9]+"      {yyval->integer = strtod(yytext, NULL, 10); return TOK_N;}
+"\\+"          {return TOK_PLUS;}
+"\\-"          {return TOK_MINUS;}
+"\\/"          {return TOK_SLASH;}
+"\\*"          {return TOK_STAR;}
+"\\^"          {return TOK_CARET;}
+"\\("          {return TOK_P_OPEN;}
+"\\)"          {return TOK_P_CLOSE;}
 
 ==
 
 %%
 
-start: expr     {$$ = $1;}
+program: expr     {$$ = $1;}
      |  MT      {$$ = 0;}
      ;
 

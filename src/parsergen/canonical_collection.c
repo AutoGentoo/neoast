@@ -30,11 +30,12 @@ void gs_free(GrammarState* self)
 
 CanonicalCollection* canonical_collection_init(const GrammarParser* parser)
 {
-    CanonicalCollection* self = malloc(sizeof(CanonicalCollection) + sizeof(GrammarState*) * 32);
+    CanonicalCollection* self = malloc(sizeof(CanonicalCollection));
     self->parser = parser;
     self->dfa = NULL;
     self->state_n = 0;
     self->state_s = 32;
+    self->all_states = malloc(sizeof(GrammarState*) * self->state_s);
     return self;
 }
 
@@ -235,6 +236,7 @@ void canonical_collection_free(CanonicalCollection* self)
         gs_free(self->all_states[i]);
     }
 
+    free(self->all_states);
     free(self);
 }
 
@@ -245,7 +247,7 @@ cc_add_state(CanonicalCollection* cc,
     if (cc->state_n + 1 >= cc->state_s)
     {
         cc->state_s *= 2;
-        cc = realloc(cc, sizeof(CanonicalCollection) + sizeof(GrammarState*) * cc->state_s);
+        cc->all_states = realloc(cc->all_states, sizeof(GrammarState*) * cc->state_s);
     }
 
     cc->all_states[cc->state_n++] = s;
