@@ -128,6 +128,8 @@ typedef union {
 int gen_parser_init(GrammarParser* self);
 int codegen_write(const struct File* self, FILE* fp);
 
+void file_free(struct File* self);
+
 extern U32* GEN_parsing_table;
 extern const char* tok_names_errors[];
 

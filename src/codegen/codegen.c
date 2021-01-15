@@ -909,12 +909,29 @@ int codegen_write(const struct File* self, FILE* fp)
                 "    \n"
                 "    U64 input_len = strlen(input);\n"
                 "    (void)lexer_fill_table(input, input_len, self, buffers);\n"
-                "    I32 output_idx = parser_parse_lr(self, buffers, buffers);\n"
+                "    I32 output_idx = parser_parse_lr(self, buffers, GEN_parsing_table);\n"
                 "    \n"
                 "    if (output_idx < 0) return NULL;\n"
                 "    return (void*)((CodegenUnion*)buffers)[output_idx];\n"
                 "}\n\n",
                 options.prefix);
+
+    canonical_collection_free(cc);
+    free(parsing_table);
+    free(gg_rules);
+    free(grammar_table);
+    free(typed_tokens);
+    free(lexer_states);
+    free(macros);
+    free(precedence_table);
+    free(tokens);
+
+    for (int i = 0; i < lex_state_n; i++)
+    {
+        free(ll_rules[i]);
+    }
+    free(ll_rules);
+    free(ll_rule_count);
 
     return 0;
 }

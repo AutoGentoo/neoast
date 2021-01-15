@@ -59,11 +59,13 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    codegen_write(((CodegenUnion*)buf->value_table)[result_idx].file, fp);
+    struct File* f = ((CodegenUnion*)buf->value_table)[result_idx].file;
+    codegen_write(f, fp);
     fclose(fp);
 
     parser_free_buffers(buf);
     parser_free(&parser);
     free(input);
+    file_free(f);
     return 0;
 }

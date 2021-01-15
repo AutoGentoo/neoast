@@ -607,3 +607,81 @@ int gen_parser_init(GrammarParser* self)
 
     return 0;
 }
+
+static void
+key_val_free(struct KeyVal* self)
+{
+    struct KeyVal* next;
+    while (self)
+    {
+        next = self->next;
+        free(self->key);
+        free(self->value);
+        free(self);
+        self = next;
+    }
+}
+
+static void
+lexer_rule_free(struct LexerRuleProto* self)
+{
+    struct LexerRuleProto* next;
+    while (self)
+    {
+        next = self->next;
+        free(self->function);
+        free(self->regex);
+        free(self->lexer_state);
+        free(self);
+        self = next;
+    }
+}
+
+static void
+tokens_free(struct Token* self)
+{
+    struct Token* next;
+    while (self)
+    {
+        next = self->next;
+        free(self->name);
+        free(self);
+        self = next;
+    }
+}
+
+static void
+grammar_rule_single_free(struct GrammarRuleSingleProto* self)
+{
+    struct GrammarRuleSingleProto* next;
+    while (self)
+    {
+        next = self->next;
+        free(self->function);
+        tokens_free(self->tokens);
+        free(self);
+        self = next;
+    }
+}
+
+static void
+grammar_rule_multi_free(struct GrammarRuleProto* self)
+{
+    struct GrammarRuleProto* next;
+    while (self)
+    {
+        next = self->next;
+        free(self->name);
+        grammar_rule_single_free(self->rules);
+        free(self);
+        self = next;
+    }
+}
+
+void file_free(struct File* self)
+{
+    key_val_free(self->header);
+    lexer_rule_free(self->lexer_rules);
+    grammar_rule_multi_free(self->grammar_rules);
+    free(self);
+}
