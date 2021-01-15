@@ -15,18 +15,20 @@
 #define ID_X "[A-z][A-z0-9]*"
 
 U32* GEN_parsing_table = NULL;
-const char* tok_names = "$ohdxei|;{FKHlLGMTSMA";
+const char* tok_names = "$ohud<xet|;{FKHlLGgTSMA";
 const char* tok_names_errors[] = {
         "eof",
         "option",
         "header",
+        "union",
         "delimiter",
+        "lex_state",
         "regex",
         "expr_def",
         "grammar_token",
-        "grammar_or",
-        "grammar_term",
-        "grammar_action",
+        "|",
+        ";",
+        "{grammar action}",
         "file",
         "key_value",
         "header",
@@ -101,11 +103,12 @@ static I32 ll_option(const char* lex_text, CodegenUnion* lex_val)
 {
     // Skip over '%option '
     const char* text_skip = lex_text + 8;
-    char* divider = strchr(text_skip, '=');
+    char* divider_1 = strchr(text_skip, '=');
+    char* divider_2 = strchr(divider_1 + 2, '"');
 
     lex_val->key_val = key_val_build(KEY_VAL_OPTION,
-                                     strndup(text_skip, text_skip - divider),
-                                     strdup(divider + 1));
+                                     strndup(text_skip, divider_1 - text_skip),
+                                     strndup(divider_1 + 2, divider_2 - divider_1 - 2));
 
     return TOK_OPTION;
 }
@@ -137,12 +140,15 @@ static I32 ll_token(const char* lex_text, CodegenUnion* lex_val)
 }
 static I32 ll_start(const char* lex_text, CodegenUnion* lex_val)
 {
-    const char* find_token_start = lex_text + 7;
+    const char* type_start = strchr(lex_text + 5, '<');
+    const char* type_end = strchr(type_start, '>');
+    const char* find_token_start = type_end + 1;
     while (*find_token_start == ' ')
         find_token_start++;
 
     lex_val->key_val = key_val_build(KEY_VAL_START,
-                                     strdup(find_token_start), NULL);
+                                     strdup(find_token_start),
+                                     strndup(type_start + 1, type_end - type_start - 1));
     return TOK_OPTION;
 }
 static I32 ll_state(const char* lex_text, CodegenUnion* lex_val)
@@ -349,11 +355,12 @@ static I32 ll_regex_add_to_buffer(const char* lex_text, void* lex_val, U32 len, 
 
 static LexerRule ll_rules_s0[] = {
         {.regex_raw = "[\n ]+"}, // skip
+        {.regex_raw = "//[^\n]*\n"},
         {.regex_raw = "%%", .expr = (lexer_expr) ll_enter_grammar},
         {.regex_raw = "==", .expr = (lexer_expr) ll_enter_lex},
-        {.regex_raw = "%option" WS_X ID_X"=\"[A-z|0-9_\\-\\+]*\"", .expr = (lexer_expr) ll_option},
+        {.regex_raw = "%option" WS_X ID_X"=\"[^\"]*\"", .expr = (lexer_expr) ll_option},
         {.regex_raw = "%token" WS_X ID_X, .expr = (lexer_expr) ll_token},
-        {.regex_raw = "%start" WS_X ID_X, .expr = (lexer_expr) ll_start},
+        {.regex_raw = "%start" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_start},
         {.regex_raw = "%state" WS_X ID_X, .expr = (lexer_expr) ll_state},
         {.regex_raw = "%type" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_type},
         {.regex_raw = "%token" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_token_with_type},
@@ -367,6 +374,7 @@ static LexerRule ll_rules_s0[] = {
 
 static LexerRule ll_rules_lex[] = {
         {.regex_raw = "[\n ]+"}, // skip
+        {.regex_raw = "//[^\n]*\n"},
         {.regex_raw = "==", .expr = (lexer_expr) ll_exit_state},
         {.regex_raw = "<" ID_X ">" WS_OPT "{", .expr = (lexer_expr) ll_lex_state},
         {.regex_raw = "\"", .expr = (lexer_expr) ll_build_regex},
@@ -375,6 +383,7 @@ static LexerRule ll_rules_lex[] = {
 
 static LexerRule ll_rules_grammar[] = {
         {.regex_raw = "[\n ]+"}, // skip
+        {.regex_raw = "//[^\n]*\n"},
         {.regex_raw = "%%", .expr = (lexer_expr) ll_exit_state},
         {.regex_raw = "[A-z_]+:", .expr = (lexer_expr) ll_g_rule},
         {.regex_raw = "{", .expr = (lexer_expr) ll_match_brace},
@@ -396,6 +405,7 @@ static LexerRule  ll_rules_regex[] = {
 
 static LexerRule ll_rules_lex_state[] = {
         {.regex_raw = "[\n ]+"}, // skip
+        {.regex_raw = "//[^\n]*\n"},
         {.regex_raw = "==", .expr = (lexer_expr) ll_exit_state},
         {.regex_raw = "}", .expr = (lexer_expr) ll_lex_state_exit},
         {.regex_raw = "\"", .expr = (lexer_expr) ll_build_regex},
@@ -449,7 +459,8 @@ const U32 grammars[][7] = {
 
         // TOK_GG_MULTI_GRAMMAR =>
         {TOK_GG_SINGLE_GRAMMAR},
-        {TOK_GG_MULTI_GRAMMAR, TOK_G_OR, TOK_GG_SINGLE_GRAMMAR},
+        {TOK_GG_SINGLE_GRAMMAR, TOK_G_OR, TOK_GG_MULTI_GRAMMAR},
+        {TOK_G_ACTION}, // empty rule
 
         // TOK_GG_GRAMMAR =>
         {TOK_G_EXPR_DEF, TOK_GG_MULTI_GRAMMAR, TOK_G_TERM},
@@ -497,7 +508,7 @@ static void gg_build_l_rule_3(CodegenUnion* dest, CodegenUnion* args)
         iter->lexer_state = args[0].string;
     }
 }
-static void gg_build_tok_1(CodegenUnion* dest, CodegenUnion* args)
+static void gg_build_tok(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->token = args[0].token;
     dest->token->next = args[1].token;
@@ -513,6 +524,13 @@ static void gg_build_multi(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->g_single_rule = args[0].g_single_rule;
     dest->g_single_rule->next = args[2].g_single_rule;
+}
+static void gg_build_multi_empty(CodegenUnion* dest, CodegenUnion* args)
+{
+    dest->g_single_rule = malloc(sizeof(struct GrammarRuleSingleProto));
+    dest->g_single_rule->next = NULL;
+    dest->g_single_rule->tokens = NULL;
+    dest->g_single_rule->function = args[0].string;
 }
 static void gg_build_grammar(CodegenUnion* dest, CodegenUnion* args)
 {
@@ -537,23 +555,24 @@ static void gg_build_file(CodegenUnion* dest, CodegenUnion* args)
 static const GrammarRule gg_rules[] = {
         {.token=TOK_AUGMENT, .tok_n=1, .grammar=grammars[0]},
         {.token=TOK_GG_KEY_VALS, .tok_n=1, .grammar=grammars[1]},
-        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[2],       .expr = (parser_expr) gg_build_header},
-        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[3],       .expr = (parser_expr) gg_build_union},
+        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[2],        .expr = (parser_expr) gg_build_header},
+        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[3],        .expr = (parser_expr) gg_build_union},
         {.token=TOK_GG_HEADER, .tok_n=1, .grammar=grammars[4]},
-        {.token=TOK_GG_HEADER, .tok_n=2, .grammar=grammars[5],         .expr = (parser_expr) gg_key_val_add_next},
-        {.token=TOK_GG_LEX_RULE, .tok_n=2, .grammar=grammars[6],       .expr = (parser_expr) gg_build_l_rule_1},
+        {.token=TOK_GG_HEADER, .tok_n=2, .grammar=grammars[5],          .expr = (parser_expr) gg_key_val_add_next},
+        {.token=TOK_GG_LEX_RULE, .tok_n=2, .grammar=grammars[6],        .expr = (parser_expr) gg_build_l_rule_1},
         {.token=TOK_GG_LEX_RULES, .tok_n=1, .grammar=grammars[7]},
-        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[8],      .expr = (parser_expr) gg_build_l_rule_2},
-        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[9],      .expr = (parser_expr) gg_build_l_rule_3},
+        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[8],       .expr = (parser_expr) gg_build_l_rule_2},
+        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[9],       .expr = (parser_expr) gg_build_l_rule_3},
         {.token=TOK_GG_TOKENS, .tok_n=1, .grammar=grammars[10]},
-        {.token=TOK_GG_TOKENS, .tok_n=2, .grammar=grammars[11],         .expr = (parser_expr) gg_build_tok_1},
+        {.token=TOK_GG_TOKENS, .tok_n=2, .grammar=grammars[11],         .expr = (parser_expr) gg_build_tok},
         {.token=TOK_GG_SINGLE_GRAMMAR, .tok_n=2, .grammar=grammars[12], .expr = (parser_expr) gg_build_single},
         {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=1, .grammar=grammars[13]},
-        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=3, .grammar=grammars[14], .expr = (parser_expr) gg_build_multi},
-        {.token=TOK_GG_GRAMMAR, .tok_n=3, .grammar=grammars[15],       .expr = (parser_expr) gg_build_grammar},
-        {.token=TOK_GG_GRAMMARS, .tok_n=1, .grammar=grammars[16]},
-        {.token=TOK_GG_GRAMMARS, .tok_n=2, .grammar=grammars[17],      .expr = (parser_expr) gg_build_grammars},
-        {.token=TOK_GG_FILE, .tok_n=7, .grammar=grammars[18],          .expr = (parser_expr) gg_build_file},
+        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=3, .grammar=grammars[14],  .expr = (parser_expr) gg_build_multi},
+        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=1, .grammar=grammars[15],  .expr = (parser_expr) gg_build_multi_empty},
+        {.token=TOK_GG_GRAMMAR, .tok_n=3, .grammar=grammars[16],        .expr = (parser_expr) gg_build_grammar},
+        {.token=TOK_GG_GRAMMARS, .tok_n=1, .grammar=grammars[17]},
+        {.token=TOK_GG_GRAMMARS, .tok_n=2, .grammar=grammars[18],       .expr = (parser_expr) gg_build_grammars},
+        {.token=TOK_GG_FILE, .tok_n=7, .grammar=grammars[19],           .expr = (parser_expr) gg_build_file},
 };
 
 U8 precedence_table[TOK_AUGMENT] = {0};
@@ -567,6 +586,9 @@ int gen_parser_init(GrammarParser* self)
     self->grammar_n = ARR_LEN(gg_rules);
     self->action_token_n = TOK_GG_FILE;
     self->token_n = TOK_AUGMENT;
+    self->token_names = tok_names_errors;
+
+    precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
 
     U32 regex_init_errors;
     if ((regex_init_errors = parser_init(self)))
@@ -580,7 +602,7 @@ int gen_parser_init(GrammarParser* self)
     canonical_collection_resolve(cc, LALR_1);
 
     GEN_parsing_table = canonical_collection_generate(cc, precedence_table);
-    dump_table(GEN_parsing_table, cc, tok_names, 0);
+    dump_table(GEN_parsing_table, cc, tok_names, 0, stdout, NULL);
     canonical_collection_free(cc);
 
     return 0;

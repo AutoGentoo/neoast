@@ -4,4 +4,4 @@ add_library(
         canonical_collection.c canonical_collection.h
         )
 
-include_directories(neoast-codegen PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../)
+include_directories(neoast-codegen PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../ ${CMAKE_CURRENT_SOURCE_DIR}/../../include)

@@ -7,68 +7,9 @@
 
 #include <stdio.h>
 #include "common.h"
-#include <cre2.h>
+#include <neoast.h>
 
 #define OFFSET_VOID_PTR(ptr, s, i) (void*)(((char*)(ptr)) + ((s) * (i)))
-
-typedef void (*parser_expr) (void* dest, void** values);
-
-enum
-{
-    // Accept an input during an augmented state
-    // step
-    TOK_ACCEPT_MASK = 1 << 29,
-
-    // Go to another parser state.
-    // TOK & TOK_MASK == next state
-    TOK_SHIFT_MASK = 1 << 30,
-
-    // Points to a reduction that can be made
-    // Passes the compound expression into a
-    // parser grammar rule handler.
-    TOK_REDUCE_MASK = 1 << 31,
-
-    // Unexpected token or expression
-    TOK_SYNTAX_ERROR = 0,
-
-    // Tokens can have every other bit
-    // enabled
-    TOK_MASK = (0xFFFFFFFF) & ~(
-            0
-            | TOK_ACCEPT_MASK
-            | TOK_SHIFT_MASK
-            | TOK_REDUCE_MASK
-            ),
-};
-
-typedef enum
-{
-    PRECEDENCE_NONE,
-    PRECEDENCE_LEFT,
-    PRECEDENCE_RIGHT
-} precedence_t;
-
-struct GrammarRule_prv
-{
-    U32 token;
-    U32 tok_n;
-    const U32* grammar;
-    parser_expr expr;
-};
-
-struct GrammarParser_prv
-{
-    cre2_options_t* regex_opts;
-    U32 grammar_n;
-    U32 lex_state_n;
-    const U32* lex_n;
-    LexerRule* const* lexer_rules;
-    const GrammarRule* grammar_rules;
-
-    // Also number of columns
-    U32 token_n;
-    U32 action_token_n;
-};
 
 /**
  * Run the LR parsing algorithm
@@ -83,17 +24,16 @@ struct GrammarParser_prv
  */
 I32 parser_parse_lr(
         const GrammarParser* parser,
-        Stack* stack,
         const U32* parsing_table,
-        const char* token_names[],
-        U32* token_table,
-        void* val_table,
-        size_t val_s);
+        const ParserBuffers* buffers);
 
 U32 parser_init(GrammarParser* self);
 void parser_free(GrammarParser* self);
 
 Stack* parser_allocate_stack(U64 stack_n);
 void parser_free_stack(Stack* self);
+ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, int max_lex_state_depth, size_t val_s);
+void parser_free_buffers(ParserBuffers* self);
+void parser_reset_buffers(const ParserBuffers* self);
 
 #endif //NEOAST_PARSER_H

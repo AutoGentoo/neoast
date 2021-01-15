@@ -90,6 +90,7 @@ CTEST(test_lexer)
     CodegenUnion llval;
 
     Stack* lex_state = parser_allocate_stack(32);
+    STACK_PUSH(lex_state, 0);
 
     U32 len = strlen(lexer_input);
     U32 offset = 0;

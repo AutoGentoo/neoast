@@ -179,6 +179,7 @@ void initialize_parser()
     p.lexer_rules = l_rules;
     p.action_token_n = 9;
     p.token_n = TOK_AUGMENT;
+    p.token_names = token_error_names;
 
     // Initialize the lexer regex rules
     parser_init(&p);
@@ -191,7 +192,7 @@ CTEST(test_clr_1)
     canonical_collection_resolve(cc, CLR_1);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
-    dump_table(table, cc, token_names, 0);
+    dump_table(table, cc, token_names, 0, stdout, NULL);
     canonical_collection_free(cc);
     free(table);
     parser_free(&p);
@@ -204,7 +205,7 @@ CTEST(test_lalr_1)
     canonical_collection_resolve(cc, LALR_1);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
-    dump_table(table, cc, token_names, 0);
+    dump_table(table, cc, token_names, 0, stdout, NULL);
     canonical_collection_free(cc);
     free(table);
     parser_free(&p);
@@ -215,10 +216,9 @@ CTEST(test_lalr_1_calculator)
     const char* lexer_input = "1 + (5 * 9) + 2";
     initialize_parser();
 
-    U32 token_table[32];
-    CalculatorUnion value_table[32];
+    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, sizeof(CalculatorUnion));
 
-    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, token_table, value_table, sizeof(CalculatorUnion), 32);
+    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
     assert_int_equal(tok_n, 9);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
@@ -226,17 +226,15 @@ CTEST(test_lalr_1_calculator)
 
     U32* table = canonical_collection_generate(cc, precedence_table);
 
-    Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
-    stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, table, token_error_names, token_table, value_table, sizeof(CalculatorUnion));
+    I32 res_idx = parser_parse_lr(&p, table, buf);
 
-    dump_table(table, cc, token_names, 0);
+    dump_table(table, cc, token_names, 0, stdout, NULL);
     assert_int_not_equal(res_idx, -1);
 
-    printf("%s = %lf\n", lexer_input, value_table[res_idx].number);
-    assert_double_equal(value_table[res_idx].number, 1 + (5 * 9) + 2, 0.005);
+    printf("%s = %lf\n", lexer_input, ((CalculatorUnion*)buf->value_table)[res_idx].number);
+    assert_double_equal(((CalculatorUnion*)buf->value_table)[res_idx].number, 1 + (5 * 9) + 2, 0.005);
 
-    free(stack);
+    parser_free_buffers(buf);
     canonical_collection_free(cc);
     free(table);
     parser_free(&p);
@@ -247,10 +245,9 @@ CTEST(test_lalr_1_order_of_ops)
     const char* lexer_input = "1 + 5 * 9 + 4";
     initialize_parser();
 
-    U32 token_table[32];
-    CalculatorUnion value_table[32];
+    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, sizeof(CalculatorUnion));
 
-    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, token_table, value_table, sizeof(CalculatorUnion), 32);
+    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
     assert_int_equal(tok_n, 7);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
@@ -258,14 +255,12 @@ CTEST(test_lalr_1_order_of_ops)
 
     U32* table = canonical_collection_generate(cc, precedence_table);
 
-    Stack* stack = malloc(sizeof(Stack) + (sizeof(U32) * 64));
-    stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, table, token_error_names, token_table, value_table, sizeof(CalculatorUnion));
+    I32 res_idx = parser_parse_lr(&p, table, buf);
 
     // This parser has no order of ops
-    assert_double_equal(value_table[res_idx].number, (((1 + 5) * 9) + 4), 0.005);
+    assert_double_equal(((CalculatorUnion*)buf->value_table)[res_idx].number, (((1 + 5) * 9) + 4), 0.005);
 
-    free(stack);
+    parser_free_buffers(buf);
     canonical_collection_free(cc);
     free(table);
     parser_free(&p);

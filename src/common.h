@@ -16,6 +16,7 @@ typedef struct LexerRule_prv LexerRule;
 typedef struct GrammarParser_prv GrammarParser;
 typedef struct GrammarRule_prv GrammarRule;
 typedef struct Stack_prv Stack;
+typedef struct ParserBuffers_prv ParserBuffers;
 
 // Codegen
 typedef struct LR_1_prv LR_1;
@@ -35,6 +36,17 @@ struct Stack_prv
 {
     U32 pos;
     U32 data[];
+};
+
+struct ParserBuffers_prv
+{
+    void* value_table;
+    U32* token_table;
+    Stack* lexing_state_stack;
+    Stack* parsing_stack;
+    char* text_buffer;
+    U32 val_s;
+    U32 table_n;
 };
 
 #endif //NEOAST_COMMON_H

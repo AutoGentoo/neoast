@@ -78,7 +78,7 @@ U32 g_lr_reduce(
 }
 
 void lr_parse_error(const U32* parsing_table,
-                    const char* token_names[],
+                    const char* const* token_names,
                     U32 current_state,
                     U32 error_tok,
                     U32 prev_tok,
@@ -96,7 +96,7 @@ void lr_parse_error(const U32* parsing_table,
     {
         if (parsing_table[index_off + i] != TOK_SYNTAX_ERROR)
         {
-            fprintf(stderr, "%s,", token_names[i]);
+            fprintf(stderr, "%s ", token_names[i]);
         }
     }
 
@@ -105,20 +105,16 @@ void lr_parse_error(const U32* parsing_table,
 
 I32 parser_parse_lr(
         const GrammarParser* parser,
-        Stack* stack,
         const U32* parsing_table,
-        const char* token_names[],
-        U32* token_table,
-        void* val_table,
-        size_t val_s)
+        const ParserBuffers* buffers)
 {
     // Push the initial state to the stack
     U32 current_state = 0;
-    STACK_PUSH(stack, current_state);
+    STACK_PUSH(buffers->parsing_stack, current_state);
 
     U32 i = 0;
     U32 prev_tok = 0;
-    U32 tok = token_table[i];
+    U32 tok = buffers->token_table[i];
     U32 dest_idx; // index of the last reduction
     while (1)
     {
@@ -132,23 +128,23 @@ I32 parser_parse_lr(
         if (table_value == TOK_SYNTAX_ERROR)
         {
             lr_parse_error(parsing_table,
-                           token_names, current_state,
+                           parser->token_names, current_state,
                            tok, prev_tok,
                            parser->token_n);
             return -1;
         } else if (table_value & TOK_SHIFT_MASK)
         {
             current_state = table_value & TOK_MASK;
-            STACK_PUSH(stack, i);
-            STACK_PUSH(stack, current_state);
+            STACK_PUSH(buffers->parsing_stack, i);
+            STACK_PUSH(buffers->parsing_stack, current_state);
             prev_tok = tok;
-            tok = token_table[++i];
+            tok = buffers->token_table[++i];
         } else if (table_value & TOK_REDUCE_MASK)
         {
             // Reduce this rule
-            current_state = g_lr_reduce(parser, stack, parsing_table,
+            current_state = g_lr_reduce(parser, buffers->parsing_stack, parsing_table,
                                         table_value & TOK_MASK,
-                                        token_table, val_table, val_s,
+                                        buffers->token_table, buffers->value_table, buffers->val_s,
                                         &dest_idx);
             prev_tok = parser->grammar_rules[table_value & TOK_MASK].token;
         } else if (table_value & TOK_ACCEPT_MASK)

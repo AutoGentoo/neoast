@@ -40,16 +40,11 @@ int main(int argc, const char* argv[])
     if (gen_parser_init(&parser))
         return 1;
 
-    U32 token_table[1024];
-    CodegenUnion value_table[1024];
-
-    int tok_n = lexer_fill_table(input, file_size, &parser, token_table,
-                                 value_table, sizeof(CodegenUnion), 1024);
+    ParserBuffers* buf = parser_allocate_buffers(1024, 1024, 16, sizeof(CodegenUnion));
+    int tok_n = lexer_fill_table(input, file_size, &parser, buf);
 
     printf("tokens: %d\n", tok_n);
-    Stack* p_stack = parser_allocate_stack(1024);
-    I32 result_idx = parser_parse_lr(&parser, p_stack, GEN_parsing_table, tok_names_errors,
-                                     token_table, value_table, sizeof(CodegenUnion));
+    I32 result_idx = parser_parse_lr(&parser, GEN_parsing_table, buf);
 
     if (result_idx == -1)
     {
@@ -64,10 +59,10 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    codegen_write(value_table[result_idx].file, fp);
+    codegen_write(((CodegenUnion*)buf->value_table)[result_idx].file, fp);
     fclose(fp);
 
-    parser_free_stack(p_stack);
+    parser_free_buffers(buf);
     parser_free(&parser);
     free(input);
     return 0;

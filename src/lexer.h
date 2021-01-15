@@ -52,7 +52,6 @@ lex_next(const char* input,
  * @param val_n offset of a value (size of value union)
  * @return number of parsed tokens
  */
-U32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, U32* table, void* val_table, U32 val_n,
-                     U32 table_n);
+U32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf);
 
 #endif //NEOAST_LEXER_H

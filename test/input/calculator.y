@@ -5,7 +5,14 @@
 // This is a calculator test program
 }
 
-%token<integer> TOK_N
+// This is default, just want to test the parser
+%option parser_type="LALR(1)"
+//%option disable_locks="TRUE"
+%option debug_table="TRUE"
+%option debug_ids="$d+-/*^()ES"
+%option prefix="calc"
+
+%token<number> TOK_N
 %token TOK_PLUS
 %token TOK_MINUS
 %token TOK_SLASH
@@ -15,8 +22,10 @@
 %token TOK_P_CLOSE
 
 %type <number> expr
-%type <number> start
-%start program
+%type <number> program
+%start <number> program
+
+// Test global comment
 
 %left TOK_PLUS
 %left TOK_MINUS
@@ -29,8 +38,8 @@
 }
 
 ==
-
-"[0-9]+"      {yyval->integer = strtod(yytext, NULL, 10); return TOK_N;}
+// Test lex rule comment
+"[0-9]+"       {yyval->integer = strtod(yytext, NULL, 10); return TOK_N;}
 "\\+"          {return TOK_PLUS;}
 "\\-"          {return TOK_MINUS;}
 "\\/"          {return TOK_SLASH;}
@@ -42,17 +51,17 @@
 ==
 
 %%
-
+// Test grammar rule comment
 program: expr     {$$ = $1;}
-     |  MT      {$$ = 0;}
+     |            {$$ = 0;}
      ;
 
-expr: TOK_N                             {$$ = $1}
+expr: TOK_N                             {$$ = $1;}
     | expr TOK_PLUS expr                {$$ = $1 + $3;}
     | expr TOK_MINUS expr               {$$ = $1 - $3;}
     | expr TOK_SLASH expr               {$$ = $1 / $3;}
     | expr TOK_STAR expr                {$$ = $1 * $3;}
-    | expr TOK_CARET expr               {$$ = $1 ^ $3;}
+    | expr TOK_CARET expr               {$$ = pow($1, $3);}
     | TOK_P_OPEN expr TOK_P_CLOSE       {$$ = $2;}
     ;
 %%

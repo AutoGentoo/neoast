@@ -7,24 +7,23 @@
 #include "parser.h"
 #include "lexer.h"
 
-U32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, U32* table, void* val_table, U32 val_n,
-                     U32 table_n)
+U32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf)
 {
-    void* current_val = val_table;
+    void* current_val = buf->value_table;
     int i = 0;
     Stack* lex_state = parser_allocate_stack(32);
     STACK_PUSH(lex_state, 0);
     U32 offset = 0;
-    while ((table[i] = lex_next(input, parse, current_val, len, &offset, lex_state)) && i < table_n) // While not EOF
+    while ((buf->token_table[i] = lex_next(input, parse, current_val, len, &offset, lex_state)) && i < buf->table_n) // While not EOF
     {
-        if (table[i] == -1)
+        if (buf->token_table[i] == -1)
         {
             fprintf(stderr, "Invalid character '%c' (state '%d')\n",
                     input[offset - 1], STACK_PEEK(lex_state));
             continue;
         }
 
-        current_val += val_n;
+        current_val += buf->val_s;
         i++;
     }
     parser_free_stack(lex_state);
