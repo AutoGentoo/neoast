@@ -38,13 +38,19 @@ int main(int argc, const char* argv[])
 
     GrammarParser parser;
     if (gen_parser_init(&parser))
+    {
+        free(input);
         return 1;
+    }
 
     ParserBuffers* buf = parser_allocate_buffers(1024, 1024, 16, sizeof(CodegenUnion));
     int tok_n = lexer_fill_table(input, file_size, &parser, buf);
     if (tok_n < 0)
     {
-        fprintf(stderr, "Failed to lex file '%s'", argv[1]);
+        fprintf(stderr, "Failed to lex file '%s'\n", argv[1]);
+        parser_free_buffers(buf);
+        parser_free(&parser);
+        free(input);
         return 1;
     }
 
@@ -53,17 +59,24 @@ int main(int argc, const char* argv[])
     if (result_idx == -1)
     {
         fprintf(stderr, "Failed to parse file '%s'\n", argv[1]);
-        return 1;
-    }
-
-    fp = fopen(argv[2], "w+");
-    if (!fp)
-    {
-        fprintf(stderr, "Failed to open '%s': %s\n", argv[1], strerror(errno));
+        parser_free_buffers(buf);
+        parser_free(&parser);
+        free(input);
         return 1;
     }
 
     struct File* f = ((CodegenUnion*)buf->value_table)[result_idx].file;
+    fp = fopen(argv[2], "w+");
+    if (!fp)
+    {
+        fprintf(stderr, "Failed to open '%s': %s\n", argv[1], strerror(errno));
+        parser_free_buffers(buf);
+        parser_free(&parser);
+        free(input);
+        file_free(f);
+        return 1;
+    }
+
     codegen_write(f, fp);
     fclose(fp);
 

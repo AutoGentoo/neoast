@@ -602,7 +602,6 @@ int gen_parser_init(GrammarParser* self)
     canonical_collection_resolve(cc, LALR_1);
 
     GEN_parsing_table = canonical_collection_generate(cc, precedence_table);
-    dump_table(GEN_parsing_table, cc, tok_names, 0, stdout, NULL);
     canonical_collection_free(cc);
 
     return 0;

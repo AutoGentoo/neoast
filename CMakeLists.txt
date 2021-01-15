@@ -5,6 +5,7 @@ project(neoast VERSION "1.0")
 
 option(SANITIZER_BUILD "Build with AddressSanitizer" OFF)
 set(ASAN_LIB "libasan.so" CACHE STRING "Path to address sanitizer library")
+set(RE2_BUILD_TESTING CACHE STRING OFF)
 
 add_compile_options(-g -fno-omit-frame-pointer)
 add_link_options(-fno-omit-frame-pointer)
