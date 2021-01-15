@@ -42,8 +42,12 @@ int main(int argc, const char* argv[])
 
     ParserBuffers* buf = parser_allocate_buffers(1024, 1024, 16, sizeof(CodegenUnion));
     int tok_n = lexer_fill_table(input, file_size, &parser, buf);
+    if (tok_n < 0)
+    {
+        fprintf(stderr, "Failed to lex file '%s'", argv[1]);
+        return 1;
+    }
 
-    printf("tokens: %d\n", tok_n);
     I32 result_idx = parser_parse_lr(&parser, GEN_parsing_table, buf);
 
     if (result_idx == -1)

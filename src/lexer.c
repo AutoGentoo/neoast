@@ -7,7 +7,7 @@
 #include "lexer.h"
 #include "parser.h"
 
-U32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf)
+I32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf)
 {
     void* current_val = buf->value_table;
     int i = 0;
@@ -19,7 +19,7 @@ U32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, con
         {
             fprintf(stderr, "Invalid character '%c' (state '%d')\n",
                     input[offset - 1], STACK_PEEK(buf->lexing_state_stack));
-            continue;
+            return -1;
         }
 
         current_val += buf->val_s;

@@ -134,7 +134,7 @@ I32 parser_parse_lr(
 
 #ifndef NEOAST_LEXER_H
 #define NEOAST_LEXER_H
-U32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf);
+I32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf);
 
 int
 lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, U32 len, U32* offset);

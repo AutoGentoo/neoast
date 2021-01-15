@@ -915,14 +915,14 @@ int codegen_write(const struct File* self, FILE* fp)
                 "    parser_reset_buffers(buffers);\n"
                 "    \n"
                 "    U64 input_len = strlen(input);\n"
-                "    (void)lexer_fill_table(input, input_len, self, buffers);\n"
+                "    if (lexer_fill_table(input, input_len, self, buffers) == -1) return (typeof(t.%s))0;\n"
                 "    I32 output_idx = parser_parse_lr(self, GEN_parsing_table, buffers);\n"
                 "    \n"
                 "    if (output_idx < 0) return (typeof(t.%s))0;\n"
                 "    return ((" CODEGEN_UNION "*)buffers->value_table)[output_idx].%s;\n"
                 "}\n\n",
                 _start->value, options.prefix,
-                _start->value, _start->value);
+                _start->value, _start->value, _start->value);
 
     canonical_collection_free(cc);
     free(parsing_table);
