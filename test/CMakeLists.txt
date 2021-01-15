@@ -17,3 +17,13 @@ add_mocked_test(tablegen_C
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT ${EXEC_ENV}
         )
+
+BuildParser(calculator_parser ${CMAKE_CURRENT_SOURCE_DIR}/input/calculator.y)
+add_mocked_test(integration_C
+        SOURCES
+        input/calculator.y
+        integration_test.c ${calculator_parser_OUTPUT}
+        LINK_LIBRARIES neoast m
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT ${EXEC_ENV}
+        )

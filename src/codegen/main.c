@@ -12,7 +12,7 @@
 
 int main(int argc, const char* argv[])
 {
-    if (argc < 3)
+    if (argc != 3)
     {
         fprintf(stderr, "usage: %s [INPUT_FILE] [OUTPUT_FILE]\n", argv[0]);
         return 1;

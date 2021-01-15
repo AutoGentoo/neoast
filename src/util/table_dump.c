@@ -1,5 +1,4 @@
 #include <lexer.h>
-#include <parser.h>
 #include <parsergen/canonical_collection.h>
 
 void dump_item(const LR_1* lr1, U32 tok_n, const char* tok_names, FILE* fp)

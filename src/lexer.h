@@ -9,20 +9,6 @@
 #include <cre2.h>
 #include "common.h"
 
-typedef I32 (*lexer_expr) (
-        const char* lex_text,
-        void* lex_val,
-        U32 len,
-        Stack* ll_state);
-
-struct LexerRule_prv
-{
-    cre2_regexp_t* regex;
-    lexer_expr expr;
-    I32 tok;
-    const char* regex_raw;
-};
-
 /**
  * Get the next token in our buffer
  * We want to use FILE* here even if we
@@ -34,12 +20,7 @@ struct LexerRule_prv
  * @return next token in buffer
  */
 int
-lex_next(const char* input,
-         const GrammarParser* parser,
-         void* lval,
-         U32 len,
-         U32* offset,
-         Stack* lex_state);
+lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, U32 len, U32* offset);
 
 /**
  * Use the lexer to get every token in a string

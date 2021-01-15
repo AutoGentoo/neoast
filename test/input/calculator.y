@@ -1,5 +1,6 @@
 %top {
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
 // This is a calculator test program
@@ -39,7 +40,8 @@
 
 ==
 // Test lex rule comment
-"[0-9]+"       {yyval->integer = strtod(yytext, NULL, 10); return TOK_N;}
+"[ ]+"         {return -1;}
+"[0-9]+"       {yyval->number = strtod(yytext, NULL); return TOK_N;}
 "\\+"          {return TOK_PLUS;}
 "\\-"          {return TOK_MINUS;}
 "\\/"          {return TOK_SLASH;}

@@ -4,39 +4,32 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include "parser.h"
 #include "lexer.h"
+#include "parser.h"
 
 U32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf)
 {
     void* current_val = buf->value_table;
     int i = 0;
-    Stack* lex_state = parser_allocate_stack(32);
-    STACK_PUSH(lex_state, 0);
+    STACK_PUSH(buf->lexing_state_stack, 0);
     U32 offset = 0;
-    while ((buf->token_table[i] = lex_next(input, parse, current_val, len, &offset, lex_state)) && i < buf->table_n) // While not EOF
+    while ((buf->token_table[i] = lex_next(input, parse, buf, current_val, len, &offset)) && i < buf->table_n) // While not EOF
     {
         if (buf->token_table[i] == -1)
         {
             fprintf(stderr, "Invalid character '%c' (state '%d')\n",
-                    input[offset - 1], STACK_PEEK(lex_state));
+                    input[offset - 1], STACK_PEEK(buf->lexing_state_stack));
             continue;
         }
 
         current_val += buf->val_s;
         i++;
     }
-    parser_free_stack(lex_state);
 
     return i;
 }
 
-int lex_next(const char* input,
-             const GrammarParser* parser,
-             void* lval,
-             U32 len,
-             U32* offset,
-             Stack* lex_state)
+int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, U32 len, U32* offset)
 {
     if (*offset >= len)
         return 0;
@@ -44,10 +37,8 @@ int lex_next(const char* input,
     cre2_string_t match;
     LexerRule* rule;
 
-    static __thread char lex_buffer[1024];
-
     int i = 0;
-    U32 state_index = STACK_PEEK(lex_state);
+    U32 state_index = STACK_PEEK(buf->lexing_state_stack);
     while(i < parser->lex_n[state_index])
     {
         rule = &parser->lexer_rules[state_index][i++];
@@ -62,14 +53,14 @@ int lex_next(const char* input,
             {
                 if (match.length < 1024)
                 {
-                    memcpy(lex_buffer, input + *offset, match.length);
-                    lex_buffer[match.length] = 0;
-                    token = rule->expr(lex_buffer, lval, match.length, lex_state);
+                    memcpy(buf->text_buffer, input + *offset, match.length);
+                    buf->text_buffer[match.length] = 0;
+                    token = rule->expr(buf->text_buffer, lval, match.length, buf->lexing_state_stack);
                 }
                 else
                 {
                     char* m_buff = strndup(match.data, match.length);
-                    token = rule->expr(m_buff, lval, match.length, lex_state);
+                    token = rule->expr(m_buff, lval, match.length, buf->lexing_state_stack);
                     free(m_buff);
                 }
             }
@@ -86,7 +77,7 @@ int lex_next(const char* input,
             if (token > 0)
                 return token;
 
-            state_index = STACK_PEEK(lex_state);
+            state_index = STACK_PEEK(buf->lexing_state_stack);
             i = 0;
         }
     }

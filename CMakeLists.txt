@@ -4,7 +4,7 @@ enable_language(C)
 project(neoast VERSION "1.0")
 
 option(SANITIZER_BUILD "Build with AddressSanitizer" OFF)
-set(ASAN_LIB "libasan.so" CACHE STRING "Path to address santizer library")
+set(ASAN_LIB "libasan.so" CACHE STRING "Path to address sanitizer library")
 
 add_compile_options(-g -fno-omit-frame-pointer)
 add_link_options(-fno-omit-frame-pointer)
@@ -24,4 +24,6 @@ include_directories(${PROJECT_SOURCE_DIR}/third_party/cre2/src)
 
 add_subdirectory(src)
 add_subdirectory(third_party)
+
+include(cmake/neoast.cmake)
 add_subdirectory(test)

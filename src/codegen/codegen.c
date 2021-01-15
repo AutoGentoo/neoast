@@ -5,12 +5,12 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <parser.h>
+#include <lexer.h>
 #include "stdio.h"
 #include "codegen.h"
-#include <lexer.h>
 #include <parsergen/canonical_collection.h>
 #include <util/util.h>
+#include <stddef.h>
 
 #define CODEGEN_UNION "NeoastValue"
 
@@ -60,8 +60,8 @@ void put_lexer_rule_action(struct LexerRuleProto* self, FILE* fp)
                 CODEGEN_UNION"* yyval, "
                 "unsigned int len, "
                 "Stack* lex_state)\n{\n"
-                "    (void) lex_text;\n"
-                "    (void) lex_val;\n"
+                "    (void) yytext;\n"
+                "    (void) yyval;\n"
                 "    (void) len;\n"
                 "    (void) lex_state;\n"
                 "    {", self);
@@ -288,7 +288,7 @@ void put_lexer_rule_count(const U32* ll_rule_count, int lex_state_n, FILE* fp)
 static inline
 void put_lexer_states(const char* const* states_names, int states, FILE* fp)
 {
-    fputs("static LexerRule lexer_rules[] = {\n", fp);
+    fputs("static LexerRule* lexer_rules[] = {\n", fp);
     for (int i = 0; i < states; i++)
     {
         fprintf(fp, "        ll_rules_state_%s,\n", states_names[i]);
@@ -349,7 +349,7 @@ void put_grammar_table_and_rules(
     {
         if (rules[i].expr)
         {
-            fprintf(fp, "        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d], .expr=gg_rule_%p},\n",
+            fprintf(fp, "        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d], .expr=(parser_expr) gg_rule_%p},\n",
                     tokens[rules[i].token],
                     rules[i].tok_n,
                     grammar_offset_i,
@@ -647,7 +647,9 @@ int codegen_write(const struct File* self, FILE* fp)
     assert(macro_i == macro_n);
 
     // Write the header information
-    fputs("#include <neoast.h>\n", fp);
+    fputs("#define NEOAST_PARSER_CODEGEN___C\n"
+          "#include <neoast.h>\n"
+          "#include <string.h>\n", fp);
 
     if (_header)
     {
@@ -887,6 +889,10 @@ int codegen_write(const struct File* self, FILE* fp)
                 "    return (void*)&parser;\n"
                 "}\n\n",
                 options.prefix);
+    fprintf(fp, "void %s_free(GrammarParser* self)\n{\n"
+                "    parser_free(self);"
+                "}\n\n",
+                options.prefix);
 
     fprintf(fp, "void* %s_allocate_buffers()\n"
                 "{\n"
@@ -903,18 +909,20 @@ int codegen_write(const struct File* self, FILE* fp)
                 "}\n\n",
                 options.prefix);
 
-    fprintf(fp, "void* %s_parse(const GrammarParser* self, const void* buffers, const char* input)\n"
+    fprintf(fp, "static " CODEGEN_UNION " t;\n"
+                "typeof(t.%s) %s_parse(const GrammarParser* self, ParserBuffers* buffers, const char* input)\n"
                 "{\n"
                 "    parser_reset_buffers(buffers);\n"
                 "    \n"
                 "    U64 input_len = strlen(input);\n"
                 "    (void)lexer_fill_table(input, input_len, self, buffers);\n"
-                "    I32 output_idx = parser_parse_lr(self, buffers, GEN_parsing_table);\n"
+                "    I32 output_idx = parser_parse_lr(self, GEN_parsing_table, buffers);\n"
                 "    \n"
-                "    if (output_idx < 0) return NULL;\n"
-                "    return (void*)((CodegenUnion*)buffers)[output_idx];\n"
+                "    if (output_idx < 0) return (typeof(t.%s))0;\n"
+                "    return ((" CODEGEN_UNION "*)buffers->value_table)[output_idx].%s;\n"
                 "}\n\n",
-                options.prefix);
+                _start->value, options.prefix,
+                _start->value, _start->value);
 
     canonical_collection_free(cc);
     free(parsing_table);

@@ -4,7 +4,6 @@
 
 #ifndef NEOAST_PARSER_H
 #define NEOAST_PARSER_H
-
 #include <stdio.h>
 #include "common.h"
 #include <neoast.h>

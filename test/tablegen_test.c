@@ -3,11 +3,9 @@
 //
 
 #include <lexer.h>
-#include <parser.h>
 #include <cmocka.h>
 #include <stdlib.h>
 #include <parsergen/canonical_collection.h>
-#include <parsergen/clr_lalr.h>
 #include <math.h>
 #include <util/util.h>
 #include <string.h>
