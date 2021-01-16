@@ -340,14 +340,18 @@ static I32 ll_decrement_brace(const char* lex_text, CodegenUnion* lex_val, U32 l
     (void) len;
 
     brace_buffer.counter--;
-    brace_buffer.buffer[brace_buffer.n++] = 0;
     if (brace_buffer.counter <= 0)
     {
+        brace_buffer.buffer[brace_buffer.n++] = 0;
         STACK_POP(lexer_state);
         lex_val->string = strndup(brace_buffer.buffer, brace_buffer.n);
         free(brace_buffer.buffer);
         brace_buffer.buffer = NULL;
         return TOK_G_ACTION;
+    }
+    else
+    {
+        brace_buffer.buffer[brace_buffer.n++] = '}';
     }
     return -1;
 }

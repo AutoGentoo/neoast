@@ -1,6 +1,7 @@
 #ifndef NEOAST_H
 #define NEOAST_H
 
+#include <stdint.h>
 #include <stdio.h>
 #include <cre2.h>
 

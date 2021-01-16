@@ -810,7 +810,11 @@ int codegen_write(const struct File* self, FILE* fp)
          rule_iter = rule_iter->next)
     {
         int rule_tok = codegen_index(tokens, rule_iter->name, token_n);
-        assert(rule_tok != -1 && "Invalid rule token");
+        if (rule_tok == -1)
+        {
+            fprintf(stderr, "Could not find token for rule '%s'\n", rule_iter->name);
+            exit(1);
+        }
 
         for (struct GrammarRuleSingleProto* rule_single_iter = rule_iter->rules;
              rule_single_iter;
