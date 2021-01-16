@@ -9,12 +9,16 @@ env:
 jobs:
   sanitizer:
     strategy:
+      fail-fast: false
       matrix:
         sanitizer: ["MSAN", "ASAN"]
+        name: ["clang", "gcc"]
         include:
-          - cc: "clang"
+          - name: "clang"
+            cc: "clang"
             cxx: "clang++"
-          - cc: "gcc"
+          - name: "gcc"
+            cc: "gcc"
             cxx: "g++"
 
     runs-on: ubuntu-latest
