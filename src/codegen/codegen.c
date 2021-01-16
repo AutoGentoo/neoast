@@ -66,10 +66,10 @@ void put_enum(int start, int n, const char* const* names, FILE* fp)
 static inline
 void put_lexer_rule_action(struct LexerRuleProto* self, FILE* fp)
 {
-    fprintf(fp, "static I32\nll_rule_%p(const char* yytext, "
+    fprintf(fp, "static int32_t\nll_rule_%p(const char* yytext, "
                 CODEGEN_UNION"* yyval, "
                 "unsigned int len, "
-                "Stack* lex_state)\n{\n"
+                "ParsingStack* lex_state)\n{\n"
                 "    (void) yytext;\n"
                 "    (void) yyval;\n"
                 "    (void) len;\n"
@@ -966,7 +966,7 @@ int codegen_write(const struct File* self, FILE* fp)
                 "    \n"
                 "    uint64_t input_len = strlen(input);\n"
                 "    if (lexer_fill_table(input, input_len, self, buffers) == -1) return (typeof(t.%s))0;\n"
-                "    I32 output_idx = parser_parse_lr(self, GEN_parsing_table, buffers);\n"
+                "    int32_t output_idx = parser_parse_lr(self, GEN_parsing_table, buffers);\n"
                 "    \n"
                 "    if (output_idx < 0) return (typeof(t.%s))0;\n"
                 "    return ((" CODEGEN_UNION "*)buffers->value_table)[output_idx].%s;\n"

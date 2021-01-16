@@ -10,7 +10,7 @@
 typedef struct LexerRule_prv LexerRule;
 typedef struct GrammarParser_prv GrammarParser;
 typedef struct GrammarRule_prv GrammarRule;
-typedef struct Stack_prv Stack;
+typedef struct ParsingStack_prv ParsingStack;
 typedef struct ParserBuffers_prv ParserBuffers;
 
 // Codegen
@@ -79,7 +79,7 @@ struct GrammarParser_prv
     uint32_t action_token_n;
 };
 
-struct Stack_prv
+struct ParsingStack_prv
 {
     uint32_t pos;
     uint32_t data[];
@@ -89,8 +89,8 @@ struct ParserBuffers_prv
 {
     void* value_table;
     uint32_t* token_table;
-    Stack* lexing_state_stack;
-    Stack* parsing_stack;
+    ParsingStack* lexing_state_stack;
+    ParsingStack* parsing_stack;
     char* text_buffer;
     uint32_t val_s;
     uint32_t table_n;
@@ -100,7 +100,7 @@ typedef int32_t (*lexer_expr) (
         const char* lex_text,
         void* lex_val,
         uint32_t len,
-        Stack* ll_state);
+        ParsingStack* ll_state);
 
 struct LexerRule_prv
 {
@@ -115,8 +115,8 @@ struct LexerRule_prv
 uint32_t parser_init(GrammarParser* self);
 void parser_free(GrammarParser* self);
 
-Stack* parser_allocate_stack(size_t stack_n);
-void parser_free_stack(Stack* self);
+ParsingStack* parser_allocate_stack(size_t stack_n);
+void parser_free_stack(ParsingStack* self);
 ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, int max_lex_state_depth, size_t val_s);
 void parser_free_buffers(ParserBuffers* self);
 void parser_reset_buffers(const ParserBuffers* self);

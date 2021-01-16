@@ -42,15 +42,15 @@ void parser_free(GrammarParser* self)
     cre2_opt_delete(self->regex_opts);
 }
 
-Stack* parser_allocate_stack(size_t stack_n)
+ParsingStack* parser_allocate_stack(size_t stack_n)
 {
-    Stack* out = malloc(sizeof(Stack) + sizeof(uint32_t) * stack_n);
+    ParsingStack* out = malloc(sizeof(ParsingStack) + sizeof(uint32_t) * stack_n);
     out->pos = 0;
 
     return out;
 }
 
-void parser_free_stack(Stack* self)
+void parser_free_stack(ParsingStack* self)
 {
     free(self);
 }

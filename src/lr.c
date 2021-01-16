@@ -19,7 +19,7 @@ void* g_table_from_matrix(void* table,
 static inline
 uint32_t g_lr_reduce(
         const GrammarParser* parser,
-        Stack* stack,
+        ParsingStack* stack,
         const uint32_t* parsing_table,
         uint32_t reduce_rule,
         uint32_t* token_table,

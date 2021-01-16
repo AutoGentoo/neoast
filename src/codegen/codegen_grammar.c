@@ -72,7 +72,7 @@ static struct Token* token_build(char* name)
     return self;
 }
 
-static int32_t ll_enter_lex(const char* lex_text, void* lex_val, uint32_t len, Stack* ll_state)
+static int32_t ll_enter_lex(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* ll_state)
 {
     (void) lex_text;
     (void) lex_val;
@@ -81,7 +81,7 @@ static int32_t ll_enter_lex(const char* lex_text, void* lex_val, uint32_t len, S
     STACK_PUSH(ll_state, LEX_STATE_LEXER_RULES);
     return TOK_DELIMITER;
 }
-static int32_t ll_enter_grammar(const char* lex_text, void* lex_val, uint32_t len, Stack* ll_state)
+static int32_t ll_enter_grammar(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* ll_state)
 {
     (void) lex_text;
     (void) lex_val;
@@ -90,7 +90,7 @@ static int32_t ll_enter_grammar(const char* lex_text, void* lex_val, uint32_t le
     STACK_PUSH(ll_state, LEX_STATE_GRAMMAR_RULES);
     return TOK_DELIMITER;
 }
-static int32_t ll_exit_state(const char* lex_text, void* lex_val, uint32_t len, Stack* ll_state)
+static int32_t ll_exit_state(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* ll_state)
 {
     (void) lex_text;
     (void) lex_val;
@@ -275,9 +275,9 @@ static int32_t ll_g_tok_ascii (const char* lex_text, CodegenUnion* lex_val)
 }
 
 static int32_t ll_match_brace(const char* lex_text,
-                        void* lex_val,
-                        uint32_t len,
-                        Stack* lexer_state)
+                              void* lex_val,
+                              uint32_t len,
+                              ParsingStack* lexer_state)
 {
     (void) lex_text;
     (void) lex_val;
@@ -291,7 +291,7 @@ static int32_t ll_match_brace(const char* lex_text,
     return -1;
 }
 
-static int32_t ll_lex_state(const char* lex_text, CodegenUnion* lex_val, uint32_t len, Stack* ll_state)
+static int32_t ll_lex_state(const char* lex_text, CodegenUnion* lex_val, uint32_t len, ParsingStack* ll_state)
 {
     (void) len;
 
@@ -305,9 +305,9 @@ static int32_t ll_lex_state(const char* lex_text, CodegenUnion* lex_val, uint32_
 }
 
 static int32_t ll_lex_state_exit(const char* lex_text,
-                             CodegenUnion* lex_val,
-                             uint32_t len,
-                             Stack* ll_state)
+                                 CodegenUnion* lex_val,
+                                 uint32_t len,
+                                 ParsingStack* ll_state)
 {
     (void) lex_text;
     (void) lex_val;
@@ -318,9 +318,9 @@ static int32_t ll_lex_state_exit(const char* lex_text,
 }
 
 static int32_t ll_build_regex(const char* lex_text,
-                          void* lex_val,
-                          uint32_t len,
-                          Stack* lexer_state)
+                              void* lex_val,
+                              uint32_t len,
+                              ParsingStack* lexer_state)
 {
     (void) lex_text;
     (void) lex_val;
@@ -334,7 +334,7 @@ static int32_t ll_build_regex(const char* lex_text,
     return -1;
 }
 
-static int32_t ll_decrement_brace(const char* lex_text, CodegenUnion* lex_val, uint32_t len, Stack* lexer_state)
+static int32_t ll_decrement_brace(const char* lex_text, CodegenUnion* lex_val, uint32_t len, ParsingStack* lexer_state)
 {
     (void) lex_text;
     (void) len;
@@ -361,7 +361,7 @@ static int32_t ll_increment_brace()
     brace_buffer.buffer[brace_buffer.n++] = '{';
     return -1;
 }
-static int32_t ll_add_to_buffer(const char* lex_text, void* lex_val, uint32_t len, Stack* lexer_state)
+static int32_t ll_add_to_buffer(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state)
 {
     (void) lex_val;
     (void) lexer_state;
@@ -377,7 +377,7 @@ static int32_t ll_add_to_buffer(const char* lex_text, void* lex_val, uint32_t le
     return -1;
 }
 
-static int32_t ll_regex_quote(const char* lex_text, CodegenUnion* lex_val, uint32_t len, Stack* lexer_state)
+static int32_t ll_regex_quote(const char* lex_text, CodegenUnion* lex_val, uint32_t len, ParsingStack* lexer_state)
 {
     (void) lex_text;
     (void) len;
@@ -398,7 +398,7 @@ static int32_t ll_regex_quote(const char* lex_text, CodegenUnion* lex_val, uint3
     return -1;
 }
 
-static int32_t ll_regex_add_to_buffer(const char* lex_text, void* lex_val, uint32_t len, Stack* lexer_state)
+static int32_t ll_regex_add_to_buffer(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state)
 {
     (void) lex_val;
     (void) lexer_state;
@@ -414,7 +414,7 @@ static int32_t ll_regex_add_to_buffer(const char* lex_text, void* lex_val, uint3
     return -1;
 }
 
-static int32_t ll_regex_enter_comment(const char* lex_text, void* lex_val, uint32_t len, Stack* lexer_state)
+static int32_t ll_regex_enter_comment(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state)
 {
     (void) lex_text;
     (void) lex_val;
@@ -424,7 +424,7 @@ static int32_t ll_regex_enter_comment(const char* lex_text, void* lex_val, uint3
     return -1;
 }
 
-static int32_t ll_regex_exit_comment(const char* lex_text, void* lex_val, uint32_t len, Stack* lexer_state)
+static int32_t ll_regex_exit_comment(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state)
 {
     (void) lex_text;
     (void) lex_val;

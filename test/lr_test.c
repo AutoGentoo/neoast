@@ -48,7 +48,7 @@ typedef union {
     }* expr;
 } CodegenUnion;
 
-I32 ll_tok_num(const char* yytext, CodegenUnion* yyval)
+int32_t ll_tok_num(const char* yytext, CodegenUnion* yyval)
 {
     yyval->integer = (int)strtol(yytext, NULL, 10);
     return TOK_a;
@@ -57,7 +57,7 @@ I32 ll_tok_num(const char* yytext, CodegenUnion* yyval)
 static GrammarParser p;
 
 static const
-U32 lalr_table[] = {
+uint32_t lalr_table[] = {
         LR_E( ), LR_S(3), LR_S(4), LR_S(1), LR_S(2), /* 0 */
         LR_A( ), LR_A( ), LR_A( ), LR_E( ), LR_E( ), /* 1 */
         LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(5), /* 2 */
@@ -75,21 +75,21 @@ void initialize_parser()
             {.expr = (lexer_expr) ll_tok_num, .regex_raw = "[0-9]+"}
     };
 
-    static U32 r1[] = {
+    static uint32_t r1[] = {
             TOK_A,
             TOK_A
     };
 
-    static U32 r2[] = {
+    static uint32_t r2[] = {
             TOK_a,
             TOK_A
     };
 
-    static U32 r3[] = {
+    static uint32_t r3[] = {
             TOK_b
     };
 
-    static U32 a_r[] = {
+    static uint32_t a_r[] = {
             TOK_AUGMENT
     };
 
@@ -102,7 +102,7 @@ void initialize_parser()
 
     static LexerRule* rules[] = {l_rules};
 
-    static U32 lex_n = ARR_LEN(l_rules);
+    static uint32_t lex_n = ARR_LEN(l_rules);
 
     p.grammar_n = 4;
     p.grammar_rules = g_rules;
@@ -131,7 +131,7 @@ CTEST(test_parser)
     int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
     assert_int_equal(tok_n, 5);
 
-    I32 res_idx = parser_parse_lr(&p, lalr_table, buf);
+    int32_t res_idx = parser_parse_lr(&p, lalr_table, buf);
 
     parser_free_buffers(buf);
     parser_free(&p);
