@@ -968,16 +968,16 @@ int codegen_write(const struct File* self, FILE* fp)
                 options.prefix);
 
     fprintf(fp, "static " CODEGEN_UNION " t;\n"
-                "typeof(t.%s) %s_parse(ParserBuffers* buffers, const char* input)\n"
+                "typeof(t.%s) %s_parse(void* buffers, const char* input)\n"
                 "{\n"
-                "    parser_reset_buffers(buffers);\n"
+                "    parser_reset_buffers((ParserBuffers*)buffers);\n"
                 "    \n"
                 "    uint64_t input_len = strlen(input);\n"
-                "    if (lexer_fill_table(input, input_len, &parser, buffers) == -1) return (typeof(t.%s))0;\n"
-                "    int32_t output_idx = parser_parse_lr(&parser, GEN_parsing_table, buffers);\n"
+                "    if (lexer_fill_table(input, input_len, &parser, (ParserBuffers*)buffers) == -1) return (typeof(t.%s))0;\n"
+                "    int32_t output_idx = parser_parse_lr(&parser, GEN_parsing_table, (ParserBuffers*)buffers);\n"
                 "    \n"
                 "    if (output_idx < 0) return (typeof(t.%s))0;\n"
-                "    return ((" CODEGEN_UNION "*)buffers->value_table)[output_idx].%s;\n"
+                "    return ((" CODEGEN_UNION "*)((ParserBuffers*)buffers)->value_table)[output_idx].%s;\n"
                 "}\n\n",
                 _start->value, options.prefix,
                 _start->value, _start->value, _start->value);
