@@ -1,0 +1,2 @@
+# We don't need to sanitize re2
+fun:*RE2*
