@@ -399,7 +399,8 @@ U32 cc_get_grammar_id(const GrammarParser* self, const GrammarRule* rule)
             return i;
     }
 
-    assert(0 && "Grammar not found");
+    fprintf(stderr, "Grammar not found\n");
+    exit(1);
 }
 
 static inline
@@ -411,7 +412,8 @@ U32 cc_get_state_id(const CanonicalCollection* self, const GrammarState* state)
             return i;
     }
 
-    assert(0 && "State not found");
+    fprintf(stderr, "State not found\n");
+    exit(1);
 }
 
 static inline

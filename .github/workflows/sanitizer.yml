@@ -4,18 +4,30 @@ on: [pull_request]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
 
 jobs:
   sanitizer:
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: ["undefined", "address"]
+        name: ["clang", "gcc"]
+        include:
+          - name: "clang"
+            cc: "clang"
+            cxx: "clang++"
+          - name: "gcc"
+            cc: "gcc"
+            cxx: "g++"
+
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
     - name: Submodules
-      # We need to clone the third-party repostitories
-      run: |
-        git submodule update --init --recursive
+      # We need to clone the third-party repositories
+      run: git submodule update --init --recursive
 
     - name: Create Build Environment
       # Some projects don't allow in-source building, so create a separate build directory
@@ -26,11 +38,14 @@ jobs:
       # Use a bash shell so we can use the same syntax for environment variable
       # access regardless of the host operating system
       shell: bash
-      working-directory: ${{runner.workspace}}/build
-      # Note the current convention is to use the -S and -B options here to specify source 
-      # and build directories, but this is only available with CMake 3.13 and higher.  
+      env:
+        CC: ${{ matrix.cc }}
+        CXX: ${{ matrix.cxx }}
+      working-directory: ${{ runner.workspace }}/build
+      # Note the current convention is to use the -S and -B options here to specify source
+      # and build directories, but this is only available with CMake 3.13 and higher.
 
-      run: cmake $GITHUB_WORKSPACE -DSANITIZER_BUILD=ON -DASAN_LIB=$(gcc -print-file-name=libasan.so) -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      run: cmake $GITHUB_WORKSPACE -DSANITIZER=${{ matrix.sanitizer }} -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
