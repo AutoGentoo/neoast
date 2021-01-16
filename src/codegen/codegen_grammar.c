@@ -12,6 +12,7 @@
 #define WS_X "[\\s]+"
 #define WS_OPT "[\\s]*"
 #define ID_X "[A-z][A-z0-9]*"
+#define ASCII "'[\\x20-\\x7E]'"
 
 U32* GEN_parsing_table = NULL;
 const char* tok_names_errors[] = {
@@ -411,16 +412,16 @@ static LexerRule ll_rules_s0[] = {
         {.regex_raw = "==", .expr = (lexer_expr) ll_enter_lex},
         {.regex_raw = "%option" WS_X ID_X"=\"[^\"]*\"", .expr = (lexer_expr) ll_option},
         {.regex_raw = "%token" WS_X ID_X, .expr = (lexer_expr) ll_token},
-        {.regex_raw = "%token" WS_X "'[\\x20-\\x7E]'", .expr = (lexer_expr) ll_token_ascii},
+        {.regex_raw = "%token" WS_X ASCII, .expr = (lexer_expr) ll_token_ascii},
         {.regex_raw = "%token" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_token_with_type},
-        {.regex_raw = "%token" WS_OPT "<"ID_X">" WS_X "'[\\x20-\\x7E]'", .expr = (lexer_expr) ll_token_with_type_ascii},
+        {.regex_raw = "%token" WS_OPT "<"ID_X">" WS_X ASCII, .expr = (lexer_expr) ll_token_with_type_ascii},
         {.regex_raw = "%start" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_start},
         {.regex_raw = "%state" WS_X ID_X, .expr = (lexer_expr) ll_state},
         {.regex_raw = "%type" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_type},
         {.regex_raw = "%left" WS_X ID_X, .expr = (lexer_expr) ll_left},
-        {.regex_raw = "%left" WS_X "'[\\x20-\\x7E]'", .expr = (lexer_expr) ll_left_ascii},
+        {.regex_raw = "%left" WS_X ASCII, .expr = (lexer_expr) ll_left_ascii},
         {.regex_raw = "%right" WS_X ID_X, .expr = (lexer_expr) ll_right},
-        {.regex_raw = "%right" WS_X "'[\\x20-\\x7E]'", .expr = (lexer_expr) ll_right_ascii},
+        {.regex_raw = "%right" WS_X ASCII, .expr = (lexer_expr) ll_right_ascii},
         {.regex_raw = "%top", .tok = TOK_HEADER},
         {.regex_raw = "%union", .tok = TOK_UNION},
         {.regex_raw = "{", .expr = ll_match_brace},
@@ -443,7 +444,7 @@ static LexerRule ll_rules_grammar[] = {
         {.regex_raw = "[A-z_]+:", .expr = (lexer_expr) ll_g_rule},
         {.regex_raw = "{", .expr = (lexer_expr) ll_match_brace},
         {.regex_raw = "[A-z][A-z_0-9]*", .expr = (lexer_expr) ll_g_tok},
-        {.regex_raw = "'[\\x20-\\x7E]'", .expr = (lexer_expr) ll_g_tok_ascii},
+        {.regex_raw = ASCII, .expr = (lexer_expr) ll_g_tok_ascii},
         {.regex_raw = "\\|", .tok = TOK_G_OR},
         {.regex_raw = ";", .tok = TOK_G_TERM},
 };
