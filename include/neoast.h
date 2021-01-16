@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <cre2.h>
 
+#define ASCII_MAX ('~' + 1)
+
 typedef uint8_t U8;
 typedef uint16_t U16;
 typedef uint32_t U32;
@@ -75,6 +77,7 @@ struct GrammarParser_prv
     U32 grammar_n;
     U32 lex_state_n;
     const U32* lex_n;
+    const U32* ascii_mappings;
     LexerRule* const* lexer_rules;
     const GrammarRule* grammar_rules;
     const char* const* token_names;

@@ -5,6 +5,7 @@
 #include <parser.h>
 #include <alloca.h>
 #include <string.h>
+#include <assert.h>
 
 static inline
 void* g_table_from_matrix(void* table,
@@ -46,7 +47,12 @@ U32 g_lr_reduce(
                val_s);
     }
 
-    int result_token = parser->grammar_rules[reduce_rule].token;
+    int result_token = (int)parser->grammar_rules[reduce_rule].token;
+    if (parser->ascii_mappings)
+    {
+        result_token -= ASCII_MAX;
+        assert(result_token > 0);
+    }
     if (parser->grammar_rules[reduce_rule].expr)
     {
         parser->grammar_rules[reduce_rule].expr(
