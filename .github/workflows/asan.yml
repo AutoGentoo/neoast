@@ -2,16 +2,16 @@ name: asan
 
 on: [pull_request]
 
-strategy:
-  matrix:
-    compiler: [gcc, clang]
-
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
 
 jobs:
   sanitizer:
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+
     runs-on: ubuntu-latest
 
     steps:
