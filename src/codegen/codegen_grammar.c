@@ -11,7 +11,7 @@
 
 #define WS_X "[\\s]+"
 #define WS_OPT "[\\s]*"
-#define ID_X "[A-z][A-z0-9]*"
+#define ID_X "[A-z][A-z0-9_]*"
 #define ASCII "'[\\x20-\\x7E]'"
 
 U32* GEN_parsing_table = NULL;
@@ -251,9 +251,14 @@ static I32 ll_right_ascii(const char* lex_text, CodegenUnion* lex_val)
     return TOK_OPTION;
 }
 
-static I32 ll_g_rule(const char* lex_text, CodegenUnion* lex_val, U32 len)
+static I32 ll_g_rule(const char* lex_text, CodegenUnion* lex_val)
 {
-    lex_val->string = strndup(lex_text, len - 1);
+    const char* gg_rule_end = lex_text + 1;
+    while (*gg_rule_end && *gg_rule_end != ' ' && *gg_rule_end != ':')
+    {
+        gg_rule_end++;
+    }
+    lex_val->string = strndup(lex_text, gg_rule_end - lex_text);
     return TOK_G_EXPR_DEF;
 }
 static I32 ll_g_tok (const char* lex_text, CodegenUnion* lex_val)
@@ -425,7 +430,7 @@ static LexerRule ll_rules_s0[] = {
         {.regex_raw = "%top", .tok = TOK_HEADER},
         {.regex_raw = "%union", .tok = TOK_UNION},
         {.regex_raw = "{", .expr = ll_match_brace},
-        {.regex_raw = "\\+[A-z_][A-z_0-9]*[\\s]+[^\n]+", .expr = (lexer_expr) ll_macro},
+        {.regex_raw = "\\+" ID_X WS_X "[^\n]+", .expr = (lexer_expr) ll_macro},
 };
 
 static LexerRule ll_rules_lex[] = {
@@ -441,9 +446,9 @@ static LexerRule ll_rules_grammar[] = {
         {.regex_raw = "[\n ]+"}, // skip
         {.regex_raw = "//[^\n]*\n"},
         {.regex_raw = "%%", .expr = (lexer_expr) ll_exit_state},
-        {.regex_raw = "[A-z_]+:", .expr = (lexer_expr) ll_g_rule},
+        {.regex_raw = ID_X WS_OPT ":", .expr = (lexer_expr) ll_g_rule},
         {.regex_raw = "{", .expr = (lexer_expr) ll_match_brace},
-        {.regex_raw = "[A-z][A-z_0-9]*", .expr = (lexer_expr) ll_g_tok},
+        {.regex_raw = ID_X, .expr = (lexer_expr) ll_g_tok},
         {.regex_raw = ASCII, .expr = (lexer_expr) ll_g_tok_ascii},
         {.regex_raw = "\\|", .tok = TOK_G_OR},
         {.regex_raw = ";", .tok = TOK_G_TERM},
