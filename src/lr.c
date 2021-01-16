@@ -34,7 +34,7 @@ U32 g_lr_reduce(
     void* dest = alloca(val_s);
     void* args = alloca(val_s * arg_count);
 
-    U32 idx;
+    U32 idx = *dest_idx;
     for (U32 i = 0; i < arg_count; i++)
     {
         STACK_POP(stack); // Pop the state
@@ -115,7 +115,7 @@ I32 parser_parse_lr(
     U32 i = 0;
     U32 prev_tok = 0;
     U32 tok = buffers->token_table[i];
-    U32 dest_idx; // index of the last reduction
+    U32 dest_idx = 0; // index of the last reduction
     while (1)
     {
         U32 table_value = *(U32*) g_table_from_matrix(
