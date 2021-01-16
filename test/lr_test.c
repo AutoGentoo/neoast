@@ -6,6 +6,7 @@
 #include <parser.h>
 #include <cmocka.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -30,30 +31,27 @@ enum
     TOK_AUGMENT
 };
 
+static const char* token_error_names[] = {
+        "EOF",
+        "a",
+        "b",
+        "S",
+        "A",
+        "augment"
+};
+
 typedef union {
     int integer;
     struct expr_ {
         int val;
         struct expr_* next;
     }* expr;
-} ValUnion;
+} CodegenUnion;
 
-I32 ll_skip(const char* yytext, void* yyval)
-{
-    (void)yytext;
-    (void)yyval;
-    return -1; // skip
-}
-I32 ll_tok_num(const char* yytext, ValUnion* yyval)
+I32 ll_tok_num(const char* yytext, CodegenUnion* yyval)
 {
     yyval->integer = (int)strtol(yytext, NULL, 10);
     return TOK_a;
-}
-I32 ll_tok_term(const char* yytext, ValUnion* yyval)
-{
-    (void)yytext;
-    (void)yyval;
-    return TOK_b;
 }
 
 static GrammarParser p;
@@ -72,9 +70,9 @@ U32 lalr_table[] = {
 void initialize_parser()
 {
     static LexerRule l_rules[] = {
-            {.expr = (lexer_expr) ll_tok_term, .regex = 0},
-            {.expr = ll_skip, .regex = 0},
-            {.expr = (lexer_expr) ll_tok_num, .regex = 0}
+            {.tok = TOK_b, .regex_raw = ";"},
+            {.regex_raw = "[ ]+"},
+            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "[0-9]+"}
     };
 
     static U32 r1[] = {
@@ -96,23 +94,27 @@ void initialize_parser()
     };
 
     static GrammarRule g_rules[] = {
-            {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r, .expr = NULL},
-            {.token = TOK_S, .tok_n = 2, .grammar = r1, .expr = NULL},
-            {.token = TOK_A, .tok_n = 2, .grammar = r2, .expr = NULL},
-            {.token = TOK_A, .tok_n = 1, .grammar = r3, .expr = NULL},
+            {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r},
+            {.token = TOK_S, .tok_n = 2, .grammar = r1},
+            {.token = TOK_A, .tok_n = 2, .grammar = r2},
+            {.token = TOK_A, .tok_n = 1, .grammar = r3},
     };
+
+    static LexerRule* rules[] = {l_rules};
+
+    static U32 lex_n = ARR_LEN(l_rules);
 
     p.grammar_n = 4;
     p.grammar_rules = g_rules;
-    p.lex_n = 3;
-    p.lexer_rules = l_rules;
-    p.token_n = TOK_AUGMENT,
-    p.action_token_n = 3,
+    p.lex_n = &lex_n;
+    p.lex_state_n = 1;
+    p.lexer_rules = rules;
+    p.token_n = TOK_AUGMENT;
+    p.action_token_n = 3;
+    p.token_names = token_error_names;
 
     // Initialize the lexer regex rules
-    assert_int_equal(regcomp(&l_rules[0].regex, "^;", REG_EXTENDED), 0);
-    assert_int_equal(regcomp(&l_rules[1].regex, "^[ ]+", REG_EXTENDED), 0);
-    assert_int_equal(regcomp(&l_rules[2].regex, "^[0-9]+", REG_EXTENDED), 0);
+    parser_init(&p);
 }
 
 CTEST(test_parser)
@@ -124,19 +126,14 @@ CTEST(test_parser)
                               ";";  // b
     initialize_parser();
 
-    const char** yyinput = &lexer_input;
+    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, sizeof(CodegenUnion));
 
-    U32 token_table[32];
-    ValUnion value_table[32];
-
-    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(ValUnion), 32);
+    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
     assert_int_equal(tok_n, 5);
 
-    ParserStack* stack = malloc(sizeof(ParserStack) + (sizeof(U32) * 64));
-    stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, lalr_table, token_table, value_table, sizeof(ValUnion));
+    I32 res_idx = parser_parse_lr(&p, lalr_table, buf);
 
-    free(stack);
+    parser_free_buffers(buf);
     parser_free(&p);
     assert_int_not_equal(res_idx, -1);
 }

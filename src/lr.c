@@ -6,30 +6,10 @@
 #include <alloca.h>
 #include <string.h>
 
-#ifndef NDEBUG
-#include <assert.h>
-#endif
-
-static inline
-void gs_push(ParserStack* stack, U32 item)
-{
-    stack->data[stack->pos++] = item;
-}
-
-static inline
-U32 gs_pop(ParserStack* stack)
-{
-#ifndef NDEBUG
-    assert(stack->pos);
-#endif
-    return stack->data[--stack->pos];
-}
-
 static inline
 void* g_table_from_matrix(void* table,
                           size_t row, size_t col,
-                          size_t col_n, size_t s
-)
+                          size_t col_n, size_t s)
 {
     size_t off = s * ((row * col_n) + (col));
     return ((char*) table) + off;
@@ -38,7 +18,7 @@ void* g_table_from_matrix(void* table,
 static inline
 U32 g_lr_reduce(
         const GrammarParser* parser,
-        ParserStack* stack,
+        Stack* stack,
         const U32* parsing_table,
         U32 reduce_rule,
         U32* token_table,
@@ -57,59 +37,85 @@ U32 g_lr_reduce(
     U32 idx;
     for (U32 i = 0; i < arg_count; i++)
     {
-        (void) gs_pop(stack); // Pop the state
-        idx = gs_pop(stack); // Pop the index of the token/value
+        STACK_POP(stack); // Pop the state
+        idx = STACK_POP(stack); // Pop the index of the token/value
 
         // Fill the argument
-        memcpy(OFFSET_VOID_PTR(args, val_s, i),
+        memcpy(OFFSET_VOID_PTR(args, val_s, arg_count - i - 1),
                OFFSET_VOID_PTR(val_table, val_s, idx),
                val_s);
     }
 
+    int result_token = parser->grammar_rules[reduce_rule].token;
     if (parser->grammar_rules[reduce_rule].expr)
     {
         parser->grammar_rules[reduce_rule].expr(
                 dest,
                 args);
+        memcpy(OFFSET_VOID_PTR(val_table, val_s, idx),
+               dest,
+               val_s);
     }
-
-    int result_token = parser->grammar_rules[reduce_rule].token;
 
     // Fill the result
     token_table[idx] = result_token;
-    memcpy(OFFSET_VOID_PTR(val_table, val_s, idx),
-           dest,
-           val_s);
 
+    // Check the goto
     U32 next_state = *(U32*) g_table_from_matrix(
             (void*) parsing_table,
-            stack->data[stack->pos - 1],
+            STACK_PEEK(stack), // Top of stack is current state
             result_token,
             parser->token_n,
-            sizeof(U32)) & TOK_MASK;
+            sizeof(U32));
 
-    gs_push(stack, idx);
-    gs_push(stack, next_state);
+    next_state &= TOK_MASK;
+
+    STACK_PUSH(stack, idx);
+    STACK_PUSH(stack, next_state);
 
     *dest_idx = idx;
     return next_state;
 }
 
+void lr_parse_error(const U32* parsing_table,
+                    const char* const* token_names,
+                    U32 current_state,
+                    U32 error_tok,
+                    U32 prev_tok,
+                    U32 tok_n)
+{
+    const char* current_token = token_names[error_tok];
+    const char* prev_token = token_names[prev_tok];
+
+    fprintf(stderr, "Invalid syntax: unexpected token '%s' after '%s' (state %d)\n",
+            current_token, prev_token, current_state);
+    fprintf(stderr, "Expected one of: ");
+
+    U32 index_off = current_state * tok_n;
+    for (U32 i = 0; i < tok_n; i++)
+    {
+        if (parsing_table[index_off + i] != TOK_SYNTAX_ERROR)
+        {
+            fprintf(stderr, "%s ", token_names[i]);
+        }
+    }
+
+    fprintf(stderr, "\n");
+}
+
 I32 parser_parse_lr(
         const GrammarParser* parser,
-        ParserStack* stack,
         const U32* parsing_table,
-        U32* token_table,
-        void* val_table,
-        size_t val_s)
+        const ParserBuffers* buffers)
 {
     // Push the initial state to the stack
     U32 current_state = 0;
-    gs_push(stack, current_state);
+    STACK_PUSH(buffers->parsing_stack, current_state);
 
     U32 i = 0;
-    U32 tok = token_table[i++];
-    U32 dest_idx;
+    U32 prev_tok = 0;
+    U32 tok = buffers->token_table[i];
+    U32 dest_idx; // index of the last reduction
     while (1)
     {
         U32 table_value = *(U32*) g_table_from_matrix(
@@ -121,22 +127,26 @@ I32 parser_parse_lr(
 
         if (table_value == TOK_SYNTAX_ERROR)
         {
-            // TODO Generate better errors
-            fprintf(stderr, "Unexpected token '%d' in state '%d'!\n", tok, current_state);
+            lr_parse_error(parsing_table,
+                           parser->token_names, current_state,
+                           tok, prev_tok,
+                           parser->token_n);
             return -1;
         } else if (table_value & TOK_SHIFT_MASK)
         {
             current_state = table_value & TOK_MASK;
-            gs_push(stack, i - 1);
-            gs_push(stack, current_state);
-            tok = token_table[i++];
+            STACK_PUSH(buffers->parsing_stack, i);
+            STACK_PUSH(buffers->parsing_stack, current_state);
+            prev_tok = tok;
+            tok = buffers->token_table[++i];
         } else if (table_value & TOK_REDUCE_MASK)
         {
             // Reduce this rule
-            current_state = g_lr_reduce(parser, stack, parsing_table,
+            current_state = g_lr_reduce(parser, buffers->parsing_stack, parsing_table,
                                         table_value & TOK_MASK,
-                                        token_table, val_table, val_s,
+                                        buffers->token_table, buffers->value_table, buffers->val_s,
                                         &dest_idx);
+            prev_tok = parser->grammar_rules[table_value & TOK_MASK].token;
         } else if (table_value & TOK_ACCEPT_MASK)
         {
             return dest_idx;

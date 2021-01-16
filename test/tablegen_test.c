@@ -3,12 +3,12 @@
 //
 
 #include <lexer.h>
-#include <parser.h>
 #include <cmocka.h>
 #include <stdlib.h>
 #include <parsergen/canonical_collection.h>
-#include <parsergen/clr_lalr.h>
 #include <math.h>
+#include <util/util.h>
+#include <string.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -32,8 +32,8 @@
 
 enum
 {
-    // 0 reserved for eof
-    TOK_NUM = 1,
+    TOK_EOF = 0,
+    TOK_NUM,
     TOK_PLUS,
     TOK_MINUS,
     TOK_STAR,
@@ -46,22 +46,30 @@ enum
     TOK_AUGMENT
 };
 
+static const char* token_error_names[] = {
+        "EOF",
+        "number",
+        "+",
+        "-",
+        "*",
+        "/",
+        "^",
+        "(",
+        ")",
+        "expression",
+        "input",
+        "augment"
+};
+
 static const char* token_names = "$N+-*/^()ES'";
-static precedence_t precedence_table[TOK_AUGMENT] = {PRECEDENCE_NONE};
+static U8 precedence_table[TOK_AUGMENT] = {PRECEDENCE_NONE};
 
 typedef union {
     double number;
     char operator;
-} ValUnion;
+} CalculatorUnion;
 
-I32 ll_skip(const char* yytext, void* yyval)
-{
-    (void)yytext;
-    (void)yyval;
-    return -1; // skip
-}
-
-I32 ll_tok_operator(const char* yytext, ValUnion* yyval)
+I32 ll_tok_operator(const char* yytext, CalculatorUnion* yyval)
 {
     yyval->operator = *yytext;
     switch (*yytext)
@@ -77,13 +85,13 @@ I32 ll_tok_operator(const char* yytext, ValUnion* yyval)
 
     return -1;
 }
-I32 ll_tok_num(const char* yytext, ValUnion* yyval)
+I32 ll_tok_num(const char* yytext, CalculatorUnion* yyval)
 {
     yyval->number = strtod(yytext, NULL);
     return TOK_NUM;
 }
 
-void binary_op(ValUnion* dest, ValUnion* args)
+void binary_op(CalculatorUnion* dest, CalculatorUnion* args)
 {
     switch (args[1].operator)
     {
@@ -95,149 +103,24 @@ void binary_op(ValUnion* dest, ValUnion* args)
     }
 }
 
-void group_op(ValUnion* dest, ValUnion* args)
+void group_op(CalculatorUnion* dest, CalculatorUnion* args)
 {
     dest->number = args[1].number;
 }
 
-void copy_op(ValUnion* dest, ValUnion* args)
+void copy_op(CalculatorUnion* dest, CalculatorUnion* args)
 {
     dest->number = args[0].number;
 }
 
 static GrammarParser p;
 
-void dump_item(const LR_1* lr1, U32 tok_n, const char* tok_names)
-{
-    U8 printed = 0;
-    printf("['");
-    for (U32 i = 0; i < lr1->grammar->tok_n; i++)
-    {
-        if (i == lr1->item_i && !printed)
-        {
-            printed = 1;
-            printf("•");
-        }
-
-        printf("%c", tok_names[lr1->grammar->grammar[i]]);
-    }
-
-    if (lr1->final_item)
-        printf("•");
-
-    printf("'");
-
-    if (lr1->final_item)
-        printf("!");
-
-    printf(",");
-
-    // Print the lookaheads
-    printed = 0;
-    for (U32 i = 0; i < tok_n; i++)
-    {
-        if (lr1->look_ahead[i])
-        {
-            if (printed)
-            {
-                printf("/");
-            }
-
-            printf("%c", tok_names[i]);
-            printed = 1;
-        }
-    }
-    printf("]; ");
-}
-
-void dump_state(const GrammarState* state, U32 tok_n, const char* tok_names, U8 line_wrap)
-{
-    U8 is_first = 1;
-    for (const LR_1* item = state->head_item; item; item = item->next)
-    {
-        if (!is_first && line_wrap)
-        {
-            // Print spacing
-            printf("%*c", 12 + (6 * tok_n), ' ');
-        }
-
-        is_first = 0;
-        dump_item(item, tok_n, tok_names);
-
-        if (line_wrap)
-        {
-            printf("\n");
-        }
-    }
-}
-
-void dump_table(const U32* table,
-                const CanonicalCollection* cc,
-                const char* tok_names,
-                U8 state_wrap)
-{
-    U32 i = 0;
-    printf("token_id : ");
-    for (U32 col = 0; col < cc->parser->token_n; col++)
-    {
-        if (col == cc->parser->action_token_n)
-            printf("|");
-        printf(" %*d  |", 2, col);
-    }
-    printf("\n");
-
-    printf("token    : ");
-    for (U32 col = 0; col < cc->parser->token_n; col++)
-    {
-        if (col == cc->parser->action_token_n)
-            printf("|");
-        printf("  %c  |", tok_names[col]);
-    }
-    printf("\n");
-    printf("___________");
-    for (U32 col = 0; col < cc->parser->token_n; col++)
-    {
-        if (col == cc->parser->action_token_n)
-            printf("_");
-        printf("______");
-    }
-    printf("\n");
-
-    for (U32 row = 0; row < cc->state_n; row++)
-    {
-        printf("state %02d : ", row);
-        for (U32 col = 0; col < cc->parser->token_n; col++, i++)
-        {
-            if (col == cc->parser->action_token_n)
-                printf("|");
-
-            if (!table[i])
-                printf("  E  |");
-            else if (table[i] & TOK_ACCEPT_MASK)
-                printf("  A  |");
-            else if (table[i] & TOK_SHIFT_MASK)
-            {
-                printf(" S%02d |", table[i] & TOK_MASK);
-            }
-            else if (table[i] & TOK_REDUCE_MASK)
-            {
-                printf(" R%02d |", table[i] & TOK_MASK);
-            }
-        }
-
-        dump_state(cc->all_states[row], cc->parser->token_n, tok_names, state_wrap);
-
-        if (!state_wrap)
-            printf("\n");
-    }
-}
-
 void initialize_parser()
 {
-    static LexerRule l_rules[] = {
-            {.expr = ll_skip, .regex = 0},
-            {.expr = (lexer_expr) ll_tok_num, .regex = 0},
-            {.expr = (lexer_expr) ll_tok_operator, .regex = 0}
+    static LexerRule l_rules_s0[] = {
+            {.regex_raw = "[ ]+"},
+            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "[0-9]+"},
+            {.expr = (lexer_expr) ll_tok_operator, .regex_raw = "[\\(\\)\\+\\-\\*\\/\\^]"}
     };
 
     /*
@@ -281,27 +164,33 @@ void initialize_parser()
             {.token = TOK_E, .tok_n = 3, .grammar = r2, .expr = (parser_expr) binary_op},
     };
 
+    static LexerRule* l_rules[] = {
+            l_rules_s0
+    };
+
+    static U32 lex_n = ARR_LEN(l_rules_s0);
+
     p.grammar_n = 10;
     p.grammar_rules = g_rules;
-    p.lex_n = 3;
+    p.lex_state_n = 1;
+    p.lex_n = &lex_n;
     p.lexer_rules = l_rules;
     p.action_token_n = 9;
     p.token_n = TOK_AUGMENT;
+    p.token_names = token_error_names;
 
     // Initialize the lexer regex rules
-    assert_int_equal(regcomp(&l_rules[0].regex, "^[ ]+", REG_EXTENDED), 0);
-    assert_int_equal(regcomp(&l_rules[1].regex, "^[0-9]+", REG_EXTENDED), 0);
-    assert_int_equal(regcomp(&l_rules[2].regex, "^[\\(\\)\\+\\-\\*\\/\\^]", REG_EXTENDED), 0);
+    parser_init(&p);
 }
 
 CTEST(test_clr_1)
 {
     initialize_parser();
     CanonicalCollection* cc = canonical_collection_init(&p);
-    canonical_collection_resolve(cc, clr_1_cmp, clr_1_merge);
+    canonical_collection_resolve(cc, CLR_1);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
-    dump_table(table, cc, token_names, 0);
+    dump_table(table, cc, token_names, 0, stdout, NULL);
     canonical_collection_free(cc);
     free(table);
     parser_free(&p);
@@ -311,10 +200,10 @@ CTEST(test_lalr_1)
 {
     initialize_parser();
     CanonicalCollection* cc = canonical_collection_init(&p);
-    canonical_collection_resolve(cc, lalr_1_cmp, lalr_1_merge);
+    canonical_collection_resolve(cc, LALR_1);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
-    dump_table(table, cc, token_names, 0);
+    dump_table(table, cc, token_names, 0, stdout, NULL);
     canonical_collection_free(cc);
     free(table);
     parser_free(&p);
@@ -325,27 +214,25 @@ CTEST(test_lalr_1_calculator)
     const char* lexer_input = "1 + (5 * 9) + 2";
     initialize_parser();
 
-    const char** yyinput = &lexer_input;
+    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, sizeof(CalculatorUnion));
 
-    U32 token_table[32];
-    ValUnion value_table[32];
-
-    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(ValUnion), 32);
+    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
     assert_int_equal(tok_n, 9);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
-    canonical_collection_resolve(cc, lalr_1_cmp, lalr_1_merge);
+    canonical_collection_resolve(cc, LALR_1);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
 
-    ParserStack* stack = malloc(sizeof(ParserStack) + (sizeof(U32) * 64));
-    stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, table, token_table, value_table, sizeof(ValUnion));
+    I32 res_idx = parser_parse_lr(&p, table, buf);
 
-    printf("%s = %lf\n", lexer_input, value_table[res_idx].number);
-    assert_double_equal(value_table[res_idx].number, 1 + (5 * 9) + 2, 0.005);
+    dump_table(table, cc, token_names, 0, stdout, NULL);
+    assert_int_not_equal(res_idx, -1);
 
-    free(stack);
+    printf("%s = %lf\n", lexer_input, ((CalculatorUnion*)buf->value_table)[res_idx].number);
+    assert_double_equal(((CalculatorUnion*)buf->value_table)[res_idx].number, 1 + (5 * 9) + 2, 0.005);
+
+    parser_free_buffers(buf);
     canonical_collection_free(cc);
     free(table);
     parser_free(&p);
@@ -356,34 +243,50 @@ CTEST(test_lalr_1_order_of_ops)
     const char* lexer_input = "1 + 5 * 9 + 4";
     initialize_parser();
 
-    const char** yyinput = &lexer_input;
+    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, sizeof(CalculatorUnion));
 
-    U32 token_table[32];
-    ValUnion value_table[32];
-
-    int tok_n = lexer_fill_table(yyinput, &p, token_table, value_table, sizeof(ValUnion), 32);
+    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
     assert_int_equal(tok_n, 7);
 
     CanonicalCollection* cc = canonical_collection_init(&p);
-    canonical_collection_resolve(cc, lalr_1_cmp, lalr_1_merge);
+    canonical_collection_resolve(cc, LALR_1);
 
     U32* table = canonical_collection_generate(cc, precedence_table);
 
-    ParserStack* stack = malloc(sizeof(ParserStack) + (sizeof(U32) * 64));
-    stack->pos = 0;
-    I32 res_idx = parser_parse_lr(&p, stack, table, token_table, value_table, sizeof(ValUnion));
+    I32 res_idx = parser_parse_lr(&p, table, buf);
 
     // This parser has no order of ops
-    assert_double_equal(value_table[res_idx].number, (((1 + 5) * 9) + 4), 0.005);
+    assert_double_equal(((CalculatorUnion*)buf->value_table)[res_idx].number, (((1 + 5) * 9) + 4), 0.005);
 
-    free(stack);
+    parser_free_buffers(buf);
     canonical_collection_free(cc);
     free(table);
     parser_free(&p);
 }
 
 
+CTEST(test_first_of_expr)
+{
+    initialize_parser();
+
+    U8 first_of_items[TOK_E] = {0};
+    lr_1_firstof(first_of_items, TOK_E, &p);
+
+    assert_true(first_of_items[TOK_OPEN_P]);
+    assert_true(first_of_items[TOK_NUM]);
+
+    assert_false(first_of_items[TOK_EOF]);
+    assert_false(first_of_items[TOK_CLOSE_P]);
+    assert_false(first_of_items[TOK_PLUS]);
+    assert_false(first_of_items[TOK_MINUS]);
+    assert_false(first_of_items[TOK_STAR]);
+    assert_false(first_of_items[TOK_SLASH]);
+    assert_false(first_of_items[TOK_CARET]);
+    parser_free(&p);
+}
+
 const static struct CMUnitTest left_scan_tests[] = {
+        cmocka_unit_test(test_first_of_expr),
         cmocka_unit_test(test_clr_1),
         cmocka_unit_test(test_lalr_1),
         cmocka_unit_test(test_lalr_1_calculator),

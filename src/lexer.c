@@ -2,70 +2,92 @@
 // Created by tumbar on 12/22/20.
 //
 
+#include <string.h>
 #include <stdlib.h>
-#include "string.h"
-#include "parser.h"
 #include "lexer.h"
+#include "parser.h"
 
-static __thread char lexdest[NEOAST_MAX_TOK_N];
-
-U32 lexer_fill_table(const char** input, GrammarParser* parse, U32* table, void* val_table, U32 val_n, U32 table_n)
+I32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf)
 {
-    void* current_val = val_table;
+    void* current_val = buf->value_table;
     int i = 0;
-    while ((table[i] = lex_next(input, parse, current_val)) && i < table_n) // While not EOF
+    STACK_PUSH(buf->lexing_state_stack, 0);
+    U32 offset = 0;
+    while ((buf->token_table[i] = lex_next(input, parse, buf, current_val, len, &offset)) && i < buf->table_n) // While not EOF
     {
-        if (table[i] == -1)
+        if (buf->token_table[i] == -1)
         {
-            fprintf(stderr, "Invalid character '%c'\n", *((*input) - 1));
+            fprintf(stderr, "Invalid character '%c' (state '%d')\n",
+                    input[offset - 1], STACK_PEEK(buf->lexing_state_stack));
+            return -1;
         }
 
-        current_val += val_n;
+        current_val += buf->val_s;
         i++;
     }
 
     return i;
 }
 
-int lex_next(const char** input, GrammarParser* parser, void* lval)
+int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, U32 len, U32* offset)
 {
-    if (!**input)
+    if (*offset >= len)
         return 0;
 
-    regmatch_t regex_matches[1];
+    cre2_string_t match;
     LexerRule* rule;
 
     int i = 0;
-    while(i < parser->lex_n)
+    U32 state_index = STACK_PEEK(buf->lexing_state_stack);
+    while(i < parser->lex_n[state_index])
     {
-        rule = &parser->lexer_rules[i++];
-        if (regexec(&rule->regex, *input, 1, regex_matches, 0) == 0)
+        rule = &parser->lexer_rules[state_index][i++];
+
+        if (cre2_match(rule->regex, input, len,
+                        *offset, len, CRE2_ANCHOR_START,
+                        &match, 1))
         {
-            // Match found
-            // Build the destination
-            size_t n = regex_matches[0].rm_eo - regex_matches[0].rm_so;
             I32 token;
-            if (n > NEOAST_MAX_TOK_N)
+
+            if (rule->expr)
             {
-                char* dest = strndup(*input + regex_matches[0].rm_so, n);
-                token = rule->expr(dest, lval);
-                free(dest);
+                if (match.length < 1024)
+                {
+                    memcpy(buf->text_buffer, input + *offset, match.length);
+                    buf->text_buffer[match.length] = 0;
+                    token = rule->expr(buf->text_buffer, lval, match.length, buf->lexing_state_stack);
+                }
+                else
+                {
+                    char* m_buff = strndup(match.data, match.length);
+                    token = rule->expr(m_buff, lval, match.length, buf->lexing_state_stack);
+                    free(m_buff);
+                }
+            }
+            else if (rule->tok)
+            {
+                token = rule->tok;
             }
             else
             {
-                strncpy(lexdest, *input + regex_matches[0].rm_so, n);
-                token = rule->expr(lexdest, lval);
+                token = -1; // skip
             }
 
-            *input += regex_matches[0].rm_eo;
+            *offset += match.length;
             if (token > 0)
                 return token;
 
+            state_index = STACK_PEEK(buf->lexing_state_stack);
             i = 0;
         }
     }
 
     // Invalid token
-    (*input)++;
-    return -1;
+    if (*offset < len)
+    {
+        (*offset)++;
+        return -1;
+    }
+
+    return 0;
 }

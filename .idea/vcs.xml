@@ -2,5 +2,8 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/third_party/cmocka" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/third_party/cre2" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/third_party/re2" vcs="Git" />
   </component>
 </project>
