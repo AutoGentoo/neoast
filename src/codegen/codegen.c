@@ -507,6 +507,7 @@ int codegen_write(const struct File* self, FILE* fp)
     //   8. Generate entry point and buffer creation
 
     struct KeyVal* _header = NULL;
+    struct KeyVal* _bottom = NULL;
     struct KeyVal* _union = NULL;
     struct KeyVal* _start = NULL;
 
@@ -538,6 +539,14 @@ int codegen_write(const struct File* self, FILE* fp)
                 }
 
                 _header = iter;
+                break;
+            case KEY_VAL_BOTTOM:
+                if (_bottom)
+                {
+                    CODEGEN_ERROR("cannot have two %%bottom definitions");
+                }
+
+                _bottom = iter;
                 break;
             case KEY_VAL_UNION:
                 if (_union)
@@ -689,7 +698,8 @@ int codegen_write(const struct File* self, FILE* fp)
 
     if (_header)
     {
-        fprintf(fp, "%s\n", _header->value);
+        fputs(_header->value, fp);
+        fputc('\n', fp);
     }
 
     fprintf(fp, "typedef union {%s} " CODEGEN_UNION ";\n\n", _union->value);
@@ -971,6 +981,12 @@ int codegen_write(const struct File* self, FILE* fp)
                 "}\n\n",
                 _start->value, options.prefix,
                 _start->value, _start->value, _start->value);
+
+    if (_bottom)
+    {
+        fputs(_bottom->value, fp);
+        fputc('\n', fp);
+    }
 
     canonical_collection_free(cc);
     free(parsing_table);
