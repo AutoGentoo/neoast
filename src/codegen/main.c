@@ -32,7 +32,8 @@ int main(int argc, const char* argv[])
 
     // Read the whole file
     input = malloc(file_size + 1);
-    assert(fread(input, 1, file_size, fp) == file_size);
+    size_t offset = 0;
+    while ((offset += fread(input + offset, 1, 1024, fp)) < file_size);
     input[file_size] = 0;
     fclose(fp);
 
