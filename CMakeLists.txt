@@ -5,6 +5,7 @@ project(neoast VERSION "1.0")
 
 option(SANITIZER_BUILD "Build with AddressSanitizer" OFF)
 set(SANITIZER "" CACHE STRING "Compile with -fsanitize=...")
+option(ENABLE_NEOAST_TESTS "Build+execute neoast's tests" OFF)
 set(ASAN_LIB "libasan.so" CACHE STRING "Path to address sanitizer library")
 set(RE2_BUILD_TESTING CACHE STRING OFF)
 
@@ -28,4 +29,7 @@ add_subdirectory(src)
 add_subdirectory(third_party)
 
 include(cmake/neoast.cmake)
-add_subdirectory(test)
+
+if (ENABLE_NEOAST_TESTS)
+    add_subdirectory(test)
+endif()
