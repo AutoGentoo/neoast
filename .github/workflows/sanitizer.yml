@@ -1,4 +1,4 @@
-name: msan
+name: sanitizer
 
 on: [pull_request]
 
@@ -10,16 +10,20 @@ jobs:
   sanitizer:
     strategy:
       matrix:
-        compiler: [clang]
+        sanitizer: ["MSAN", "ASAN"]
+        include:
+          - cc: "clang"
+            cxx: "clang++"
+          - cc: "gcc"
+            cxx: "g++"
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
     - name: Submodules
-      # We need to clone the third-party repostitories
-      run: |
-        git submodule update --init --recursive
+      # We need to clone the third-party repositories
+      run: git submodule update --init --recursive
 
     - name: Create Build Environment
       # Some projects don't allow in-source building, so create a separate build directory
@@ -31,12 +35,13 @@ jobs:
       # access regardless of the host operating system
       shell: bash
       env:
-        CC: ${{ matrix.compiler }}
-      working-directory: ${{runner.workspace}}/build
+        CC: ${{ matrix.cc }}
+        CXX: ${{ matrix.cxx }}
+      working-directory: ${{ runner.workspace }}/build
       # Note the current convention is to use the -S and -B options here to specify source
       # and build directories, but this is only available with CMake 3.13 and higher.
 
-      run: cmake $GITHUB_WORKSPACE -DMSAN_BUILD=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      run: cmake $GITHUB_WORKSPACE -D${{ matrix.sanitizer }}_BUILD=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
