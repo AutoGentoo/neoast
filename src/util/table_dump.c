@@ -13,7 +13,7 @@ void dump_item(const LR_1* lr1, U32 tok_n, const char* tok_names, FILE* fp)
             fprintf(fp, "•");
         }
 
-        fprintf(fp, "%c", tok_names[lr1->grammar->grammar[i]]);
+        fprintf(fp, "%c", tok_names[lr1->grammar->grammar[i] < ASCII_MAX ? lr1->grammar->grammar[i] : lr1->grammar->grammar[i] - ASCII_MAX]);
     }
 
     if (lr1->final_item)

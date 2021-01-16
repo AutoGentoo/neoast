@@ -48,7 +48,17 @@ void put_enum(int start, int n, const char* const* names, FILE* fp)
     fprintf(fp, "    %s = %d,\n", names[0], start++);
     for (int i = 1; i < n; i++)
     {
-        fprintf(fp, "    %s, // %d\n", names[i], start++);
+        fprintf(fp, "    %s, // %d 0x%03X", names[i], start, start);
+        if (strncmp(names[i], "ASCII_CHAR_0x", 13) == 0)
+        {
+            U8 c = strtoul(&names[i][13], NULL, 16);
+            fprintf(fp, " '%c'\n", c);
+        }
+        else
+        {
+            fputc('\n', fp);
+        }
+        start++;
     }
     fputs("};\n\n", fp);
 }
@@ -350,7 +360,7 @@ void put_grammar_table_and_rules(
         if (rules[i].expr)
         {
             fprintf(fp, "        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d], .expr=(parser_expr) gg_rule_%p},\n",
-                    tokens[rules[i].token],
+                    tokens[rules[i].token - ASCII_MAX],
                     rules[i].tok_n,
                     grammar_offset_i,
                     rules[i].expr);
@@ -358,7 +368,7 @@ void put_grammar_table_and_rules(
         else
         {
             fprintf(fp, "        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d]},\n",
-                    tokens[rules[i].token],
+                    tokens[rules[i].token - ASCII_MAX],
                     rules[i].tok_n,
                     grammar_offset_i);
         }
@@ -379,6 +389,22 @@ void put_parsing_table(const U32* parsing_table, CanonicalCollection* cc, FILE* 
         for (int tok_i = 0; tok_i < cc->parser->token_n; tok_i++, i++)
         {
             fprintf(fp,"0x%08X,%c", parsing_table[i], tok_i + 1 >= cc->parser->token_n ? '\n' : ' ');
+        }
+    }
+    fputs("};\n\n", fp);
+}
+
+static inline
+void put_ascii_mappings(const U32 ascii_mappings[ASCII_MAX], FILE* fp)
+{
+    fputs("static const\nU32 ascii_mappings[ASCII_MAX] = {\n", fp);
+    int i = 0;
+    for (int row = 0; i < ASCII_MAX; row++)
+    {
+        fputs("        ", fp);
+        for (int col = 0; col < 6 && i < ASCII_MAX; col++, i++)
+        {
+            fprintf(fp, "0x%03X,%c", ascii_mappings[i], (col + 1 >= 6) ? '\n' : ' ');
         }
     }
     fputs("};\n\n", fp);
@@ -530,10 +556,12 @@ int codegen_write(const struct File* self, FILE* fp)
                 _start = iter;
                 break;
             case KEY_VAL_TOKEN:
+            case KEY_VAL_TOKEN_ASCII:
                 action_n++;
                 token_n++;
                 break;
             case KEY_VAL_TOKEN_TYPE:
+            case KEY_VAL_TOKEN_TYPE_ASCII:
                 action_n++;
                 token_n++;
                 typed_token_n++;
@@ -574,12 +602,14 @@ int codegen_write(const struct File* self, FILE* fp)
     int action_i = 0, grammar_i = action_n,
             typed_token_i = 0, lex_state_i = 1,
             macro_i = 0;
-    const char** tokens = malloc(sizeof(char*) * token_n);
+    const char** tokens = calloc(token_n, sizeof(char*));
     const struct KeyVal** typed_tokens = calloc(token_n, sizeof(struct KeyVal*));
 
     const char** lexer_states = malloc(sizeof(char*) * (lex_state_n));
     const struct KeyVal** macros = malloc(sizeof(struct KeyVal*) * macro_n);
     U8* precedence_table = calloc(token_n, sizeof(U8));
+
+    U32 ascii_mappings[ASCII_MAX] = {0};
 
     tokens[action_i++] = "EOF";
     for (struct KeyVal* iter = self->header; iter; iter = iter->next)
@@ -594,6 +624,16 @@ int codegen_write(const struct File* self, FILE* fp)
                 tokens[action_i++] = iter->key;
                 typed_token_i++;
                 break;
+            case KEY_VAL_TOKEN_ASCII:
+                ascii_mappings[iter->options] = action_i + ASCII_MAX;
+                tokens[action_i++] = iter->key;
+                break;
+            case KEY_VAL_TOKEN_TYPE_ASCII:
+                ascii_mappings[iter->options] = action_i + ASCII_MAX;
+                typed_tokens[action_i] = iter;
+                tokens[action_i++] = iter->key;
+                typed_token_i++;
+                break;
             case KEY_VAL_TYPE:
                 typed_tokens[grammar_i] = iter;
                 tokens[grammar_i++] = iter->key;
@@ -604,8 +644,6 @@ int codegen_write(const struct File* self, FILE* fp)
                 break;
             case KEY_VAL_MACRO:
                 macros[macro_i++] = iter;
-            case KEY_VAL_LEFT:
-            case KEY_VAL_RIGHT:
             default:
                 break;
         }
@@ -636,9 +674,7 @@ int codegen_write(const struct File* self, FILE* fp)
         }
     }
 
-    int augment_tok = grammar_i++;
-    tokens[augment_tok] = "TOK_AUGMENT";
-    //typed_tokens[augment_tok] = _start;
+    tokens[grammar_i++] = "TOK_AUGMENT";
 
     assert(typed_token_i == typed_token_n);
     assert(action_i == action_n);
@@ -658,7 +694,7 @@ int codegen_write(const struct File* self, FILE* fp)
 
     fprintf(fp, "typedef union {%s} " CODEGEN_UNION ";\n\n", _union->value);
     fputs("// Tokens\n", fp);
-    put_enum(1, token_n - 1, tokens + 1, fp);
+    put_enum(ASCII_MAX + 1, token_n - 1, tokens + 1, fp);
 
     // Map a lexer state id to each state
     lexer_states[0] = "LEX_STATE_DEFAULT";
@@ -785,7 +821,7 @@ int codegen_write(const struct File* self, FILE* fp)
             // Add the tokens to the token tables
             for (struct Token* tok_iter = rule_single_iter->tokens; tok_iter; tok_iter = tok_iter->next)
             {
-                grammar_table[grammar_tok_offset_c] = codegen_index(tokens, tok_iter->name, token_n);
+                grammar_table[grammar_tok_offset_c] = codegen_index(tokens, tok_iter->name, token_n) + ASCII_MAX;
                 assert(grammar_table[grammar_tok_offset_c] != -1 && "Invalid token name");
                 grammar_tok_offset_c++;
                 gg_tok_n++;
@@ -794,7 +830,7 @@ int codegen_write(const struct File* self, FILE* fp)
             // Construct the rule
             GrammarRule* gg_current = &gg_rules[grammar_i++];
             gg_current->expr = (parser_expr) rule_single_iter->function;
-            gg_current->token = rule_tok;
+            gg_current->token = rule_tok + ASCII_MAX;
             gg_current->grammar = (U32*) &grammar_table[grammar_table_offset];
             gg_current->tok_n = gg_tok_n;
         }
@@ -812,7 +848,8 @@ int codegen_write(const struct File* self, FILE* fp)
             .lex_n = ll_rule_count,
             .lexer_rules = ll_rules,
             .grammar_n = grammar_n,
-            .grammar_rules = gg_rules
+            .grammar_rules = gg_rules,
+            .ascii_mappings = ascii_mappings
     };
 
     // Dump parser instantiation
@@ -822,15 +859,19 @@ int codegen_write(const struct File* self, FILE* fp)
         fprintf(fp, "        \"%s\",\n", tokens[i]);
     }
     fputs("};\n\n", fp);
+
+    put_ascii_mappings(ascii_mappings, fp);
+
     fprintf(fp, "static GrammarParser parser = {\n"
-                "        .token_n = TOK_AUGMENT,\n"
+                "        .token_n = TOK_AUGMENT - ASCII_MAX,\n"
                 "        .token_names = token_names,\n"
                 "        .lex_state_n = %d,\n"
                 "        .action_token_n = %d,\n"
                 "        .lex_n = lexer_rule_n,\n"
                 "        .lexer_rules = lexer_rules,\n"
                 "        .grammar_n = %d,\n"
-                "        .grammar_rules = grammar_rules\n",
+                "        .grammar_rules = grammar_rules,\n"
+                "        .ascii_mappings = ascii_mappings\n",
                 lex_state_n, action_n, grammar_n
     );
     fputs("};\n\n", fp);

@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "lexer.h"
 #include "parser.h"
 
@@ -17,8 +18,9 @@ I32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, con
     {
         if (buf->token_table[i] == -1)
         {
-            fprintf(stderr, "Invalid character '%c' (state '%d')\n",
-                    input[offset - 1], STACK_PEEK(buf->lexing_state_stack));
+            fprintf(stderr, "Invalid character near '%.*s' (state '%d')\n",
+                    (U32)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
+                    &input[offset - 1], STACK_PEEK(buf->lexing_state_stack));
             return -1;
         }
 
@@ -75,7 +77,24 @@ int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers
 
             *offset += match.length;
             if (token > 0)
-                return token;
+            {
+                // Check if this token is an ascii character and needs to be converted
+                if (parser->ascii_mappings && token < ASCII_MAX)
+                {
+                    I32 mapping = parser->ascii_mappings[token];
+                    assert(mapping > ASCII_MAX);
+                    return mapping - ASCII_MAX;
+                }
+                else if (!parser->ascii_mappings)
+                {
+                    // Ascii mappings are not defined
+                    return token;
+                }
+                else
+                {
+                    return token - ASCII_MAX;
+                }
+            }
 
             state_index = STACK_PEEK(buf->lexing_state_stack);
             i = 0;

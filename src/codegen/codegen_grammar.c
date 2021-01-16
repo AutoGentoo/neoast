@@ -8,14 +8,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <parsergen/canonical_collection.h>
-#include <util/util.h>
 
 #define WS_X "[\\s]+"
 #define WS_OPT "[\\s]*"
 #define ID_X "[A-z][A-z0-9]*"
+#define ASCII "'[\\x20-\\x7E]'"
 
 U32* GEN_parsing_table = NULL;
-const char* tok_names = "$ohud<xet|;{FKHlLGgTSMA";
 const char* tok_names_errors[] = {
         "eof",
         "option",
@@ -61,6 +60,7 @@ struct KeyVal* key_val_build(key_val_t type, char* key, char* value)
     self->type = type;
     self->key = key;
     self->value = value;
+    self->options = 0;
 
     return self;
 }
@@ -138,6 +138,17 @@ static I32 ll_token(const char* lex_text, CodegenUnion* lex_val)
                                      strdup(find_token_start), NULL);
     return TOK_OPTION;
 }
+static I32 ll_token_ascii(const char* lex_text, CodegenUnion* lex_val)
+{
+    const char* find_token_start = strchr(lex_text + 7, '\'');
+    char* key = NULL;
+    asprintf(&key, "ASCII_CHAR_0x%02X", find_token_start[1]);
+
+    lex_val->key_val = key_val_build(KEY_VAL_TOKEN_ASCII,
+                                     key, NULL);
+    lex_val->key_val->options = (U8)find_token_start[1];
+    return TOK_OPTION;
+}
 static I32 ll_start(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* type_start = strchr(lex_text + 5, '<');
@@ -187,6 +198,20 @@ static I32 ll_token_with_type(const char* lex_text, CodegenUnion* lex_val)
                                      strndup(type_start + 1, type_end - type_start - 1));
     return TOK_OPTION;
 }
+static I32 ll_token_with_type_ascii(const char* lex_text, CodegenUnion* lex_val)
+{
+    const char* type_start = strchr(lex_text + 6, '<');
+    const char* type_end = strchr(type_start, '>');
+    const char* find_token_start = strchr(type_end + 1, '\'');
+    char* key = NULL;
+    asprintf(&key, "ASCII_CHAR_0x%02X", find_token_start[1]);
+
+    lex_val->key_val = key_val_build(KEY_VAL_TOKEN_TYPE_ASCII,
+                                     key,
+                                     strndup(type_start + 1, type_end - type_start - 1));
+    lex_val->key_val->options = (U8)find_token_start[1];
+    return TOK_OPTION;
+}
 static I32 ll_left(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = lex_text + 6;
@@ -194,6 +219,16 @@ static I32 ll_left(const char* lex_text, CodegenUnion* lex_val)
         find_token_start++;
 
     lex_val->key_val = key_val_build(KEY_VAL_LEFT, strdup(find_token_start), NULL);
+    return TOK_OPTION;
+}
+static I32 ll_left_ascii(const char* lex_text, CodegenUnion* lex_val)
+{
+    const char* find_token_start = strchr(lex_text + 6, '\'');
+    char* key = NULL;
+    asprintf(&key, "ASCII_CHAR_0x%02X", find_token_start[1]);
+
+    lex_val->key_val = key_val_build(KEY_VAL_LEFT, key, NULL);
+    lex_val->key_val->options = (U8)find_token_start[1];
     return TOK_OPTION;
 }
 static I32 ll_right(const char* lex_text, CodegenUnion* lex_val)
@@ -205,6 +240,16 @@ static I32 ll_right(const char* lex_text, CodegenUnion* lex_val)
     lex_val->key_val = key_val_build(KEY_VAL_RIGHT, strdup(find_token_start), NULL);
     return TOK_OPTION;
 }
+static I32 ll_right_ascii(const char* lex_text, CodegenUnion* lex_val)
+{
+    const char* find_token_start = strchr(lex_text + 7, '\'');
+    char* key = NULL;
+    asprintf(&key, "ASCII_CHAR_0x%02X", find_token_start[1]);
+
+    lex_val->key_val = key_val_build(KEY_VAL_RIGHT, key, NULL);
+    lex_val->key_val->options = (U8)find_token_start[1];
+    return TOK_OPTION;
+}
 
 static I32 ll_g_rule(const char* lex_text, CodegenUnion* lex_val, U32 len)
 {
@@ -214,6 +259,13 @@ static I32 ll_g_rule(const char* lex_text, CodegenUnion* lex_val, U32 len)
 static I32 ll_g_tok (const char* lex_text, CodegenUnion* lex_val)
 {
     lex_val->token = token_build(strdup(lex_text));
+    return TOK_G_TOK;
+}
+static I32 ll_g_tok_ascii (const char* lex_text, CodegenUnion* lex_val)
+{
+    char* token = NULL;
+    asprintf(&token, "ASCII_CHAR_0x%02X", lex_text[1]);
+    lex_val->token = token_build(token);
     return TOK_G_TOK;
 }
 
@@ -360,12 +412,16 @@ static LexerRule ll_rules_s0[] = {
         {.regex_raw = "==", .expr = (lexer_expr) ll_enter_lex},
         {.regex_raw = "%option" WS_X ID_X"=\"[^\"]*\"", .expr = (lexer_expr) ll_option},
         {.regex_raw = "%token" WS_X ID_X, .expr = (lexer_expr) ll_token},
+        {.regex_raw = "%token" WS_X ASCII, .expr = (lexer_expr) ll_token_ascii},
+        {.regex_raw = "%token" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_token_with_type},
+        {.regex_raw = "%token" WS_OPT "<"ID_X">" WS_X ASCII, .expr = (lexer_expr) ll_token_with_type_ascii},
         {.regex_raw = "%start" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_start},
         {.regex_raw = "%state" WS_X ID_X, .expr = (lexer_expr) ll_state},
         {.regex_raw = "%type" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_type},
-        {.regex_raw = "%token" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_token_with_type},
         {.regex_raw = "%left" WS_X ID_X, .expr = (lexer_expr) ll_left},
+        {.regex_raw = "%left" WS_X ASCII, .expr = (lexer_expr) ll_left_ascii},
         {.regex_raw = "%right" WS_X ID_X, .expr = (lexer_expr) ll_right},
+        {.regex_raw = "%right" WS_X ASCII, .expr = (lexer_expr) ll_right_ascii},
         {.regex_raw = "%top", .tok = TOK_HEADER},
         {.regex_raw = "%union", .tok = TOK_UNION},
         {.regex_raw = "{", .expr = ll_match_brace},
@@ -388,6 +444,7 @@ static LexerRule ll_rules_grammar[] = {
         {.regex_raw = "[A-z_]+:", .expr = (lexer_expr) ll_g_rule},
         {.regex_raw = "{", .expr = (lexer_expr) ll_match_brace},
         {.regex_raw = "[A-z][A-z_0-9]*", .expr = (lexer_expr) ll_g_tok},
+        {.regex_raw = ASCII, .expr = (lexer_expr) ll_g_tok_ascii},
         {.regex_raw = "\\|", .tok = TOK_G_OR},
         {.regex_raw = ";", .tok = TOK_G_TERM},
 };
@@ -587,6 +644,7 @@ int gen_parser_init(GrammarParser* self)
     self->action_token_n = TOK_GG_FILE;
     self->token_n = TOK_AUGMENT;
     self->token_names = tok_names_errors;
+    self->ascii_mappings = NULL;
 
     precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
 

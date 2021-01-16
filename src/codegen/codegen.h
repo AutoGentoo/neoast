@@ -12,7 +12,9 @@ typedef enum
     KEY_VAL_HEADER, // Key not filled
     KEY_VAL_OPTION,
     KEY_VAL_TOKEN,
+    KEY_VAL_TOKEN_ASCII,
     KEY_VAL_TOKEN_TYPE,
+    KEY_VAL_TOKEN_TYPE_ASCII,
     KEY_VAL_TYPE,
     KEY_VAL_LEFT,
     KEY_VAL_RIGHT,
@@ -77,6 +79,7 @@ struct KeyVal
     key_val_t type;
     char* key;
     char* value;
+    uint64_t options;
     struct KeyVal* next;
 };
 

@@ -10,6 +10,25 @@
 #include "clr_lalr.h"
 
 static inline
+U32 token_to_index(U32 token, const GrammarParser* parser)
+{
+    if (token < ASCII_MAX)
+    {
+        if (parser->ascii_mappings)
+        {
+            fprintf(stderr, "ASCII characters are not valid grammar tokens\n");
+            abort();
+        }
+    }
+    else if (parser->ascii_mappings)
+    {
+        return token - ASCII_MAX;
+    }
+
+    return token;
+}
+
+static inline
 void lr_1_free(LR_1* self)
 {
     LR_1* next;
@@ -133,7 +152,7 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
 
             // Find if this rule can be expanded
             U32 potential_token = item->grammar->grammar[item->item_i];
-            if (potential_token < parser->action_token_n)
+            if (token_to_index(potential_token, parser) < parser->action_token_n)
             {
                 // Action tokens cannot be expanded
                 continue;
@@ -152,15 +171,15 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             else
             {
                 // The look ahead is the next item in our grammar
-                U32 lookahead_token = item->grammar->grammar[item->item_i + 1];
-                if (lookahead_token < parser->action_token_n)
+                U32 lookahead_token_idx = token_to_index(item->grammar->grammar[item->item_i + 1], parser);
+                if (lookahead_token_idx < parser->action_token_n)
                 {
-                    temp_lookahead[lookahead_token] = 1;
+                    temp_lookahead[lookahead_token_idx] = 1;
                 }
                 else
                 {
                     U8 merge_our_lookahead = lr_1_firstof(
-                            temp_lookahead, lookahead_token,
+                            temp_lookahead, item->grammar->grammar[item->item_i + 1],
                             parser);
 
                     if (merge_our_lookahead)
@@ -170,7 +189,7 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
                 }
             }
 
-            if (already_expanded[potential_token - parser->action_token_n])
+            if (already_expanded[token_to_index(potential_token, parser) - parser->action_token_n])
             {
                 // This is already expanded
                 // We need to merge the lookahead with every other
@@ -186,7 +205,7 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             }
 
             dirty = 1;
-            already_expanded[potential_token - parser->action_token_n] = 1;
+            already_expanded[token_to_index(potential_token, parser) - parser->action_token_n] = 1;
 
             U32 expand_count = 0;
             for (U32 i = 0; i < parser->grammar_n; i++)
@@ -209,7 +228,7 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             if (!expand_count)
             {
                 fprintf(stderr, "Could not find a rule to describe token '%d'\n", potential_token);
-                exit(1);
+                abort();
             }
         }
     }
@@ -268,7 +287,7 @@ void gs_resolve(CanonicalCollection* cc, GrammarState* state)
         LR_1* new_item = lr_1_init(item->grammar, item->item_i + 1, cc->parser->action_token_n);
         lookahead_copy(new_item->look_ahead, item->look_ahead, cc->parser->action_token_n);
 
-        U32 next_token = item->grammar->grammar[item->item_i];
+        U32 next_token = token_to_index(item->grammar->grammar[item->item_i], cc->parser);
         if (state->action_states[next_token])
         {
             // Another rule already generated this state
@@ -464,7 +483,7 @@ U32* canonical_collection_generate(const CanonicalCollection* self, const U8* pr
             {
                 U32 action_mask;
                 U32 grammar_id;
-                if (item->grammar->token == self->parser->token_n) // Augmented rule
+                if (token_to_index(item->grammar->token, self->parser) == self->parser->token_n) // Augmented rule
                 {
                     // This is an accept
                     action_mask = TOK_ACCEPT_MASK;
