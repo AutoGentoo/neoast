@@ -7,19 +7,19 @@
 #include "lexer.h"
 #include "parser.h"
 
-U32 parser_init(GrammarParser* self)
+uint32_t parser_init(GrammarParser* self)
 {
     self->regex_opts = cre2_opt_new();
     cre2_opt_set_one_line(self->regex_opts, 1);
 
-    U32 error = 0;
-    for (U32 i = 0; i < self->lex_state_n; i++)
+    uint32_t error = 0;
+    for (uint32_t i = 0; i < self->lex_state_n; i++)
     {
-        for (U32 j = 0; j < self->lex_n[i]; j++)
+        for (uint32_t j = 0; j < self->lex_n[i]; j++)
         {
             const char* pattern = self->lexer_rules[i][j].regex_raw;
             if ((self->lexer_rules[i][j].regex =
-                    cre2_new(pattern, (U32)strlen(pattern), self->regex_opts)) == NULL) {
+                    cre2_new(pattern, (uint32_t)strlen(pattern), self->regex_opts)) == NULL) {
                 fprintf(stderr, "Failed to compile regex \"%s\"\n", pattern);
                 error++;
             }
@@ -31,9 +31,9 @@ U32 parser_init(GrammarParser* self)
 
 void parser_free(GrammarParser* self)
 {
-    for (U32 i = 0; i < self->lex_state_n; i++)
+    for (uint32_t i = 0; i < self->lex_state_n; i++)
     {
-        for (U32 j = 0; j < self->lex_n[i]; j++)
+        for (uint32_t j = 0; j < self->lex_n[i]; j++)
         {
             cre2_delete(self->lexer_rules[i][j].regex);
         }
@@ -42,15 +42,15 @@ void parser_free(GrammarParser* self)
     cre2_opt_delete(self->regex_opts);
 }
 
-Stack* parser_allocate_stack(U64 stack_n)
+ParsingStack* parser_allocate_stack(size_t stack_n)
 {
-    Stack* out = malloc(sizeof(Stack) + sizeof(U32) * stack_n);
+    ParsingStack* out = malloc(sizeof(ParsingStack) + sizeof(uint32_t) * stack_n);
     out->pos = 0;
 
     return out;
 }
 
-void parser_free_stack(Stack* self)
+void parser_free_stack(ParsingStack* self)
 {
     free(self);
 }
@@ -59,9 +59,9 @@ ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, in
 {
     ParserBuffers* buffers = malloc(sizeof(ParserBuffers));
     buffers->lexing_state_stack = parser_allocate_stack(max_lex_state_depth);
-    buffers->parsing_stack = parser_allocate_stack(64);
+    buffers->parsing_stack = parser_allocate_stack(256);
 
-    buffers->token_table = malloc(sizeof(U32) * max_lex_tokens);
+    buffers->token_table = malloc(sizeof(uint32_t) * max_lex_tokens);
     buffers->value_table = malloc(val_s * max_lex_tokens);
     buffers->text_buffer = malloc(max_token_len);
     buffers->val_s = val_s;

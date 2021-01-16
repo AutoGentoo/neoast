@@ -6,7 +6,6 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <assert.h>
 #include "lexer.h"
 #include "codegen.h"
 
@@ -55,7 +54,7 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    I32 result_idx = parser_parse_lr(&parser, GEN_parsing_table, buf);
+    int32_t result_idx = parser_parse_lr(&parser, GEN_parsing_table, buf);
 
     if (result_idx == -1)
     {

@@ -17,26 +17,26 @@ void* g_table_from_matrix(void* table,
 }
 
 static inline
-U32 g_lr_reduce(
+uint32_t g_lr_reduce(
         const GrammarParser* parser,
-        Stack* stack,
-        const U32* parsing_table,
-        U32 reduce_rule,
-        U32* token_table,
+        ParsingStack* stack,
+        const uint32_t* parsing_table,
+        uint32_t reduce_rule,
+        uint32_t* token_table,
         void* val_table,
         size_t val_s,
-        U32* dest_idx
+        uint32_t* dest_idx
 )
 {
     // Find how many tokens to pop
     // due to this rule
-    U32 arg_count = parser->grammar_rules[reduce_rule].tok_n;
+    uint32_t arg_count = parser->grammar_rules[reduce_rule].tok_n;
 
     void* dest = alloca(val_s);
     void* args = alloca(val_s * arg_count);
 
-    U32 idx = *dest_idx;
-    for (U32 i = 0; i < arg_count; i++)
+    uint32_t idx = *dest_idx;
+    for (uint32_t i = 0; i < arg_count; i++)
     {
         STACK_POP(stack); // Pop the state
         idx = STACK_POP(stack); // Pop the index of the token/value
@@ -67,12 +67,12 @@ U32 g_lr_reduce(
     token_table[idx] = result_token;
 
     // Check the goto
-    U32 next_state = *(U32*) g_table_from_matrix(
+    uint32_t next_state = *(uint32_t*) g_table_from_matrix(
             (void*) parsing_table,
             STACK_PEEK(stack), // Top of stack is current state
             result_token,
             parser->token_n,
-            sizeof(U32));
+            sizeof(uint32_t));
 
     next_state &= TOK_MASK;
 
@@ -83,12 +83,12 @@ U32 g_lr_reduce(
     return next_state;
 }
 
-void lr_parse_error(const U32* parsing_table,
+void lr_parse_error(const uint32_t* parsing_table,
                     const char* const* token_names,
-                    U32 current_state,
-                    U32 error_tok,
-                    U32 prev_tok,
-                    U32 tok_n)
+                    uint32_t current_state,
+                    uint32_t error_tok,
+                    uint32_t prev_tok,
+                    uint32_t tok_n)
 {
     const char* current_token = token_names[error_tok];
     const char* prev_token = token_names[prev_tok];
@@ -97,8 +97,8 @@ void lr_parse_error(const U32* parsing_table,
             current_token, prev_token, current_state);
     fprintf(stderr, "Expected one of: ");
 
-    U32 index_off = current_state * tok_n;
-    for (U32 i = 0; i < tok_n; i++)
+    uint32_t index_off = current_state * tok_n;
+    for (uint32_t i = 0; i < tok_n; i++)
     {
         if (parsing_table[index_off + i] != TOK_SYNTAX_ERROR)
         {
@@ -109,27 +109,27 @@ void lr_parse_error(const U32* parsing_table,
     fprintf(stderr, "\n");
 }
 
-I32 parser_parse_lr(
+int32_t parser_parse_lr(
         const GrammarParser* parser,
-        const U32* parsing_table,
+        const uint32_t* parsing_table,
         const ParserBuffers* buffers)
 {
     // Push the initial state to the stack
-    U32 current_state = 0;
+    uint32_t current_state = 0;
     STACK_PUSH(buffers->parsing_stack, current_state);
 
-    U32 i = 0;
-    U32 prev_tok = 0;
-    U32 tok = buffers->token_table[i];
-    U32 dest_idx = 0; // index of the last reduction
+    uint32_t i = 0;
+    uint32_t prev_tok = 0;
+    uint32_t tok = buffers->token_table[i];
+    uint32_t dest_idx = 0; // index of the last reduction
     while (1)
     {
-        U32 table_value = *(U32*) g_table_from_matrix(
+        uint32_t table_value = *(uint32_t*) g_table_from_matrix(
                 (void*)parsing_table,
                 current_state,
                 tok,
                 parser->token_n,
-                sizeof(U32));
+                sizeof(uint32_t));
 
         if (table_value == TOK_SYNTAX_ERROR)
         {

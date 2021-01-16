@@ -47,7 +47,7 @@ typedef union {
     }* expr;
 } CodegenUnion;
 
-I32 ll_tok_num(const char* yytext, CodegenUnion* yyval)
+int32_t ll_tok_num(const char* yytext, CodegenUnion* yyval)
 {
     yyval->integer = (int)strtol(yytext, NULL, 10);
     return 1;
@@ -70,7 +70,7 @@ void initialize_parser()
     p.grammar_n = 0;
     p.grammar_rules = 0;
 
-    static U32 lex_n = ARR_LEN(l_rules);
+    static uint32_t lex_n = ARR_LEN(l_rules);
 
     p.lex_state_n = 1;
     p.lex_n = &lex_n;
@@ -92,8 +92,8 @@ CTEST(test_lexer)
     ParserBuffers* buf = parser_allocate_buffers(32, 32, 8, sizeof(CodegenUnion));
     STACK_PUSH(buf->lexing_state_stack, 0);
 
-    U32 len = strlen(lexer_input);
-    U32 offset = 0;
+    uint32_t len = strlen(lexer_input);
+    uint32_t offset = 0;
     assert_int_equal(lex_next(yyinput, &p, buf, &llval, len, &offset), 1);
     assert_int_equal(llval.integer, 10);
     assert_int_equal(lex_next(yyinput, &p, buf, &llval, len, &offset), 1);

@@ -62,14 +62,14 @@ static const char* token_error_names[] = {
 };
 
 static const char* token_names = "$N+-*/^()ES'";
-static U8 precedence_table[TOK_AUGMENT] = {PRECEDENCE_NONE};
+static uint8_t precedence_table[TOK_AUGMENT] = {PRECEDENCE_NONE};
 
 typedef union {
     double number;
     char operator;
 } CalculatorUnion;
 
-I32 ll_tok_operator(const char* yytext, CalculatorUnion* yyval)
+int32_t ll_tok_operator(const char* yytext, CalculatorUnion* yyval)
 {
     yyval->operator = *yytext;
     switch (*yytext)
@@ -85,7 +85,7 @@ I32 ll_tok_operator(const char* yytext, CalculatorUnion* yyval)
 
     return -1;
 }
-I32 ll_tok_num(const char* yytext, CalculatorUnion* yyval)
+int32_t ll_tok_num(const char* yytext, CalculatorUnion* yyval)
 {
     yyval->number = strtod(yytext, NULL);
     return TOK_NUM;
@@ -133,15 +133,15 @@ void initialize_parser()
      *      | '(' E ')'
      */
 
-    static U32 r1[] = {TOK_NUM};
-    static U32 r2[] = {TOK_E, TOK_PLUS, TOK_E};
-    static U32 r3[] = {TOK_E, TOK_MINUS, TOK_E};
-    static U32 r4[] = {TOK_E, TOK_STAR, TOK_E};
-    static U32 r5[] = {TOK_E, TOK_SLASH, TOK_E};
-    static U32 r6[] = {TOK_E, TOK_CARET, TOK_E};
-    static U32 r7[] = {TOK_OPEN_P, TOK_E, TOK_CLOSE_P};
-    static U32 r8[] = {TOK_E};
-    static U32 r9[] = {};
+    static uint32_t r1[] = {TOK_NUM};
+    static uint32_t r2[] = {TOK_E, TOK_PLUS, TOK_E};
+    static uint32_t r3[] = {TOK_E, TOK_MINUS, TOK_E};
+    static uint32_t r4[] = {TOK_E, TOK_STAR, TOK_E};
+    static uint32_t r5[] = {TOK_E, TOK_SLASH, TOK_E};
+    static uint32_t r6[] = {TOK_E, TOK_CARET, TOK_E};
+    static uint32_t r7[] = {TOK_OPEN_P, TOK_E, TOK_CLOSE_P};
+    static uint32_t r8[] = {TOK_E};
+    static uint32_t r9[] = {};
 
     precedence_table[TOK_PLUS] = PRECEDENCE_LEFT;
     precedence_table[TOK_MINUS] = PRECEDENCE_LEFT;
@@ -149,7 +149,7 @@ void initialize_parser()
     precedence_table[TOK_SLASH] = PRECEDENCE_LEFT;
     precedence_table[TOK_CARET] = PRECEDENCE_RIGHT;
 
-    static U32 a_r[] = {TOK_S};
+    static uint32_t a_r[] = {TOK_S};
 
     static GrammarRule g_rules[] = {
             {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r, .expr = NULL}, // Augmented rule
@@ -168,7 +168,7 @@ void initialize_parser()
             l_rules_s0
     };
 
-    static U32 lex_n = ARR_LEN(l_rules_s0);
+    static uint32_t lex_n = ARR_LEN(l_rules_s0);
 
     p.grammar_n = 10;
     p.grammar_rules = g_rules;
@@ -189,7 +189,7 @@ CTEST(test_clr_1)
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, CLR_1);
 
-    U32* table = canonical_collection_generate(cc, precedence_table);
+    uint32_t* table = canonical_collection_generate(cc, precedence_table);
     dump_table(table, cc, token_names, 0, stdout, NULL);
     canonical_collection_free(cc);
     free(table);
@@ -202,7 +202,7 @@ CTEST(test_lalr_1)
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);
 
-    U32* table = canonical_collection_generate(cc, precedence_table);
+    uint32_t* table = canonical_collection_generate(cc, precedence_table);
     dump_table(table, cc, token_names, 0, stdout, NULL);
     canonical_collection_free(cc);
     free(table);
@@ -222,9 +222,9 @@ CTEST(test_lalr_1_calculator)
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);
 
-    U32* table = canonical_collection_generate(cc, precedence_table);
+    uint32_t* table = canonical_collection_generate(cc, precedence_table);
 
-    I32 res_idx = parser_parse_lr(&p, table, buf);
+    int32_t res_idx = parser_parse_lr(&p, table, buf);
 
     dump_table(table, cc, token_names, 0, stdout, NULL);
     assert_int_not_equal(res_idx, -1);
@@ -251,9 +251,9 @@ CTEST(test_lalr_1_order_of_ops)
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);
 
-    U32* table = canonical_collection_generate(cc, precedence_table);
+    uint32_t* table = canonical_collection_generate(cc, precedence_table);
 
-    I32 res_idx = parser_parse_lr(&p, table, buf);
+    int32_t res_idx = parser_parse_lr(&p, table, buf);
 
     // This parser has no order of ops
     assert_double_equal(((CalculatorUnion*)buf->value_table)[res_idx].number, (((1 + 5) * 9) + 4), 0.005);
@@ -269,7 +269,7 @@ CTEST(test_first_of_expr)
 {
     initialize_parser();
 
-    U8 first_of_items[TOK_E] = {0};
+    uint8_t first_of_items[TOK_E] = {0};
     lr_1_firstof(first_of_items, TOK_E, &p);
 
     assert_true(first_of_items[TOK_OPEN_P]);

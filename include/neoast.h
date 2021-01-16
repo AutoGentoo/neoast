@@ -1,24 +1,16 @@
 #ifndef NEOAST_H
 #define NEOAST_H
 
+#include <stdint.h>
 #include <stdio.h>
 #include <cre2.h>
 
 #define ASCII_MAX ('~' + 1)
 
-typedef uint8_t U8;
-typedef uint16_t U16;
-typedef uint32_t U32;
-typedef uint64_t U64;
-typedef int8_t I8;
-typedef int16_t I16;
-typedef int32_t I32;
-typedef int64_t I64;
-
 typedef struct LexerRule_prv LexerRule;
 typedef struct GrammarParser_prv GrammarParser;
 typedef struct GrammarRule_prv GrammarRule;
-typedef struct Stack_prv Stack;
+typedef struct ParsingStack_prv ParsingStack;
 typedef struct ParserBuffers_prv ParserBuffers;
 
 // Codegen
@@ -65,82 +57,82 @@ enum
 
 struct GrammarRule_prv
 {
-    U32 token;
-    U32 tok_n;
-    const U32* grammar;
+    uint32_t token;
+    uint32_t tok_n;
+    const uint32_t* grammar;
     parser_expr expr;
 };
 
 struct GrammarParser_prv
 {
     cre2_options_t* regex_opts;
-    U32 grammar_n;
-    U32 lex_state_n;
-    const U32* lex_n;
-    const U32* ascii_mappings;
+    uint32_t grammar_n;
+    uint32_t lex_state_n;
+    const uint32_t* lex_n;
+    const uint32_t* ascii_mappings;
     LexerRule* const* lexer_rules;
     const GrammarRule* grammar_rules;
     const char* const* token_names;
 
     // Also number of columns
-    U32 token_n;
-    U32 action_token_n;
+    uint32_t token_n;
+    uint32_t action_token_n;
 };
 
-struct Stack_prv
+struct ParsingStack_prv
 {
-    U32 pos;
-    U32 data[];
+    uint32_t pos;
+    uint32_t data[];
 };
 
 struct ParserBuffers_prv
 {
     void* value_table;
-    U32* token_table;
-    Stack* lexing_state_stack;
-    Stack* parsing_stack;
+    uint32_t* token_table;
+    ParsingStack* lexing_state_stack;
+    ParsingStack* parsing_stack;
     char* text_buffer;
-    U32 val_s;
-    U32 table_n;
+    uint32_t val_s;
+    uint32_t table_n;
 };
 
-typedef I32 (*lexer_expr) (
+typedef int32_t (*lexer_expr) (
         const char* lex_text,
         void* lex_val,
-        U32 len,
-        Stack* ll_state);
+        uint32_t len,
+        ParsingStack* ll_state);
 
 struct LexerRule_prv
 {
     cre2_regexp_t* regex;
     lexer_expr expr;
-    I32 tok;
+    int32_t tok;
     const char* regex_raw;
 };
 
 #ifndef NEOAST_PARSER_H
 #define NEOAST_PARSER_H
-U32 parser_init(GrammarParser* self);
+uint32_t parser_init(GrammarParser* self);
 void parser_free(GrammarParser* self);
 
-Stack* parser_allocate_stack(U64 stack_n);
-void parser_free_stack(Stack* self);
+ParsingStack* parser_allocate_stack(size_t stack_n);
+void parser_free_stack(ParsingStack* self);
 ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, int max_lex_state_depth, size_t val_s);
 void parser_free_buffers(ParserBuffers* self);
 void parser_reset_buffers(const ParserBuffers* self);
 
-I32 parser_parse_lr(
+int32_t parser_parse_lr(
         const GrammarParser* parser,
-        const U32* parsing_table,
+        const uint32_t* parsing_table,
         const ParserBuffers* buffers);
 #endif
 
 #ifndef NEOAST_LEXER_H
 #define NEOAST_LEXER_H
-I32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf);
+int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* parse, const ParserBuffers* buf);
 
 int
-lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, U32 len, U32* offset);
+lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, uint32_t len, uint32_t* offset);
 #endif
 
 #endif

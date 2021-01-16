@@ -10,7 +10,7 @@
 #include "clr_lalr.h"
 
 static inline
-U32 token_to_index(U32 token, const GrammarParser* parser)
+uint32_t token_to_index(uint32_t token, const GrammarParser* parser)
 {
     if (token < ASCII_MAX)
     {
@@ -65,32 +65,32 @@ static GrammarState* gs_init(const CanonicalCollection* parent)
                   + sizeof (GrammarState*) * parent->parser->token_n);
 }
 
-static LR_1* lr_1_init(const GrammarRule* rule, U32 item_i, U32 token_n)
+static LR_1* lr_1_init(const GrammarRule* rule, uint32_t item_i, uint32_t token_n)
 {
-    LR_1* self = malloc(sizeof(LR_1) + sizeof(U8) * token_n);
+    LR_1* self = malloc(sizeof(LR_1) + (sizeof(uint8_t) * token_n));
     self->next = NULL;
     self->grammar = rule;
     self->item_i = item_i;
     self->final_item = self->item_i >= rule->tok_n;
-    memset(self->look_ahead, 0, token_n);
+    memset(self->look_ahead, 0, sizeof(uint8_t) * token_n);
 
     return self;
 }
 
 static void
-lookahead_copy(U8 dest[], const U8 src[], U32 n)
+lookahead_copy(uint8_t dest[], const uint8_t src[], uint32_t n)
 {
-    memcpy(dest, src, sizeof(U8) * n);
+    memcpy(dest, src, sizeof(uint8_t) * n);
 }
 
-void lookahead_merge(U8 dest[], const U8 src[], U32 n)
+void lookahead_merge(uint8_t dest[], const uint8_t src[], uint32_t n)
 {
-    for (U32 i = 0; i < n; i++)
+    for (uint32_t i = 0; i < n; i++)
         dest[i] = dest[i] || src[i];
 }
 
 
-U8 lr_1_firstof(U8 dest[], U32 token, const GrammarParser* parser)
+uint8_t lr_1_firstof(uint8_t dest[], uint32_t token, const GrammarParser* parser)
 {
     if (token < parser->action_token_n)
     {
@@ -99,11 +99,11 @@ U8 lr_1_firstof(U8 dest[], U32 token, const GrammarParser* parser)
         return 0;
     }
 
-    U8 merge_current_lookahead = 0;
+    uint8_t merge_current_lookahead = 0;
 
     // This rule can be expanded
     // Recursively get the first of this token
-    for (U32 i = 0; i < parser->grammar_n; i++)
+    for (uint32_t i = 0; i < parser->grammar_n; i++)
     {
         const GrammarRule* rule = &parser->grammar_rules[i];
         if (rule->tok_n == 0)
@@ -138,9 +138,9 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
     // from other grammar rules
     // Expand those token's rules
 
-    U8* already_expanded = alloca(sizeof(U8) * (parser->token_n - parser->action_token_n));
-    memset(already_expanded, 0, sizeof(U8) * (parser->token_n - parser->action_token_n));
-    U8 dirty = 1;
+    uint8_t* already_expanded = alloca(sizeof(uint8_t) * (parser->token_n - parser->action_token_n));
+    memset(already_expanded, 0, sizeof(uint8_t) * (parser->token_n - parser->action_token_n));
+    uint8_t dirty = 1;
 
     while (dirty) // Recursively generate closure rules
     {
@@ -151,7 +151,7 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
                 continue;
 
             // Find if this rule can be expanded
-            U32 potential_token = item->grammar->grammar[item->item_i];
+            uint32_t potential_token = item->grammar->grammar[item->item_i];
             if (token_to_index(potential_token, parser) < parser->action_token_n)
             {
                 // Action tokens cannot be expanded
@@ -159,8 +159,8 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             }
 
             // Generate the lookahead for this rule
-            U8* temp_lookahead = alloca(sizeof(U8) * parser->action_token_n);
-            memset(temp_lookahead, 0, sizeof(U8) * parser->action_token_n);
+            uint8_t* temp_lookahead = alloca(sizeof(uint8_t) * parser->action_token_n);
+            memset(temp_lookahead, 0, sizeof(uint8_t) * parser->action_token_n);
 
             if (item->final_item || item->item_i + 1 >= item->grammar->tok_n)
             {
@@ -171,14 +171,14 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             else
             {
                 // The look ahead is the next item in our grammar
-                U32 lookahead_token_idx = token_to_index(item->grammar->grammar[item->item_i + 1], parser);
+                uint32_t lookahead_token_idx = token_to_index(item->grammar->grammar[item->item_i + 1], parser);
                 if (lookahead_token_idx < parser->action_token_n)
                 {
                     temp_lookahead[lookahead_token_idx] = 1;
                 }
                 else
                 {
-                    U8 merge_our_lookahead = lr_1_firstof(
+                    uint8_t merge_our_lookahead = lr_1_firstof(
                             temp_lookahead, item->grammar->grammar[item->item_i + 1],
                             parser);
 
@@ -207,8 +207,8 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             dirty = 1;
             already_expanded[token_to_index(potential_token, parser) - parser->action_token_n] = 1;
 
-            U32 expand_count = 0;
-            for (U32 i = 0; i < parser->grammar_n; i++)
+            uint32_t expand_count = 0;
+            for (uint32_t i = 0; i < parser->grammar_n; i++)
             {
                 // Check if this token is the result of any grammar rule
                 const GrammarRule* rule = &parser->grammar_rules[i];
@@ -250,7 +250,7 @@ static GrammarState* cc_generate_augmented(const CanonicalCollection* cc)
 
 void canonical_collection_free(CanonicalCollection* self)
 {
-    for (U32 i = 0; i < self->state_n; i++)
+    for (uint32_t i = 0; i < self->state_n; i++)
     {
         gs_free(self->all_states[i]);
     }
@@ -287,7 +287,7 @@ void gs_resolve(CanonicalCollection* cc, GrammarState* state)
         LR_1* new_item = lr_1_init(item->grammar, item->item_i + 1, cc->parser->action_token_n);
         lookahead_copy(new_item->look_ahead, item->look_ahead, cc->parser->action_token_n);
 
-        U32 next_token = token_to_index(item->grammar->grammar[item->item_i], cc->parser);
+        uint32_t next_token = token_to_index(item->grammar->grammar[item->item_i], cc->parser);
         if (state->action_states[next_token])
         {
             // Another rule already generated this state
@@ -306,7 +306,7 @@ void gs_resolve(CanonicalCollection* cc, GrammarState* state)
         state->action_states[next_token]->head_item = new_item;
     }
 
-    for (I32 token = cc->parser->token_n - 1; token >= 0; token--)
+    for (int32_t token = cc->parser->token_n - 1; token >= 0; token--)
     {
         if (!state->action_states[token])
             continue;
@@ -315,8 +315,8 @@ void gs_resolve(CanonicalCollection* cc, GrammarState* state)
         gs_apply_closure(state->action_states[token], cc->parser);
 
         // Check if this state matches any other added states
-        U8 is_duplicate = 0;
-        for (U32 i = 0; i < cc->state_n; i++)
+        uint8_t is_duplicate = 0;
+        for (uint32_t i = 0; i < cc->state_n; i++)
         {
             if (clr_1_cmp(cc->all_states[i],
                       state->action_states[token],
@@ -365,9 +365,9 @@ void canonical_collection_resolve(
     {
         // We need to consolidate states that have
         // the LR(1) items but different lookaheads
-        for (U32 i = 0; i < self->state_n; i++)
+        for (uint32_t i = 0; i < self->state_n; i++)
         {
-            for (U32 j = i + 1; j < self->state_n; j++)
+            for (uint32_t j = i + 1; j < self->state_n; j++)
             {
                 // If states at i and j match, we need
                 // to merge j into i.
@@ -382,12 +382,12 @@ void canonical_collection_resolve(
                 {
                     // i and j match
 
-                    lalr_1_merge(self->all_states[i], self->all_states[j], self->parser->token_n);
+                    lalr_1_merge(self->all_states[i], self->all_states[j], self->parser->action_token_n);
 
                     // Find all uses of j in all states
-                    for (U32 k = 0; k < self->state_n; k++)
+                    for (uint32_t k = 0; k < self->state_n; k++)
                     {
-                        for (U32 action_i = 0; action_i < self->parser->token_n; action_i++)
+                        for (uint32_t action_i = 0; action_i < self->parser->token_n; action_i++)
                         {
                             if (self->all_states[k]->action_states[action_i] == self->all_states[j])
                             {
@@ -410,9 +410,9 @@ void canonical_collection_resolve(
 }
 
 static inline
-U32 cc_get_grammar_id(const GrammarParser* self, const GrammarRule* rule)
+uint32_t cc_get_grammar_id(const GrammarParser* self, const GrammarRule* rule)
 {
-    for (U32 i = 0; i < self->grammar_n; i++)
+    for (uint32_t i = 0; i < self->grammar_n; i++)
     {
         if (rule == &self->grammar_rules[i])
             return i;
@@ -423,9 +423,9 @@ U32 cc_get_grammar_id(const GrammarParser* self, const GrammarRule* rule)
 }
 
 static inline
-U32 cc_get_state_id(const CanonicalCollection* self, const GrammarState* state)
+uint32_t cc_get_state_id(const CanonicalCollection* self, const GrammarState* state)
 {
-    for (U32 i = 0; i < self->state_n; i++)
+    for (uint32_t i = 0; i < self->state_n; i++)
     {
         if (state == self->all_states[i])
             return i;
@@ -436,23 +436,23 @@ U32 cc_get_state_id(const CanonicalCollection* self, const GrammarState* state)
 }
 
 static inline
-U32* cc_allocate_table(const CanonicalCollection* self)
+uint32_t* cc_allocate_table(const CanonicalCollection* self)
 {
-    return calloc(self->state_n * self->parser->token_n, sizeof(U32));
+    return calloc(self->state_n * self->parser->token_n, sizeof(uint32_t));
 }
 
-U32* canonical_collection_generate(const CanonicalCollection* self, const U8* precedence_table)
+uint32_t* canonical_collection_generate(const CanonicalCollection* self, const uint8_t* precedence_table)
 {
-    U32 rr_conflicts = 0, sr_conflicts = 0;
-    U32* table = cc_allocate_table(self); // zeroes
+    uint32_t rr_conflicts = 0, sr_conflicts = 0;
+    uint32_t* table = cc_allocate_table(self); // zeroes
 
-    U32 i;
-    for (U32 state_i = 0; state_i < self->state_n; state_i++)
+    uint32_t i;
+    for (uint32_t state_i = 0; state_i < self->state_n; state_i++)
     {
         const GrammarState* state = self->all_states[state_i];
         i = state_i * self->parser->token_n;
 
-        for (U32 tok_j = 0; tok_j < self->parser->token_n; tok_j++, i++)
+        for (uint32_t tok_j = 0; tok_j < self->parser->token_n; tok_j++, i++)
         {
             // There are three options
             // 1. Syntax error
@@ -467,7 +467,7 @@ U32* canonical_collection_generate(const CanonicalCollection* self, const U8* pr
             }
             else
             {
-                U32 target_state = cc_get_state_id(
+                uint32_t target_state = cc_get_state_id(
                         self, state->action_states[tok_j]);
 
                 table[i] = target_state | TOK_SHIFT_MASK;
@@ -481,8 +481,8 @@ U32* canonical_collection_generate(const CanonicalCollection* self, const U8* pr
         {
             if (item->final_item)
             {
-                U32 action_mask;
-                U32 grammar_id;
+                uint32_t action_mask;
+                uint32_t grammar_id;
                 if (token_to_index(item->grammar->token, self->parser) == self->parser->token_n) // Augmented rule
                 {
                     // This is an accept
@@ -501,12 +501,12 @@ U32* canonical_collection_generate(const CanonicalCollection* self, const U8* pr
                 }
 
                 // Only add reduce for the items in this lookahead
-                for (U32 lookahead_i = 0; lookahead_i < self->parser->action_token_n; lookahead_i++)
+                for (uint32_t lookahead_i = 0; lookahead_i < self->parser->action_token_n; lookahead_i++)
                 {
                     if (!item->look_ahead[lookahead_i])
                         continue; // Not a lookahead
 
-                    U32 idx = lookahead_i + (state_i * self->parser->token_n);
+                    uint32_t idx = lookahead_i + (state_i * self->parser->token_n);
 
                     if (table[idx])
                     {

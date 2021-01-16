@@ -23,8 +23,6 @@ include(cmake/policy.cmake)
 # Unit and integration testing
 include(cmake/test.cmake)
 
-include_directories(${PROJECT_SOURCE_DIR}/third_party/cre2/src)
-
 add_subdirectory(src)
 add_subdirectory(third_party)
 
