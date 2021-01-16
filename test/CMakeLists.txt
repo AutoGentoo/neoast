@@ -18,8 +18,8 @@ add_mocked_test(tablegen_C
         ENVIRONMENT ${EXEC_ENV}
         )
 
-BuildParser(calculator_parser ${CMAKE_CURRENT_SOURCE_DIR}/input/calculator.y)
-BuildParser(calculator_ascii_parser ${CMAKE_CURRENT_SOURCE_DIR}/input/calculator_ascii.y)
+BuildParser(calculator_parser input/calculator.y)
+BuildParser(calculator_ascii_parser input/calculator_ascii.y)
 add_mocked_test(integration_C
         SOURCES
         input/calculator.y

@@ -6,5 +6,7 @@ function(BuildParser target input_file)
     add_custom_command(OUTPUT ${neoast_OUTPUT}
             COMMAND $<TARGET_FILE:neoast-exec>
             ARGS ${input_file} ${neoast_OUTPUT}
-            DEPENDS ${input_file} neoast-exec)
+            DEPENDS ${input_file} neoast-exec
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            )
 endfunction()
