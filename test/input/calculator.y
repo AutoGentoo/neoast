@@ -38,6 +38,10 @@
     double number;
 }
 
+/*
+ * Block comment
+ */
+
 ==
 // Test lex rule comment
 "[ ]+"         {return -1;}
@@ -49,6 +53,11 @@
 "\\^"          {return TOK_CARET;}
 "\\("          {return TOK_P_OPEN;}
 "\\)"          {return TOK_P_CLOSE;}
+
+
+/*
+Block comment
+*/
 
 ==
 
@@ -66,4 +75,9 @@ expr: TOK_N                             {$$ = $1;}
     | expr TOK_CARET expr               {$$ = pow($1, $3);}
     | TOK_P_OPEN expr TOK_P_CLOSE       {$$ = $2;}
     ;
+
+
+/*
+Block comment
+*/
 %%

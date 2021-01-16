@@ -410,9 +410,30 @@ static I32 ll_regex_add_to_buffer(const char* lex_text, void* lex_val, U32 len, 
     return -1;
 }
 
+static I32 ll_regex_enter_comment(const char* lex_text, void* lex_val, U32 len, Stack* lexer_state)
+{
+    (void) lex_text;
+    (void) lex_val;
+    (void) len;
+
+    STACK_PUSH(lexer_state, LEX_STATE_COMMENT);
+    return -1;
+}
+
+static I32 ll_regex_exit_comment(const char* lex_text, void* lex_val, U32 len, Stack* lexer_state)
+{
+    (void) lex_text;
+    (void) lex_val;
+    (void) len;
+
+    STACK_POP(lexer_state);
+    return -1;
+}
+
 static LexerRule ll_rules_s0[] = {
         {.regex_raw = "[\n ]+"}, // skip
         {.regex_raw = "//[^\n]*\n"},
+        {.regex_raw = "/\\*", .expr = ll_regex_enter_comment},
         {.regex_raw = "%%", .expr = (lexer_expr) ll_enter_grammar},
         {.regex_raw = "==", .expr = (lexer_expr) ll_enter_lex},
         {.regex_raw = "%option" WS_X ID_X"=\"[^\"]*\"", .expr = (lexer_expr) ll_option},
@@ -436,6 +457,7 @@ static LexerRule ll_rules_s0[] = {
 static LexerRule ll_rules_lex[] = {
         {.regex_raw = "[\n ]+"}, // skip
         {.regex_raw = "//[^\n]*\n"},
+        {.regex_raw = "/\\*", .expr = ll_regex_enter_comment},
         {.regex_raw = "==", .expr = (lexer_expr) ll_exit_state},
         {.regex_raw = "<" ID_X ">" WS_OPT "{", .expr = (lexer_expr) ll_lex_state},
         {.regex_raw = "\"", .expr = (lexer_expr) ll_build_regex},
@@ -445,6 +467,7 @@ static LexerRule ll_rules_lex[] = {
 static LexerRule ll_rules_grammar[] = {
         {.regex_raw = "[\n ]+"}, // skip
         {.regex_raw = "//[^\n]*\n"},
+        {.regex_raw = "/\\*", .expr = ll_regex_enter_comment},
         {.regex_raw = "%%", .expr = (lexer_expr) ll_exit_state},
         {.regex_raw = ID_X WS_OPT ":", .expr = (lexer_expr) ll_g_rule},
         {.regex_raw = "{", .expr = (lexer_expr) ll_match_brace},
@@ -468,10 +491,17 @@ static LexerRule  ll_rules_regex[] = {
 static LexerRule ll_rules_lex_state[] = {
         {.regex_raw = "[\n ]+"}, // skip
         {.regex_raw = "//[^\n]*\n"},
+        {.regex_raw = "/\\*", .expr = ll_regex_enter_comment},
         {.regex_raw = "==", .expr = (lexer_expr) ll_exit_state},
         {.regex_raw = "}", .expr = (lexer_expr) ll_lex_state_exit},
         {.regex_raw = "\"", .expr = (lexer_expr) ll_build_regex},
         {.regex_raw = "{", .expr = (lexer_expr) ll_match_brace},
+};
+
+static LexerRule ll_rules_comment[] = {
+        {.regex_raw = "\\*/", .expr = ll_regex_exit_comment},
+        {.regex_raw = "[^\\*]+"},
+        {.regex_raw = "\\*"},
 };
 
 static LexerRule* ll_rules[] = {
@@ -481,6 +511,7 @@ static LexerRule* ll_rules[] = {
         ll_rules_match_brace,
         ll_rules_regex,
         ll_rules_lex_state,
+        ll_rules_comment,
 };
 
 static U32 ll_rules_n[] = {
@@ -490,6 +521,7 @@ static U32 ll_rules_n[] = {
         ARR_LEN(ll_rules_match_brace),
         ARR_LEN(ll_rules_regex),
         ARR_LEN(ll_rules_lex_state),
+        ARR_LEN(ll_rules_comment),
 };
 
 const U32 grammars[][7] = {

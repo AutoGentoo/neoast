@@ -72,6 +72,7 @@ enum
     LEX_STATE_MATCH_BRACE,
     LEX_STATE_REGEX,
     LEX_STATE_LEX_STATE,
+    LEX_STATE_COMMENT
 };
 
 struct KeyVal
