@@ -14,6 +14,17 @@ void calc_free_buffers(void* self);
 void calc_free(void* self);
 double calc_parse(const void* self, const void* buffers, const char* input);
 
+CTEST(test_empty)
+{
+    void* parser = calc_init();
+    void* buffers = calc_allocate_buffers();
+
+    assert_double_equal(calc_parse(parser, buffers, "   "), 0, 0);
+
+    calc_free(parser);
+    calc_free_buffers(buffers);
+}
+
 CTEST(test_parser)
 {
     void* parser = calc_init();
@@ -27,6 +38,7 @@ CTEST(test_parser)
 }
 
 const static struct CMUnitTest left_scan_tests[] = {
+        cmocka_unit_test(test_empty),
         cmocka_unit_test(test_parser),
 };
 

@@ -875,9 +875,9 @@ int codegen_write(const struct File* self, FILE* fp)
     put_parsing_table(parsing_table, cc, fp);
 
     // Dump the exported symbols
-    fprintf(fp, "void* %s_init()\n{\n"
-                "    static int inited = 0;\n"
-                "    if (inited)\n"
+    fprintf(fp, "static int parser_initialized = 0;\n"
+                "void* %s_init()\n{\n"
+                "    if (parser_initialized)\n"
                 "    {\n"
                 "        return &parser;\n"
                 "    }\n"
@@ -885,12 +885,17 @@ int codegen_write(const struct File* self, FILE* fp)
                 "    U32 error = parser_init(&parser);\n"
                 "    if (error)\n"
                 "        return NULL;\n\n"
-                "    inited = 1;\n"
+                "    parser_initialized = 1;\n"
                 "    return (void*)&parser;\n"
                 "}\n\n",
                 options.prefix);
-    fprintf(fp, "void %s_free(GrammarParser* self)\n{\n"
-                "    parser_free(self);"
+    fprintf(fp, "void %s_free(GrammarParser* self)\n"
+                "{\n"
+                "    if (parser_initialized)\n"
+                "    {\n"
+                "         parser_free(self);\n"
+                "         parser_initialized = 0;\n"
+                "    }\n"
                 "}\n\n",
                 options.prefix);
 
