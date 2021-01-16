@@ -67,12 +67,12 @@ static GrammarState* gs_init(const CanonicalCollection* parent)
 
 static LR_1* lr_1_init(const GrammarRule* rule, U32 item_i, U32 token_n)
 {
-    LR_1* self = malloc(sizeof(LR_1) + sizeof(U8) * token_n);
+    LR_1* self = malloc(sizeof(LR_1) + (sizeof(U8) * token_n));
     self->next = NULL;
     self->grammar = rule;
     self->item_i = item_i;
     self->final_item = self->item_i >= rule->tok_n;
-    memset(self->look_ahead, 0, token_n);
+    memset(self->look_ahead, 0, sizeof(U8) * token_n);
 
     return self;
 }
@@ -382,7 +382,7 @@ void canonical_collection_resolve(
                 {
                     // i and j match
 
-                    lalr_1_merge(self->all_states[i], self->all_states[j], self->parser->token_n);
+                    lalr_1_merge(self->all_states[i], self->all_states[j], self->parser->action_token_n);
 
                     // Find all uses of j in all states
                     for (U32 k = 0; k < self->state_n; k++)
