@@ -51,7 +51,7 @@ void put_enum(int start, int n, const char* const* names, FILE* fp)
         fprintf(fp, "    %s, // %d 0x%03X", names[i], start, start);
         if (strncmp(names[i], "ASCII_CHAR_0x", 13) == 0)
         {
-            U8 c = strtoul(&names[i][13], NULL, 16);
+            uint8_t c = strtoul(&names[i][13], NULL, 16);
             fprintf(fp, " '%c'\n", c);
         }
         else
@@ -88,7 +88,7 @@ const char* check_grammar_arg_skip(const char* start, const char* search)
     {
         const char* start_str;
         const char* end_str;
-        U32 len[2];
+        uint32_t len[2];
     } red_zone_desc[] = {
             {"//", "\n", {2, 1}},
             {"/*", "*/", {2, 2}},
@@ -128,7 +128,7 @@ const char* check_grammar_arg_skip(const char* start, const char* search)
 }
 
 static inline
-int get_named_token(const char* token_name, const char* const* tokens, U32 token_n)
+int get_named_token(const char* token_name, const char* const* tokens, uint32_t token_n)
 {
     for (int i = 0; i < token_n; i++)
     {
@@ -147,7 +147,7 @@ const char* put_grammar_rule_arg(
         struct GrammarRuleSingleProto* self,
         const char** tokens,
         const struct KeyVal** typed_tokens,
-        U32 token_n,
+        uint32_t token_n,
         FILE* fp)
 {
     if (search[1] == '$')
@@ -165,7 +165,7 @@ const char* put_grammar_rule_arg(
     }
 
     char* out;
-    U32 arg_num = strtoul(search + 1, &out, 10);
+    uint32_t arg_num = strtoul(search + 1, &out, 10);
     if (arg_num == 0)
     {
         fprintf(stderr, "Invalid argument index '0', use '$$' for destination\n");
@@ -203,7 +203,7 @@ void put_grammar_rule_action(
         struct GrammarRuleSingleProto* self,
         const char** tokens,
         const struct KeyVal** typed_tokens,
-        U32 token_n,
+        uint32_t token_n,
         FILE* fp)
 {
     fprintf(fp, "static void\ngg_rule_%p("
@@ -278,9 +278,9 @@ void put_lexer_state_rules(LexerRule* rules, int rules_n, const char* state_name
 }
 
 static inline
-void put_lexer_rule_count(const U32* ll_rule_count, int lex_state_n, FILE* fp)
+void put_lexer_rule_count(const uint32_t* ll_rule_count, int lex_state_n, FILE* fp)
 {
-    fputs("static const U32 lexer_rule_n[] = {", fp);
+    fputs("static const uint32_t lexer_rule_n[] = {", fp);
     for (int i = 0; i < lex_state_n; i++)
     {
         if (i + 1 >= lex_state_n)
@@ -312,12 +312,12 @@ void put_grammar_table_and_rules(
         struct GrammarRuleProto* rule_symbols,
         GrammarRule* rules,
         const char* const* tokens,
-        U32 rule_n,
+        uint32_t rule_n,
         FILE* fp)
 {
     // First put the grammar table
     fputs("static const\nunsigned int grammar_token_table[] = {\n", fp);
-    U32 grammar_i = 0;
+    uint32_t grammar_i = 0;
     for (struct GrammarRuleProto* rule_iter = rule_symbols;
          rule_iter;
          rule_iter = rule_iter->next)
@@ -353,7 +353,7 @@ void put_grammar_table_and_rules(
     fputs("};\n\n", fp);
 
     // Print the grammar rules
-    U32 grammar_offset_i = 0;
+    uint32_t grammar_offset_i = 0;
     fputs("static const\nGrammarRule grammar_rules[] = {\n", fp);
     for (int i = 0; i < rule_n; i++)
     {
@@ -379,10 +379,10 @@ void put_grammar_table_and_rules(
 }
 
 static inline
-void put_parsing_table(const U32* parsing_table, CanonicalCollection* cc, FILE* fp)
+void put_parsing_table(const uint32_t* parsing_table, CanonicalCollection* cc, FILE* fp)
 {
     int i = 0;
-    fputs("static const\nU32 GEN_parsing_table[] = {\n", fp);
+    fputs("static const\nuint32_t GEN_parsing_table[] = {\n", fp);
     for (int state_i = 0; state_i < cc->state_n; state_i++)
     {
         fputs("        ", fp);
@@ -395,9 +395,9 @@ void put_parsing_table(const U32* parsing_table, CanonicalCollection* cc, FILE* 
 }
 
 static inline
-void put_ascii_mappings(const U32 ascii_mappings[ASCII_MAX], FILE* fp)
+void put_ascii_mappings(const uint32_t ascii_mappings[ASCII_MAX], FILE* fp)
 {
-    fputs("static const\nU32 ascii_mappings[ASCII_MAX] = {\n", fp);
+    fputs("static const\nuint32_t ascii_mappings[ASCII_MAX] = {\n", fp);
     int i = 0;
     for (int row = 0; i < ASCII_MAX; row++)
     {
@@ -607,9 +607,9 @@ int codegen_write(const struct File* self, FILE* fp)
 
     const char** lexer_states = malloc(sizeof(char*) * (lex_state_n));
     const struct KeyVal** macros = malloc(sizeof(struct KeyVal*) * macro_n);
-    U8* precedence_table = calloc(token_n, sizeof(U8));
+    uint8_t* precedence_table = calloc(token_n, sizeof(uint8_t));
 
-    U32 ascii_mappings[ASCII_MAX] = {0};
+    uint32_t ascii_mappings[ASCII_MAX] = {0};
 
     tokens[action_i++] = "EOF";
     for (struct KeyVal* iter = self->header; iter; iter = iter->next)
@@ -711,7 +711,7 @@ int codegen_write(const struct File* self, FILE* fp)
 
     // Dump all lexer rule actions
     // Count the number of lexer rules in each state
-    U32* ll_rule_count = calloc(lex_state_n, sizeof(U32));
+    uint32_t* ll_rule_count = calloc(lex_state_n, sizeof(uint32_t));
     for (struct LexerRuleProto* iter = self->lexer_rules; iter; iter = iter->next)
     {
         int state_id;
@@ -760,8 +760,8 @@ int codegen_write(const struct File* self, FILE* fp)
     put_lexer_rule_count(ll_rule_count, lex_state_n, fp);
     put_lexer_states(lexer_states, lex_state_n, fp);
 
-    U32 grammar_n = 0;
-    U32 grammar_tok_n = 0;
+    uint32_t grammar_n = 0;
+    uint32_t grammar_tok_n = 0;
     for (struct GrammarRuleProto* rule_iter = self->grammar_rules;
          rule_iter;
          rule_iter = rule_iter->next)
@@ -801,8 +801,8 @@ int codegen_write(const struct File* self, FILE* fp)
     grammar_tok_n++;
 
     GrammarRule* gg_rules = malloc(sizeof(GrammarRule) * grammar_n);
-    I32* grammar_table = malloc(sizeof(U32) * grammar_tok_n);
-    U32 grammar_tok_offset_c = 0;
+    int32_t* grammar_table = malloc(sizeof(uint32_t) * grammar_tok_n);
+    uint32_t grammar_tok_offset_c = 0;
     grammar_i = 0;
 
     for (struct GrammarRuleProto* rule_iter = all_rules;
@@ -820,8 +820,8 @@ int codegen_write(const struct File* self, FILE* fp)
              rule_single_iter;
              rule_single_iter = rule_single_iter->next)
         {
-            U32 grammar_table_offset = grammar_tok_offset_c;
-            U32 gg_tok_n = 0;
+            uint32_t grammar_table_offset = grammar_tok_offset_c;
+            uint32_t gg_tok_n = 0;
             // Add the tokens to the token tables
             for (struct Token* tok_iter = rule_single_iter->tokens; tok_iter; tok_iter = tok_iter->next)
             {
@@ -835,7 +835,7 @@ int codegen_write(const struct File* self, FILE* fp)
             GrammarRule* gg_current = &gg_rules[grammar_i++];
             gg_current->expr = (parser_expr) rule_single_iter->function;
             gg_current->token = rule_tok + ASCII_MAX;
-            gg_current->grammar = (U32*) &grammar_table[grammar_table_offset];
+            gg_current->grammar = (uint32_t*) &grammar_table[grammar_table_offset];
             gg_current->tok_n = gg_tok_n;
         }
     }
@@ -883,7 +883,7 @@ int codegen_write(const struct File* self, FILE* fp)
     CanonicalCollection* cc = canonical_collection_init(&parser);
     canonical_collection_resolve(cc, LALR_1);
 
-    U32* parsing_table = canonical_collection_generate(cc, precedence_table);
+    uint32_t* parsing_table = canonical_collection_generate(cc, precedence_table);
 
     if (options.debug_table)
     {
@@ -927,7 +927,7 @@ int codegen_write(const struct File* self, FILE* fp)
                 "        return &parser;\n"
                 "    }\n"
                 "\n"
-                "    U32 error = parser_init(&parser);\n"
+                "    uint32_t error = parser_init(&parser);\n"
                 "    if (error)\n"
                 "        return NULL;\n\n"
                 "    parser_initialized = 1;\n"
@@ -964,7 +964,7 @@ int codegen_write(const struct File* self, FILE* fp)
                 "{\n"
                 "    parser_reset_buffers(buffers);\n"
                 "    \n"
-                "    U64 input_len = strlen(input);\n"
+                "    uint64_t input_len = strlen(input);\n"
                 "    if (lexer_fill_table(input, input_len, self, buffers) == -1) return (typeof(t.%s))0;\n"
                 "    I32 output_idx = parser_parse_lr(self, GEN_parsing_table, buffers);\n"
                 "    \n"

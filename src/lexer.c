@@ -8,18 +8,18 @@
 #include "lexer.h"
 #include "parser.h"
 
-I32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf)
+int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* parse, const ParserBuffers* buf)
 {
     void* current_val = buf->value_table;
     int i = 0;
     STACK_PUSH(buf->lexing_state_stack, 0);
-    U32 offset = 0;
+    uint32_t offset = 0;
     while ((buf->token_table[i] = lex_next(input, parse, buf, current_val, len, &offset)) && i < buf->table_n) // While not EOF
     {
         if (buf->token_table[i] == -1)
         {
             fprintf(stderr, "Invalid character near '%.*s' (state '%d')\n",
-                    (U32)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
+                    (uint32_t)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
                     &input[offset - 1], STACK_PEEK(buf->lexing_state_stack));
             return -1;
         }
@@ -31,7 +31,7 @@ I32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, con
     return i;
 }
 
-int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, U32 len, U32* offset)
+int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, uint32_t len, uint32_t* offset)
 {
     if (*offset >= len)
         return 0;
@@ -40,7 +40,7 @@ int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers
     LexerRule* rule;
 
     int i = 0;
-    U32 state_index = STACK_PEEK(buf->lexing_state_stack);
+    uint32_t state_index = STACK_PEEK(buf->lexing_state_stack);
     while(i < parser->lex_n[state_index])
     {
         rule = &parser->lexer_rules[state_index][i++];
@@ -49,7 +49,7 @@ int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers
                         *offset, len, CRE2_ANCHOR_START,
                         &match, 1))
         {
-            I32 token;
+            int32_t token;
 
             if (rule->expr)
             {
@@ -81,7 +81,7 @@ int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers
                 // Check if this token is an ascii character and needs to be converted
                 if (parser->ascii_mappings && token < ASCII_MAX)
                 {
-                    I32 mapping = parser->ascii_mappings[token];
+                    int32_t mapping = parser->ascii_mappings[token];
                     assert(mapping > ASCII_MAX);
                     return mapping - ASCII_MAX;
                 }

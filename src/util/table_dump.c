@@ -1,11 +1,11 @@
 #include <lexer.h>
 #include <parsergen/canonical_collection.h>
 
-void dump_item(const LR_1* lr1, U32 tok_n, const char* tok_names, FILE* fp)
+void dump_item(const LR_1* lr1, uint32_t tok_n, const char* tok_names, FILE* fp)
 {
-    U8 printed = 0;
+    uint8_t printed = 0;
     fprintf(fp, "['");
-    for (U32 i = 0; i < lr1->grammar->tok_n; i++)
+    for (uint32_t i = 0; i < lr1->grammar->tok_n; i++)
     {
         if (i == lr1->item_i && !printed)
         {
@@ -28,7 +28,7 @@ void dump_item(const LR_1* lr1, U32 tok_n, const char* tok_names, FILE* fp)
 
     // Print the lookaheads
     printed = 0;
-    for (U32 i = 0; i < tok_n; i++)
+    for (uint32_t i = 0; i < tok_n; i++)
     {
         if (lr1->look_ahead[i])
         {
@@ -44,9 +44,9 @@ void dump_item(const LR_1* lr1, U32 tok_n, const char* tok_names, FILE* fp)
     fprintf(fp, "];");
 }
 
-void dump_state(const GrammarState* state, U32 tok_n, U32 lookahead_n, const char* tok_names, U8 line_wrap, FILE* fp)
+void dump_state(const GrammarState* state, uint32_t tok_n, uint32_t lookahead_n, const char* tok_names, uint8_t line_wrap, FILE* fp)
 {
-    U8 is_first = 1;
+    uint8_t is_first = 1;
     for (const LR_1* item = state->head_item; item; item = item->next)
     {
         if (!is_first && line_wrap)
@@ -67,19 +67,19 @@ void dump_state(const GrammarState* state, U32 tok_n, U32 lookahead_n, const cha
     }
 }
 
-void dump_table(const U32* table,
+void dump_table(const uint32_t* table,
                 const CanonicalCollection* cc,
                 const char* tok_names,
-                U8 state_wrap,
+                uint8_t state_wrap,
                 FILE* fp,
                 const char* indent_str)
 {
     if (!indent_str)
         indent_str = "";
 
-    U32 i = 0;
+    uint32_t i = 0;
     fprintf(fp, "%stoken_id : ", indent_str);
-    for (U32 col = 0; col < cc->parser->token_n; col++)
+    for (uint32_t col = 0; col < cc->parser->token_n; col++)
     {
         if (col == cc->parser->action_token_n)
             fprintf(fp, "|");
@@ -88,7 +88,7 @@ void dump_table(const U32* table,
     fprintf(fp, "\n");
 
     fprintf(fp, "%stoken    : ", indent_str);
-    for (U32 col = 0; col < cc->parser->token_n; col++)
+    for (uint32_t col = 0; col < cc->parser->token_n; col++)
     {
         if (col == cc->parser->action_token_n)
             fprintf(fp, "|");
@@ -96,7 +96,7 @@ void dump_table(const U32* table,
     }
     fprintf(fp, "\n");
     fprintf(fp, "%s___________", indent_str);
-    for (U32 col = 0; col < cc->parser->token_n; col++)
+    for (uint32_t col = 0; col < cc->parser->token_n; col++)
     {
         if (col == cc->parser->action_token_n)
             fprintf(fp, "_");
@@ -104,10 +104,10 @@ void dump_table(const U32* table,
     }
     fprintf(fp, "\n");
 
-    for (U32 row = 0; row < cc->state_n; row++)
+    for (uint32_t row = 0; row < cc->state_n; row++)
     {
         fprintf(fp, "%sstate %02d : ", indent_str, row);
-        for (U32 col = 0; col < cc->parser->token_n; col++, i++)
+        for (uint32_t col = 0; col < cc->parser->token_n; col++, i++)
         {
             if (col == cc->parser->action_token_n)
                 fprintf(fp, "|");

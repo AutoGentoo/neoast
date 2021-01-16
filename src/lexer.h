@@ -20,7 +20,7 @@
  * @return next token in buffer
  */
 int
-lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, U32 len, U32* offset);
+lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, unsigned int len, unsigned int* offset);
 
 /**
  * Use the lexer to get every token in a string
@@ -33,6 +33,6 @@ lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* bu
  * @param val_n offset of a value (size of value union)
  * @return number of parsed tokens
  */
-I32 lexer_fill_table(const char* input, U64 len, const GrammarParser* parse, const ParserBuffers* buf);
+int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* parse, const ParserBuffers* buf);
 
 #endif //NEOAST_LEXER_H

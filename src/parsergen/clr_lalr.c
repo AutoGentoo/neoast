@@ -8,11 +8,11 @@
 
 static inline
 int lr_1_cmp_look_ahead(
-        const U8 a[],
-        const U8 b[],
-        U32 tok_n)
+        const uint8_t a[],
+        const uint8_t b[],
+        uint32_t tok_n)
 {
-    for (U32 i = 0; i < tok_n; i++)
+    for (uint32_t i = 0; i < tok_n; i++)
     {
         if (a[i] != b[i])
             return 1;
@@ -22,7 +22,7 @@ int lr_1_cmp_look_ahead(
 }
 
 static inline
-int lalr_1_cmp_prv(const LR_1* a, const LR_1* b, U32 tok_n)
+int lalr_1_cmp_prv(const LR_1* a, const LR_1* b, uint32_t tok_n)
 {
     (void)tok_n;
 
@@ -33,7 +33,7 @@ int lalr_1_cmp_prv(const LR_1* a, const LR_1* b, U32 tok_n)
 }
 
 static inline
-int clr_1_cmp_prv(const LR_1* a, const LR_1* b, U32 tok_n)
+int clr_1_cmp_prv(const LR_1* a, const LR_1* b, uint32_t tok_n)
 {
     // LALR(1) but we treat different lookaheads as different
     return lalr_1_cmp_prv(a, b, tok_n)
@@ -41,7 +41,7 @@ int clr_1_cmp_prv(const LR_1* a, const LR_1* b, U32 tok_n)
 }
 
 
-int lalr_1_cmp(const GrammarState* a, const GrammarState* b, U32 tok_n)
+int lalr_1_cmp(const GrammarState* a, const GrammarState* b, uint32_t tok_n)
 {
     // Make sure all items in a exist in b
     int a_item_n = 0;
@@ -56,7 +56,7 @@ int lalr_1_cmp(const GrammarState* a, const GrammarState* b, U32 tok_n)
 
     for (LR_1* a_c = a->head_item; a_c; a_c = a_c->next)
     {
-        U8 found_match = 0;
+        uint8_t found_match = 0;
         for (const LR_1* b_c = b->head_item; b_c; b_c = b_c->next)
         {
             if (lalr_1_cmp_prv(a_c, b_c, tok_n) == 0)
@@ -75,7 +75,7 @@ int lalr_1_cmp(const GrammarState* a, const GrammarState* b, U32 tok_n)
     return 0;
 }
 
-int clr_1_cmp(const GrammarState* a, const GrammarState* b, U32 tok_n)
+int clr_1_cmp(const GrammarState* a, const GrammarState* b, uint32_t tok_n)
 {
     // Make sure all items in a exist in b
     int a_item_n = 0;
@@ -90,7 +90,7 @@ int clr_1_cmp(const GrammarState* a, const GrammarState* b, U32 tok_n)
 
     for (LR_1* a_c = a->head_item; a_c; a_c = a_c->next)
     {
-        U8 found_match = 0;
+        uint8_t found_match = 0;
         for (const LR_1* b_c = b->head_item; b_c; b_c = b_c->next)
         {
             if (clr_1_cmp_prv(a_c, b_c, tok_n) == 0)
@@ -109,7 +109,7 @@ int clr_1_cmp(const GrammarState* a, const GrammarState* b, U32 tok_n)
     return 0;
 }
 
-void lalr_1_merge(GrammarState* target, const GrammarState* to_merge, U32 tok_n)
+void lalr_1_merge(GrammarState* target, const GrammarState* to_merge, uint32_t tok_n)
 {
     // Merge the lookaheads
     LR_1* iter = target->head_item;
