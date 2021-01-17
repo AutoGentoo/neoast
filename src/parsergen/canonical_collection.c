@@ -92,6 +92,7 @@ void lookahead_merge(uint8_t dest[], const uint8_t src[], uint32_t n)
 
 uint8_t lr_1_firstof(uint8_t dest[], uint32_t token, const GrammarParser* parser)
 {
+    token = token_to_index(token, parser);
     if (token < parser->action_token_n)
     {
         // Action tokens cannot be expanded
@@ -115,12 +116,12 @@ uint8_t lr_1_firstof(uint8_t dest[], uint32_t token, const GrammarParser* parser
 
         // Recursive grammar rules
         // We can skip this one
-        if (rule->grammar[0] == token)
+        if (token_to_index(rule->grammar[0], parser) == token)
         {
             continue;
         }
 
-        if (rule->token == token)
+        if (token_to_index(rule->token, parser) == token)
         {
             merge_current_lookahead =
                     lr_1_firstof(dest, rule->grammar[0], parser)
