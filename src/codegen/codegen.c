@@ -1029,6 +1029,7 @@ int codegen_write(const struct File* self, FILE* fp)
     }
     free(ll_rules);
     free(ll_rule_count);
+    macro_engine_free(m_engine);
 
     return 0;
 }
