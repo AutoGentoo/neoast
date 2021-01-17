@@ -10,6 +10,12 @@ endmacro()
 
 CUnitTest(lexer)
 CUnitTest(lr)
+add_mocked_test(macro_C
+        SOURCES macro_test.c
+        LINK_LIBRARIES neoast neoast-codegen
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT ${EXEC_ENV}
+        )
 
 add_mocked_test(tablegen_C
         SOURCES tablegen_test.c

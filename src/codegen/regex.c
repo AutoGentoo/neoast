@@ -50,7 +50,7 @@ const char* macro_engine_get_macro(MacroEngine* self, const char* name, int name
 {
     for (Macro* iter = self->head; iter; iter = iter->next)
     {
-        if (strncmp(iter->name, name, name_length) == 0)
+        if (strncmp(iter->name, name, name_length) == 0 && !iter->name[name_length])
         {
             return iter->expanded_regex;
         }
