@@ -1024,7 +1024,10 @@ int codegen_write(const struct File* self, FILE* fp)
 
     for (int i = 0; i < lex_state_n; i++)
     {
-        free((char*)ll_rules[i]->regex_raw);
+        for (int j = 0; j < ll_rule_count[i]; j++)
+        {
+            free((char*)ll_rules[i][j].regex_raw);
+        }
         free(ll_rules[i]);
     }
     free(ll_rules);

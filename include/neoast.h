@@ -1,5 +1,6 @@
 #ifndef NEOAST_H
 #define NEOAST_H
+#define _GNU_SOURCE
 
 #include <stdint.h>
 #include <stdio.h>
