@@ -93,8 +93,8 @@ void lr_parse_error(const uint32_t* parsing_table,
     const char* current_token = token_names[error_tok];
     const char* prev_token = token_names[prev_tok];
 
-    fprintf(stderr, "Invalid syntax: unexpected token '%s' after '%s' (state %d)\n",
-            current_token, prev_token, current_state);
+    fprintf(stderr, "Invalid syntax: unexpected token '%s' [%d] after '%s' [%d] (state %d)\n",
+            current_token, error_tok, prev_token, prev_tok, current_state);
     fprintf(stderr, "Expected one of: ");
 
     uint32_t index_off = current_state * tok_n;
@@ -152,7 +152,7 @@ int32_t parser_parse_lr(
                                         table_value & TOK_MASK,
                                         buffers->token_table, buffers->value_table, buffers->val_s,
                                         &dest_idx);
-            prev_tok = parser->grammar_rules[table_value & TOK_MASK].token;
+            prev_tok = parser->grammar_rules[table_value & TOK_MASK].token - ASCII_MAX;
         } else if (table_value & TOK_ACCEPT_MASK)
         {
             return dest_idx;

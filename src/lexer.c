@@ -18,7 +18,7 @@ int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* par
     {
         if (buf->token_table[i] == -1)
         {
-            fprintf(stderr, "Invalid character near '%.*s' (state '%d')\n",
+            fprintf(stderr, "Unmatched token near '%.*s' (state '%d')\n",
                     (uint32_t)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
                     &input[offset - 1], STACK_PEEK(buf->lexing_state_stack));
             return -1;

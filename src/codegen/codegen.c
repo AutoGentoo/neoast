@@ -895,7 +895,15 @@ int codegen_write(const struct File* self, FILE* fp)
     fputs("static const\nchar* token_names[] = {\n", fp);
     for (int i = 0; i < token_n - 1; i++)
     {
-        fprintf(fp, "        \"%s\",\n", tokens[i]);
+        if (strncmp(tokens[i], "ASCII_CHAR_0x", 13) == 0)
+        {
+            uint8_t c = strtoul(&tokens[i][13], NULL, 16);
+            fprintf(fp, "        \"%c\",\n", c);
+        }
+        else
+        {
+            fprintf(fp, "        \"%s\",\n", tokens[i]);
+        }
     }
     fputs("};\n\n", fp);
 
