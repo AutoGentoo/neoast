@@ -8,6 +8,7 @@
 #include <lexer.h>
 #include "stdio.h"
 #include "codegen.h"
+#include "regex.h"
 #include <parsergen/canonical_collection.h>
 #include <util/util.h>
 #include <stddef.h>
@@ -252,26 +253,49 @@ void put_grammar_rule_action(
 }
 
 static inline
-void put_lexer_rule(LexerRule* self, FILE* fp)
+void put_lexer_rule_regex(LexerRule* self, FILE* fp)
+{
+    fputs("        ", fp);
+    for (const char* iter = self->regex_raw; *iter; iter++)
+    {
+        fprintf(fp, "0x%02x, ", *iter);
+    }
+
+    // Null terminator
+    fprintf(fp, "0x%02x,\n", 0);
+}
+
+static inline
+uint32_t put_lexer_rule(LexerRule* self, const char* state_name, uint32_t offset, FILE* fp)
 {
     if (self->expr)
     {
-        fprintf(fp, "        {.regex_raw = \"%s\", .expr = (lexer_expr) ll_rule_%p},\n",
-                self->regex_raw, self->expr);
+        fprintf(fp, "        {.regex_raw = &ll_rules_state_%s_regex_table[%d], .expr = (lexer_expr) ll_rule_%p}, // %s\n",
+                state_name, offset, self->expr, self->regex_raw);
     } else
     {
-
         // TODO Add support for quick token optimization in code gen
     }
+
+    return strlen(self->regex_raw) + 1;
 }
 
 static inline
 void put_lexer_state_rules(LexerRule* rules, int rules_n, const char* state_name, FILE* fp)
 {
-    fprintf(fp, "static LexerRule ll_rules_state_%s[] = {\n", state_name);
+    // First we need to build the regex table
+    fprintf(fp, "static const char ll_rules_state_%s_regex_table[] = {\n", state_name);
     for (int i = 0; i < rules_n; i++)
     {
-        put_lexer_rule(&rules[i], fp);
+        put_lexer_rule_regex(&rules[i], fp);
+    }
+    fputs("};\n\n", fp);
+
+    fprintf(fp, "static LexerRule ll_rules_state_%s[] = {\n", state_name);
+    uint32_t offset = 0;
+    for (int i = 0; i < rules_n; i++)
+    {
+        offset += put_lexer_rule(&rules[i], state_name, offset, fp);
     }
 
     fputs("};\n\n", fp);
@@ -512,8 +536,8 @@ int codegen_write(const struct File* self, FILE* fp)
     struct KeyVal* _start = NULL;
 
     int action_n = 1, token_n = 1, // reserved eof
-    typed_token_n = 0, precedence_n = 0,
-            macro_n = 0, lex_state_n = 1;
+        typed_token_n = 0, precedence_n = 0,
+        lex_state_n = 1;
 
     struct Options options = {
             .debug_table = 0,
@@ -525,6 +549,8 @@ int codegen_write(const struct File* self, FILE* fp)
             .max_lex_tokens = 1024,
             .max_lex_state_depth = 16
     };
+
+    MacroEngine* m_engine = macro_engine_init();
 
     // Iterate a single time though the header data
     // Count all of the different header option types
@@ -587,7 +613,7 @@ int codegen_write(const struct File* self, FILE* fp)
                 precedence_n++;
                 break;
             case KEY_VAL_MACRO:
-                macro_n++;
+                macro_engine_register(m_engine, iter->key, iter->value);
                 break;
             case KEY_VAL_STATE:
                 lex_state_n++;
@@ -615,7 +641,6 @@ int codegen_write(const struct File* self, FILE* fp)
     const struct KeyVal** typed_tokens = calloc(token_n, sizeof(struct KeyVal*));
 
     const char** lexer_states = malloc(sizeof(char*) * (lex_state_n));
-    const struct KeyVal** macros = malloc(sizeof(struct KeyVal*) * macro_n);
     uint8_t* precedence_table = calloc(token_n, sizeof(uint8_t));
 
     uint32_t ascii_mappings[ASCII_MAX] = {0};
@@ -651,8 +676,6 @@ int codegen_write(const struct File* self, FILE* fp)
             case KEY_VAL_STATE:
                 lexer_states[lex_state_i++] = iter->key;
                 break;
-            case KEY_VAL_MACRO:
-                macros[macro_i++] = iter;
             default:
                 break;
         }
@@ -673,11 +696,6 @@ int codegen_write(const struct File* self, FILE* fp)
                 precedence_table[token_id] = iter->type == KEY_VAL_LEFT ? PRECEDENCE_LEFT : PRECEDENCE_RIGHT;
 
                 break;
-            case KEY_VAL_TOKEN:
-            case KEY_VAL_TOKEN_TYPE:
-            case KEY_VAL_TYPE:
-            case KEY_VAL_STATE:
-            case KEY_VAL_MACRO:
             default:
                 break;
         }
@@ -689,7 +707,6 @@ int codegen_write(const struct File* self, FILE* fp)
     assert(action_i == action_n);
     assert(grammar_i == token_n);
     assert(lex_state_i == lex_state_n);
-    assert(macro_i == macro_n);
 
     // Write the header information
     fputs("#define NEOAST_PARSER_CODEGEN___C\n"
@@ -750,6 +767,8 @@ int codegen_write(const struct File* self, FILE* fp)
         ll_rules[i] = current;
         int iterator = 0;
 
+        // We're going to build a large array with every string embedded
+        uint32_t regex_length = 0;
         for (struct LexerRuleProto* iter = self->lexer_rules; iter; iter = iter->next)
         {
             if (iter->lexer_state && i != 0)
@@ -759,7 +778,13 @@ int codegen_write(const struct File* self, FILE* fp)
 
             LexerRule* ll_rule = &current[iterator++];
             ll_rule->expr = (lexer_expr) iter;
-            ll_rule->regex_raw = iter->regex;
+            ll_rule->regex_raw = regex_expand(m_engine, iter->regex);
+            regex_length += strlen(ll_rule->regex_raw) + 1; // We need to null terminator
+            if (!regex_verify(m_engine, ll_rule->regex_raw))
+            {
+                CODEGEN_ERROR("Failed to compile regular expression '%s'\n", ll_rule->regex_raw);
+            }
+
             ll_rule->tok = 0;
         }
 
@@ -994,16 +1019,20 @@ int codegen_write(const struct File* self, FILE* fp)
     free(grammar_table);
     free(typed_tokens);
     free(lexer_states);
-    free(macros);
     free(precedence_table);
     free(tokens);
 
     for (int i = 0; i < lex_state_n; i++)
     {
+        for (int j = 0; j < ll_rule_count[i]; j++)
+        {
+            free((char*)ll_rules[i][j].regex_raw);
+        }
         free(ll_rules[i]);
     }
     free(ll_rules);
     free(ll_rule_count);
+    macro_engine_free(m_engine);
 
     return 0;
 }

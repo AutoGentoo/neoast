@@ -115,8 +115,8 @@ static int32_t ll_option(const char* lex_text, CodegenUnion* lex_val)
 static int32_t ll_macro(const char* lex_text, CodegenUnion* lex_val)
 {
     // Find the white space delimiter
-    char* split = strchr(lex_text, ' ');
-    char* key = strndup(lex_text, split - lex_text);
+    char* split = strchr(lex_text + 1, ' ');
+    char* key = strndup(lex_text + 1, split - lex_text - 1);
 
     // Find the start of the regex rule
     while (*split == ' ')
