@@ -3,7 +3,6 @@
 //
 
 #include <lexer.h>
-#include <parser.h>
 #include <cmocka.h>
 #include <stdlib.h>
 #include <string.h>

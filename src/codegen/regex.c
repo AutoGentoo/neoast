@@ -18,7 +18,7 @@ MacroEngine* macro_engine_init()
 
     const char* pattern = "\\{[A-z][A-z0-9_]*\\}";
 
-    self->macro_pattern = cre2_new(pattern, strlen(pattern), self->opts);
+    self->macro_pattern = cre2_new(pattern, (int)strlen(pattern), self->opts);
     assert(self->macro_pattern && "re2 failed to allocate memory for regex pattern");
     assert(!cre2_error_code(self->macro_pattern) && "Failed to build macro");
 
