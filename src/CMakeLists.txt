@@ -12,6 +12,7 @@ target_include_directories(neoast
         ${CMAKE_CURRENT_SOURCE_DIR}/../include
         ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/cre2/src)
 target_link_libraries(neoast cre2 re2 pthread)
+target_compile_options(neoast PRIVATE -fPIC)
 
 add_subdirectory(parsergen)
 add_subdirectory(codegen)
