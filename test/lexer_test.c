@@ -8,7 +8,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <lexer.h>
-#include <parser.h>
 
 #define CTEST(name) static void name(void** state)
 

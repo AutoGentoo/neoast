@@ -65,9 +65,9 @@ void put_enum(int start, int n, const char* const* names, FILE* fp)
 }
 
 static inline
-void put_lexer_rule_action(struct LexerRuleProto* self, FILE* fp)
+void put_lexer_rule_action(struct LexerRuleProto* self, const char* state_name, uint32_t regex_i, FILE* fp)
 {
-    fprintf(fp, "static int32_t\nll_rule_%p(const char* yytext, "
+    fprintf(fp, "static int32_t\nll_rule_%s_%02d(const char* yytext, "
                 CODEGEN_UNION"* yyval, "
                 "unsigned int len, "
                 "ParsingStack* lex_state)\n{\n"
@@ -75,7 +75,7 @@ void put_lexer_rule_action(struct LexerRuleProto* self, FILE* fp)
                 "    (void) yyval;\n"
                 "    (void) len;\n"
                 "    (void) lex_state;\n"
-                "    {", self);
+                "    {", state_name, regex_i);
     fputs(self->function, fp);
     fputs("}\n    return -1;\n}\n\n", fp);
 }
@@ -205,14 +205,15 @@ void put_grammar_rule_action(
         const char** tokens,
         const struct KeyVal** typed_tokens,
         uint32_t token_n,
+        uint32_t rule_n,
         FILE* fp)
 {
-    fprintf(fp, "static void\ngg_rule_%p("
+    fprintf(fp, "static void\ngg_rule_r%02d("
                 CODEGEN_UNION"* dest, "
                 CODEGEN_UNION"* args)\n{\n"
                 "    (void) dest;\n"
                 "    (void) args;\n"
-                "    {", self->function);
+                "    {", rule_n);
 
     // Find all usages of $N or $$
     // Check if this usage should be ignored (comment or string)
@@ -266,12 +267,12 @@ void put_lexer_rule_regex(LexerRule* self, FILE* fp)
 }
 
 static inline
-uint32_t put_lexer_rule(LexerRule* self, const char* state_name, uint32_t offset, FILE* fp)
+uint32_t put_lexer_rule(LexerRule* self, const char* state_name, uint32_t offset, uint32_t rule_i, FILE* fp)
 {
     if (self->expr)
     {
-        fprintf(fp, "        {.regex_raw = &ll_rules_state_%s_regex_table[%d], .expr = (lexer_expr) ll_rule_%p}, // %s\n",
-                state_name, offset, self->expr, self->regex_raw);
+        fprintf(fp, "        {.regex_raw = &ll_rules_state_%s_regex_table[%d], .expr = (lexer_expr) ll_rule_%s_%02d}, // %s\n",
+                state_name, offset, state_name, rule_i, self->regex_raw);
     } else
     {
         // TODO Add support for quick token optimization in code gen
@@ -295,7 +296,7 @@ void put_lexer_state_rules(LexerRule* rules, int rules_n, const char* state_name
     uint32_t offset = 0;
     for (int i = 0; i < rules_n; i++)
     {
-        offset += put_lexer_rule(&rules[i], state_name, offset, fp);
+        offset += put_lexer_rule(&rules[i], state_name, offset, i, fp);
     }
 
     fputs("};\n\n", fp);
@@ -383,11 +384,11 @@ void put_grammar_table_and_rules(
     {
         if (rules[i].expr)
         {
-            fprintf(fp, "        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d], .expr=(parser_expr) gg_rule_%p},\n",
+            fprintf(fp, "        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d], .expr=(parser_expr) gg_rule_r%02d},\n",
                     tokens[rules[i].token - ASCII_MAX],
                     rules[i].tok_n,
                     grammar_offset_i,
-                    rules[i].expr);
+                    i);
         }
         else
         {
@@ -756,8 +757,9 @@ int codegen_write(const struct File* self, FILE* fp)
         }
 
         ll_rule_count[state_id]++;
+        const char* state_name = lexer_states[state_id];
 
-        put_lexer_rule_action(iter, fp);
+        put_lexer_rule_action(iter, state_name, ll_rule_count[state_id] - 1, fp);
     }
 
     LexerRule** ll_rules = malloc(sizeof(LexerRule*) * lex_state_n);
@@ -805,7 +807,7 @@ int codegen_write(const struct File* self, FILE* fp)
              rule_single_iter;
              rule_single_iter = rule_single_iter->next)
         {
-            put_grammar_rule_action(rule_iter, rule_single_iter, tokens, typed_tokens, token_n, fp);
+            put_grammar_rule_action(rule_iter, rule_single_iter, tokens, typed_tokens, token_n, grammar_n + 1, fp);
             grammar_n++;
 
             // Find the number of tokens in this rule
