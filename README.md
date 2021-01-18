@@ -1,3 +1,6 @@
+![default](https://github.com/AutoGentoo/neoast/workflows/default/badge.svg)
+![sanitizer](https://github.com/AutoGentoo/neoast/workflows/sanitizer/badge.svg)
+
 # neoast
 A modern AST grammar lexer/parser generator written in C. Neoast can take arbitrary
 lexing and grammar rules and generate a scanner and parsing table. Unlike Bison/Flex,
