@@ -185,6 +185,16 @@ static int32_t ll_type(const char* lex_text, CodegenUnion* lex_val)
                                      strndup(type_start + 1, type_end - type_start - 1));
     return TOK_OPTION;
 }
+static int32_t ll_destructor(const char* lex_text, CodegenUnion* lex_val)
+{
+    const char* type_start = strchr(lex_text + 5, '<');
+    const char* type_end = strchr(type_start, '>');
+
+    lex_val->key_val = key_val_build(KEY_VAL_DESTRUCTOR,
+                                     strndup(type_start + 1, type_end - type_start - 1),
+                                     NULL);
+    return TOK_DESTRUCTOR;
+}
 static int32_t ll_token_with_type(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* type_start = strchr(lex_text + 6, '<');
@@ -455,6 +465,7 @@ static LexerRule ll_rules_s0[] = {
         {.regex_raw = "%top", .tok = TOK_HEADER},
         {.regex_raw = "%bottom", .tok = TOK_BOTTOM},
         {.regex_raw = "%union", .tok = TOK_UNION},
+        {.regex_raw = "%destructor" WS_OPT "<" ID_X ">", .expr = (lexer_expr) ll_destructor},
         {.regex_raw = "{", .expr = ll_match_brace},
         {.regex_raw = "\\+" ID_X WS_X "[^\n]+", .expr = (lexer_expr) ll_macro},
 };
@@ -538,6 +549,7 @@ const uint32_t grammars[][7] = {
         {TOK_HEADER, TOK_G_ACTION},
         {TOK_UNION, TOK_G_ACTION},
         {TOK_BOTTOM, TOK_G_ACTION},
+        {TOK_DESTRUCTOR, TOK_G_ACTION},
 
         /* TOK_GG_HEADER */
         {TOK_GG_KEY_VALS},
@@ -589,6 +601,11 @@ static void gg_build_union(CodegenUnion* dest, CodegenUnion* args)
 static void gg_build_bottom(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->key_val = key_val_build(KEY_VAL_BOTTOM, NULL, args[1].string);
+}
+static void gg_build_destructor(CodegenUnion* dest, CodegenUnion* args)
+{
+    dest->key_val = args[0].key_val;
+    dest->key_val->value = args[1].string;
 }
 static void gg_build_l_rule_1(CodegenUnion* dest, CodegenUnion* args)
 {
@@ -662,22 +679,23 @@ static const GrammarRule gg_rules[] = {
         {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[2],        .expr = (parser_expr) gg_build_header},
         {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[3],        .expr = (parser_expr) gg_build_union},
         {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[4],        .expr = (parser_expr) gg_build_bottom},
-        {.token=TOK_GG_HEADER, .tok_n=1, .grammar=grammars[5]},
-        {.token=TOK_GG_HEADER, .tok_n=2, .grammar=grammars[6],          .expr = (parser_expr) gg_key_val_add_next},
-        {.token=TOK_GG_LEX_RULE, .tok_n=2, .grammar=grammars[7],        .expr = (parser_expr) gg_build_l_rule_1},
-        {.token=TOK_GG_LEX_RULES, .tok_n=1, .grammar=grammars[8]},
-        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[9],       .expr = (parser_expr) gg_build_l_rule_2},
-        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[10],       .expr = (parser_expr) gg_build_l_rule_3},
-        {.token=TOK_GG_TOKENS, .tok_n=1, .grammar=grammars[11]},
-        {.token=TOK_GG_TOKENS, .tok_n=2, .grammar=grammars[12],         .expr = (parser_expr) gg_build_tok},
-        {.token=TOK_GG_SINGLE_GRAMMAR, .tok_n=2, .grammar=grammars[13], .expr = (parser_expr) gg_build_single},
-        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=1, .grammar=grammars[14]},
-        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=3, .grammar=grammars[15],  .expr = (parser_expr) gg_build_multi},
-        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=1, .grammar=grammars[16],  .expr = (parser_expr) gg_build_multi_empty},
-        {.token=TOK_GG_GRAMMAR, .tok_n=3, .grammar=grammars[17],        .expr = (parser_expr) gg_build_grammar},
-        {.token=TOK_GG_GRAMMARS, .tok_n=1, .grammar=grammars[18]},
-        {.token=TOK_GG_GRAMMARS, .tok_n=2, .grammar=grammars[19],       .expr = (parser_expr) gg_build_grammars},
-        {.token=TOK_GG_FILE, .tok_n=7, .grammar=grammars[20],           .expr = (parser_expr) gg_build_file},
+        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[5],        .expr = (parser_expr) gg_build_destructor},
+        {.token=TOK_GG_HEADER, .tok_n=1, .grammar=grammars[6]},
+        {.token=TOK_GG_HEADER, .tok_n=2, .grammar=grammars[7],          .expr = (parser_expr) gg_key_val_add_next},
+        {.token=TOK_GG_LEX_RULE, .tok_n=2, .grammar=grammars[8],        .expr = (parser_expr) gg_build_l_rule_1},
+        {.token=TOK_GG_LEX_RULES, .tok_n=1, .grammar=grammars[9]},
+        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[10],       .expr = (parser_expr) gg_build_l_rule_2},
+        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[11],       .expr = (parser_expr) gg_build_l_rule_3},
+        {.token=TOK_GG_TOKENS, .tok_n=1, .grammar=grammars[12]},
+        {.token=TOK_GG_TOKENS, .tok_n=2, .grammar=grammars[13],         .expr = (parser_expr) gg_build_tok},
+        {.token=TOK_GG_SINGLE_GRAMMAR, .tok_n=2, .grammar=grammars[14], .expr = (parser_expr) gg_build_single},
+        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=1, .grammar=grammars[15]},
+        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=3, .grammar=grammars[16],  .expr = (parser_expr) gg_build_multi},
+        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=1, .grammar=grammars[17],  .expr = (parser_expr) gg_build_multi_empty},
+        {.token=TOK_GG_GRAMMAR, .tok_n=3, .grammar=grammars[18],        .expr = (parser_expr) gg_build_grammar},
+        {.token=TOK_GG_GRAMMARS, .tok_n=1, .grammar=grammars[19]},
+        {.token=TOK_GG_GRAMMARS, .tok_n=2, .grammar=grammars[20],       .expr = (parser_expr) gg_build_grammars},
+        {.token=TOK_GG_FILE, .tok_n=7, .grammar=grammars[21],           .expr = (parser_expr) gg_build_file},
 };
 
 uint8_t precedence_table[TOK_AUGMENT] = {0};

@@ -7,18 +7,21 @@
 
 #define CTEST(name) static void name(void** state)
 
-// Pretend header
-uint32_t calc_init();
-void* calc_allocate_buffers();
-void calc_free_buffers(void* self);
-void calc_free();
-double calc_parse(const void* buffers, const char* input);
+#define FUNC(name, suffix) name ## _ ## suffix
 
-uint32_t calc_ascii_init();
-void* calc_ascii_allocate_buffers();
-void calc_ascii_free_buffers(void* self);
-void calc_ascii_free();
-double calc_ascii_parse(const void* buffers, const char* input);
+#define DEFINE_HEADER(name, return_type) \
+uint32_t FUNC(name, init)(); \
+void* FUNC(name, allocate_buffers)(); \
+void FUNC(name, free_buffers)(void* self); \
+void FUNC(name, free)(); \
+return_type FUNC(name, parse)(const void* buffers, const char* input);
+
+// Pretend headers
+DEFINE_HEADER(calc, double);
+DEFINE_HEADER(calc_ascii, double);
+DEFINE_HEADER(required_use, void*)
+
+void required_use_stmt_free(void* self);
 
 CTEST(test_empty)
 {
@@ -66,11 +69,23 @@ CTEST(test_parser_ascii)
     calc_ascii_free();
 }
 
+CTEST(test_destructor)
+{
+    assert_int_equal(required_use_init(), 0);
+    void* buffers = required_use_allocate_buffers();
+    void* stmt = required_use_parse(buffers, "?? ( hello_world");
+    assert_null(stmt);
+    required_use_stmt_free(stmt);
+    required_use_free_buffers(buffers);
+    required_use_free();
+}
+
 const static struct CMUnitTest left_scan_tests[] = {
         cmocka_unit_test(test_empty),
         cmocka_unit_test(test_parser),
         cmocka_unit_test(test_empty_ascii),
         cmocka_unit_test(test_parser_ascii),
+        cmocka_unit_test(test_destructor),
 };
 
 int main()
