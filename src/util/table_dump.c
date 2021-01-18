@@ -1,4 +1,3 @@
-#include <lexer.h>
 #include <parsergen/canonical_collection.h>
 
 void dump_item(const LR_1* lr1, uint32_t tok_n, const char* tok_names, FILE* fp)
@@ -13,7 +12,7 @@ void dump_item(const LR_1* lr1, uint32_t tok_n, const char* tok_names, FILE* fp)
             fprintf(fp, "•");
         }
 
-        fprintf(fp, "%c", tok_names[lr1->grammar->grammar[i] < ASCII_MAX ? lr1->grammar->grammar[i] : lr1->grammar->grammar[i] - ASCII_MAX]);
+        fprintf(fp, "%c", tok_names[lr1->grammar->grammar[i] < NEOAST_ASCII_MAX ? lr1->grammar->grammar[i] : lr1->grammar->grammar[i] - NEOAST_ASCII_MAX]);
     }
 
     if (lr1->final_item)

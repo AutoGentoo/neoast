@@ -8,7 +8,11 @@
 #include <stdio.h>
 #include <cre2.h>
 
-#define ASCII_MAX ('~' + 1)
+#define NEOAST_ASCII_MAX ('~' + 1)
+#define NEOAST_ARR_LEN(arr) ((sizeof(arr)) / sizeof(((arr)[0])))
+#define NEOAST_STACK_PUSH(stack, i) (stack)->data[((stack)->pos)++] = (i)
+#define NEOAST_STACK_POP(stack) (stack)->data[--((stack)->pos)]
+#define NEOAST_STACK_PEEK(stack) (stack)->data[(stack)->pos - 1]
 
 typedef struct LexerRule_prv LexerRule;
 typedef struct GrammarParser_prv GrammarParser;

@@ -101,7 +101,7 @@ void initialize_parser()
 
     static LexerRule* rules[] = {l_rules};
 
-    static uint32_t lex_n = ARR_LEN(l_rules);
+    static uint32_t lex_n = NEOAST_ARR_LEN(l_rules);
 
     p.grammar_n = 4;
     p.grammar_rules = g_rules;

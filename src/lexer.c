@@ -12,7 +12,7 @@ int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* par
 {
     void* current_val = buf->value_table;
     int i = 0;
-    STACK_PUSH(buf->lexing_state_stack, 0);
+    NEOAST_STACK_PUSH(buf->lexing_state_stack, 0);
     uint32_t offset = 0;
     while ((buf->token_table[i] = lex_next(input, parse, buf, current_val, len, &offset)) && i < buf->table_n) // While not EOF
     {
@@ -20,7 +20,7 @@ int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* par
         {
             fprintf(stderr, "Unmatched token near '%.*s' (state '%d')\n",
                     (uint32_t)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
-                    &input[offset - 1], STACK_PEEK(buf->lexing_state_stack));
+                    &input[offset - 1], NEOAST_STACK_PEEK(buf->lexing_state_stack));
             return -1;
         }
 
@@ -40,7 +40,7 @@ int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers
     LexerRule* rule;
 
     int i = 0;
-    uint32_t state_index = STACK_PEEK(buf->lexing_state_stack);
+    uint32_t state_index = NEOAST_STACK_PEEK(buf->lexing_state_stack);
     while(i < parser->lex_n[state_index])
     {
         rule = &parser->lexer_rules[state_index][i++];
@@ -79,15 +79,15 @@ int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers
             if (token > 0)
             {
                 // Check if this token is an ascii character and needs to be converted
-                if (parser->ascii_mappings && token < ASCII_MAX)
+                if (parser->ascii_mappings && token < NEOAST_ASCII_MAX)
                 {
                     int32_t mapping = parser->ascii_mappings[token];
-                    if (mapping <= ASCII_MAX)
+                    if (mapping <= NEOAST_ASCII_MAX)
                     {
                         fprintf(stderr, "Token '%c' needs to be explicitly defined\n", token);
                         exit(1);
                     }
-                    return mapping - ASCII_MAX;
+                    return mapping - NEOAST_ASCII_MAX;
                 }
                 else if (!parser->ascii_mappings)
                 {
@@ -96,11 +96,11 @@ int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers
                 }
                 else
                 {
-                    return token - ASCII_MAX;
+                    return token - NEOAST_ASCII_MAX;
                 }
             }
 
-            state_index = STACK_PEEK(buf->lexing_state_stack);
+            state_index = NEOAST_STACK_PEEK(buf->lexing_state_stack);
             i = 0;
         }
     }

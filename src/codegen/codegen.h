@@ -5,7 +5,7 @@
 #ifndef NEOAST_CODEGEN_H
 #define NEOAST_CODEGEN_H
 
-#include <common.h>
+#include <neoast.h>
 
 typedef enum
 {
