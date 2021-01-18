@@ -59,7 +59,7 @@ ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, in
 {
     ParserBuffers* buffers = malloc(sizeof(ParserBuffers));
     buffers->lexing_state_stack = parser_allocate_stack(max_lex_state_depth);
-    buffers->parsing_stack = parser_allocate_stack(256);
+    buffers->parsing_stack = parser_allocate_stack(1024);
 
     buffers->token_table = malloc(sizeof(uint32_t) * max_lex_tokens);
     buffers->value_table = malloc(val_s * max_lex_tokens);
