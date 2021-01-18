@@ -148,6 +148,7 @@ int32_t parser_parse_lr(
         } else if (table_value & TOK_REDUCE_MASK)
         {
             // Reduce this rule
+            printf("REDUCE %02d\n", table_value & TOK_MASK);
             current_state = g_lr_reduce(parser, buffers->parsing_stack, parsing_table,
                                         table_value & TOK_MASK,
                                         buffers->token_table, buffers->value_table, buffers->val_s,

@@ -95,6 +95,7 @@ struct ParserBuffers_prv
     ParsingStack* lexing_state_stack;
     ParsingStack* parsing_stack;
     char* text_buffer;
+    uint32_t max_token_length;
     uint32_t val_s;
     uint32_t table_n;
 };

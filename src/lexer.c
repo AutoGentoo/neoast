@@ -53,7 +53,7 @@ int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers
 
             if (rule->expr)
             {
-                if (match.length < 1024)
+                if (match.length < buf->max_token_length)
                 {
                     memcpy(buf->text_buffer, input + *offset, match.length);
                     buf->text_buffer[match.length] = 0;
@@ -82,7 +82,11 @@ int lex_next(const char* input, const GrammarParser* parser, const ParserBuffers
                 if (parser->ascii_mappings && token < ASCII_MAX)
                 {
                     int32_t mapping = parser->ascii_mappings[token];
-                    assert(mapping > ASCII_MAX);
+                    if (mapping <= ASCII_MAX)
+                    {
+                        fprintf(stderr, "Token '%c' needs to be explicitly defined\n", token);
+                        exit(1);
+                    }
                     return mapping - ASCII_MAX;
                 }
                 else if (!parser->ascii_mappings)
