@@ -78,7 +78,7 @@ static int32_t ll_enter_lex(const char* lex_text, void* lex_val, uint32_t len, P
     (void) lex_val;
     (void) len;
 
-    STACK_PUSH(ll_state, LEX_STATE_LEXER_RULES);
+    NEOAST_STACK_PUSH(ll_state, LEX_STATE_LEXER_RULES);
     return TOK_DELIMITER;
 }
 static int32_t ll_enter_grammar(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* ll_state)
@@ -87,7 +87,7 @@ static int32_t ll_enter_grammar(const char* lex_text, void* lex_val, uint32_t le
     (void) lex_val;
     (void) len;
 
-    STACK_PUSH(ll_state, LEX_STATE_GRAMMAR_RULES);
+    NEOAST_STACK_PUSH(ll_state, LEX_STATE_GRAMMAR_RULES);
     return TOK_DELIMITER;
 }
 static int32_t ll_exit_state(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* ll_state)
@@ -96,7 +96,7 @@ static int32_t ll_exit_state(const char* lex_text, void* lex_val, uint32_t len, 
     (void) lex_val;
     (void) len;
 
-    STACK_POP(ll_state);
+    NEOAST_STACK_POP(ll_state);
     return TOK_DELIMITER;
 }
 static int32_t ll_option(const char* lex_text, CodegenUnion* lex_val)
@@ -293,7 +293,7 @@ static int32_t ll_match_brace(const char* lex_text,
     (void) lex_val;
     (void) len;
 
-    STACK_PUSH(lexer_state, LEX_STATE_MATCH_BRACE);
+    NEOAST_STACK_PUSH(lexer_state, LEX_STATE_MATCH_BRACE);
     brace_buffer.s = 1024;
     brace_buffer.buffer = malloc(brace_buffer.s);
     brace_buffer.n = 0;
@@ -309,7 +309,7 @@ static int32_t ll_lex_state(const char* lex_text, CodegenUnion* lex_val, uint32_
     const char* end_ptr = strchr(lex_text, '>');
 
     lex_val->string = strndup(start_ptr, end_ptr - start_ptr);
-    STACK_PUSH(ll_state, LEX_STATE_LEX_STATE);
+    NEOAST_STACK_PUSH(ll_state, LEX_STATE_LEX_STATE);
 
     return TOK_LEX_STATE;
 }
@@ -323,7 +323,7 @@ static int32_t ll_lex_state_exit(const char* lex_text,
     (void) lex_val;
     (void) len;
 
-    STACK_POP(ll_state);
+    NEOAST_STACK_POP(ll_state);
     return -1;
 }
 
@@ -336,7 +336,7 @@ static int32_t ll_build_regex(const char* lex_text,
     (void) lex_val;
     (void) len;
 
-    STACK_PUSH(lexer_state, LEX_STATE_REGEX);
+    NEOAST_STACK_PUSH(lexer_state, LEX_STATE_REGEX);
     regex_buffer.s = 256;
     regex_buffer.buffer = malloc(regex_buffer.s);
     regex_buffer.n = 0;
@@ -353,7 +353,7 @@ static int32_t ll_decrement_brace(const char* lex_text, CodegenUnion* lex_val, u
     if (brace_buffer.counter <= 0)
     {
         brace_buffer.buffer[brace_buffer.n++] = 0;
-        STACK_POP(lexer_state);
+        NEOAST_STACK_POP(lexer_state);
         lex_val->string = strndup(brace_buffer.buffer, brace_buffer.n);
         free(brace_buffer.buffer);
         brace_buffer.buffer = NULL;
@@ -399,7 +399,7 @@ static int32_t ll_regex_quote(const char* lex_text, CodegenUnion* lex_val, uint3
         lex_val->string = strndup(regex_buffer.buffer, regex_buffer.n);
         free(regex_buffer.buffer);
         regex_buffer.buffer = NULL;
-        STACK_POP(lexer_state);
+        NEOAST_STACK_POP(lexer_state);
         return TOK_REGEX_RULE;
     }
 
@@ -430,7 +430,7 @@ static int32_t ll_regex_enter_comment(const char* lex_text, void* lex_val, uint3
     (void) lex_val;
     (void) len;
 
-    STACK_PUSH(lexer_state, LEX_STATE_COMMENT);
+    NEOAST_STACK_PUSH(lexer_state, LEX_STATE_COMMENT);
     return -1;
 }
 
@@ -440,7 +440,7 @@ static int32_t ll_regex_exit_comment(const char* lex_text, void* lex_val, uint32
     (void) lex_val;
     (void) len;
 
-    STACK_POP(lexer_state);
+    NEOAST_STACK_POP(lexer_state);
     return -1;
 }
 
@@ -531,13 +531,13 @@ static LexerRule* ll_rules[] = {
 };
 
 static uint32_t ll_rules_n[] = {
-        ARR_LEN(ll_rules_s0),
-        ARR_LEN(ll_rules_lex),
-        ARR_LEN(ll_rules_grammar),
-        ARR_LEN(ll_rules_match_brace),
-        ARR_LEN(ll_rules_regex),
-        ARR_LEN(ll_rules_lex_state),
-        ARR_LEN(ll_rules_comment),
+        NEOAST_ARR_LEN(ll_rules_s0),
+        NEOAST_ARR_LEN(ll_rules_lex),
+        NEOAST_ARR_LEN(ll_rules_grammar),
+        NEOAST_ARR_LEN(ll_rules_match_brace),
+        NEOAST_ARR_LEN(ll_rules_regex),
+        NEOAST_ARR_LEN(ll_rules_lex_state),
+        NEOAST_ARR_LEN(ll_rules_comment),
 };
 
 const uint32_t grammars[][7] = {
@@ -704,9 +704,9 @@ int gen_parser_init(GrammarParser* self)
 {
     self->lexer_rules = ll_rules;
     self->grammar_rules = gg_rules;
-    self->lex_state_n = ARR_LEN(ll_rules_n);
+    self->lex_state_n = NEOAST_ARR_LEN(ll_rules_n);
     self->lex_n = ll_rules_n;
-    self->grammar_n = ARR_LEN(gg_rules);
+    self->grammar_n = NEOAST_ARR_LEN(gg_rules);
     self->action_token_n = TOK_GG_FILE;
     self->token_n = TOK_AUGMENT;
     self->token_names = tok_names_errors;

@@ -38,8 +38,8 @@ uint32_t g_lr_reduce(
     uint32_t idx = *dest_idx;
     for (uint32_t i = 0; i < arg_count; i++)
     {
-        STACK_POP(stack); // Pop the state
-        idx = STACK_POP(stack); // Pop the index of the token/value
+        NEOAST_STACK_POP(stack); // Pop the state
+        idx = NEOAST_STACK_POP(stack); // Pop the index of the token/value
 
         // Fill the argument
         memcpy(OFFSET_VOID_PTR(args, val_s, arg_count - i - 1),
@@ -50,7 +50,7 @@ uint32_t g_lr_reduce(
     int result_token = (int)parser->grammar_rules[reduce_rule].token;
     if (parser->ascii_mappings)
     {
-        result_token -= ASCII_MAX;
+        result_token -= NEOAST_ASCII_MAX;
         assert(result_token > 0);
     }
     if (parser->grammar_rules[reduce_rule].expr)
@@ -69,15 +69,15 @@ uint32_t g_lr_reduce(
     // Check the goto
     uint32_t next_state = *(uint32_t*) g_table_from_matrix(
             (void*) parsing_table,
-            STACK_PEEK(stack), // Top of stack is current state
+            NEOAST_STACK_PEEK(stack), // Top of stack is current state
             result_token,
             parser->token_n,
             sizeof(uint32_t));
 
     next_state &= TOK_MASK;
 
-    STACK_PUSH(stack, idx);
-    STACK_PUSH(stack, next_state);
+    NEOAST_STACK_PUSH(stack, idx);
+    NEOAST_STACK_PUSH(stack, next_state);
 
     *dest_idx = idx;
     return next_state;
@@ -144,8 +144,8 @@ static void parser_run_destructors(
     assert(buffers->parsing_stack->pos % 2 == 1);
     while (buffers->parsing_stack->pos > 1) // last hold the initialize state '0'
     {
-        STACK_POP(buffers->parsing_stack); // state
-        uint32_t index = STACK_POP(buffers->parsing_stack);
+        NEOAST_STACK_POP(buffers->parsing_stack); // state
+        uint32_t index = NEOAST_STACK_POP(buffers->parsing_stack);
         current_token = buffers->token_table[index];
 
         assert(current_token < parser->token_n);
@@ -169,7 +169,7 @@ int32_t parser_parse_lr(
 {
     // Push the initial state to the stack
     uint32_t current_state = 0;
-    STACK_PUSH(buffers->parsing_stack, current_state);
+    NEOAST_STACK_PUSH(buffers->parsing_stack, current_state);
 
     uint32_t i = 0;
     uint32_t prev_tok = 0;
@@ -197,8 +197,8 @@ int32_t parser_parse_lr(
         } else if (table_value & TOK_SHIFT_MASK)
         {
             current_state = table_value & TOK_MASK;
-            STACK_PUSH(buffers->parsing_stack, i);
-            STACK_PUSH(buffers->parsing_stack, current_state);
+            NEOAST_STACK_PUSH(buffers->parsing_stack, i);
+            NEOAST_STACK_PUSH(buffers->parsing_stack, current_state);
             prev_tok = tok;
             tok = buffers->token_table[++i];
         } else if (table_value & TOK_REDUCE_MASK)
@@ -208,7 +208,7 @@ int32_t parser_parse_lr(
                                         table_value & TOK_MASK,
                                         buffers->token_table, buffers->value_table, buffers->val_s,
                                         &dest_idx);
-            prev_tok = parser->grammar_rules[table_value & TOK_MASK].token - ASCII_MAX;
+            prev_tok = parser->grammar_rules[table_value & TOK_MASK].token - NEOAST_ASCII_MAX;
         } else if (table_value & TOK_ACCEPT_MASK)
         {
             return dest_idx;

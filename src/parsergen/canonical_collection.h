@@ -5,8 +5,7 @@
 #ifndef NEOAST_CANONICAL_COLLECTION_H
 #define NEOAST_CANONICAL_COLLECTION_H
 
-#include "common.h"
-#include "parser.h"
+#include "neoast.h"
 
 typedef enum {
     LALR_1,  // Highly recommended!!

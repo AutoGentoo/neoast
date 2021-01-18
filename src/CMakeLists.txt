@@ -1,5 +1,4 @@
 add_library(neoast STATIC
-        common.h
         lexer.c
         lexer.h
         parser.h

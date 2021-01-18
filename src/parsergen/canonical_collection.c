@@ -12,7 +12,7 @@
 static inline
 uint32_t token_to_index(uint32_t token, const GrammarParser* parser)
 {
-    if (token < ASCII_MAX)
+    if (token < NEOAST_ASCII_MAX)
     {
         if (parser->ascii_mappings)
         {
@@ -22,7 +22,7 @@ uint32_t token_to_index(uint32_t token, const GrammarParser* parser)
     }
     else if (parser->ascii_mappings)
     {
-        return token - ASCII_MAX;
+        return token - NEOAST_ASCII_MAX;
     }
 
     return token;

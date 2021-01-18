@@ -168,7 +168,7 @@ void initialize_parser()
             l_rules_s0
     };
 
-    static uint32_t lex_n = ARR_LEN(l_rules_s0);
+    static uint32_t lex_n = NEOAST_ARR_LEN(l_rules_s0);
 
     p.grammar_n = 10;
     p.grammar_rules = g_rules;

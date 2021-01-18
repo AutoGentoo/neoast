@@ -5,7 +5,6 @@
 #ifndef NEOAST_PARSER_H
 #define NEOAST_PARSER_H
 #include <stdio.h>
-#include "common.h"
 #include <neoast.h>
 
 #define OFFSET_VOID_PTR(ptr, s, i) (void*)(((char*)(ptr)) + ((s) * (i)))

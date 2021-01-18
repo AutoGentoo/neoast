@@ -226,6 +226,56 @@ Notice that if the defined action does not return, the function returns `-1`.
 `-1` is a special token used to tell the lexer to skip this block of text. You'll most likely use this
 when defining rules for `[ \n\t]+` or whitespace.
 
+#### Lexing states
+There are situations where you may want to only generate some tokens at different
+points. For example, when matching a brace, you could do something like this:
+
+```C
+%top {
+    static int brace_counter = 0;
+    static void* brace_buffer = NULL;
+}
+
+%state BRACE_MODE // define the state
+%token <braced_content> BRACED_CONTENT
+
+%union {
+    void* braced_content;
+}
+
+==
+
+"{"        {
+                brace_buffer = buffer_new();
+                add_to_buffer(brace_buffer, yytext);
+                brace_counter = 1;
+                NEOAST_STACK_PUSH(lex_state, BRACE_MODE); // only match regex in the BRACE_MODE state
+                // skip token (no return)
+           }
+
+<BRACE_MODE>
+{
+    "{"     {brace_counter++; add_to_buffer(brace_buffer, yytext);}
+    "}"     {
+                brace_counter--;
+                add_to_buffer(brace_buffer, yytext);
+                
+                if (brace_counter == 0)
+                {
+                    yyval->brace_content = brace_buffer;
+                    NEOAST_STACK_POP(lex_state); // return to default state
+                    return BRACED_CONTENT;
+                }
+            }
+    "[^\}\{]+" {add_to_buffer(brace_buffer, yytext);}
+}
+==
+```
+
+This set of lexer rules will match a set of braces and return a BRACED_CONTENT token
+with the value being the text in the braced content. (Obviously you would need to define
+your own buffer mutators).
+
 ### Grammar section
 The grammar section will define the grammar rules used to reduce token
 sequences into expressions. The same syntax used in bison is utilized in neoast.
@@ -330,6 +380,31 @@ The second type of conflict, RR conflict, is much more rare than the
 SR conflict. It happens when two rules can validly be reduced at the same
 time. This is simply an error in the grammar and cannot be fixed via a
 header switch.
+
+## Benchmark
+A benchmark was done for the AutoGentoo CPortage use case. Here we needed to
+parse `REQUIRE_USE` and `DEPEND*` expressions for Gentoo ebuild. The original
+parser was written for Bison+Flex so we can compare the results with the old parser.
+The parsing and lexing rules are exactly the same and they both run in a single thread.
+
+This benchmark was taken on a Thinkpad X1 Carbon 3rd Generation, i7-5600U @ 3.2 GHz running
+Gentoo Linux with a `5.4.38-gentoo` kernel.
+
+Benchmarks with and without optimizations were performed to show the benefit of
+optimization with neoast. The entire portage repository was parsed:
+
+|   Parser   |         `CFLAGS`          |  Time (s) |
+|------------|---------------------------|-----------|
+| Bison+Flex |                           |   10.50   |
+| Bison+Flex | `-O2 -march=native -pipe` |   10.35   |
+| neoast     |                           |   7.13    |
+| neoast     | `-O2 -march=native -pipe` |   4.83    |
+
+As you can see neoast has a lot of optimizations that reduce runtime overhead when
+comparing to Bison+Flex. This is because neoast using a parsing table instead of
+a *VERY* long chain of `if` statements. The advantage of neoast is that there is no
+runtime impact to having more tokens or grammar rules, it will simply increase the size
+of the parsing table which doesn't really matter too much.
 
 ## Contributing
 If you want to contribute or submit a bug report/feature request, you are

@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 #include <cre2.h>
-#include "common.h"
+#include <neoast.h>
 
 /**
  * Get the next token in our buffer
