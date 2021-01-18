@@ -23,6 +23,7 @@ typedef enum
     KEY_VAL_STATE,
     KEY_VAL_UNION,
     KEY_VAL_BOTTOM,
+    KEY_VAL_DESTRUCTOR,
 } key_val_t;
 
 enum
@@ -32,39 +33,40 @@ enum
     TOK_HEADER, // 2
     TOK_BOTTOM, // 3
     TOK_UNION, // 4
-    TOK_DELIMITER, // 5
+    TOK_DESTRUCTOR, // 5
+    TOK_DELIMITER, // 6
 
     /* Lexer tokens */
-    TOK_LEX_STATE, // 6
-    TOK_REGEX_RULE, // 7
+    TOK_LEX_STATE, // 7
+    TOK_REGEX_RULE, // 8
 
     /* Grammar tokens */
-    TOK_G_EXPR_DEF, // 8
-    TOK_G_TOK, // 9
-    TOK_G_OR, // 10
-    TOK_G_TERM, // 11
-    TOK_G_ACTION, // 12
+    TOK_G_EXPR_DEF, // 9
+    TOK_G_TOK, // 10
+    TOK_G_OR, // 11
+    TOK_G_TERM, // 12
+    TOK_G_ACTION, // 13
 
     /* Grammar rules */
-    TOK_GG_FILE, // 13
+    TOK_GG_FILE, // 14
 
     /* Header grammar */
-    TOK_GG_KEY_VALS, // 14
-    TOK_GG_HEADER, // 15
+    TOK_GG_KEY_VALS, // 15
+    TOK_GG_HEADER, // 16
 
     /* Lexing grammar */
-    TOK_GG_LEX_RULE, // 16
-    TOK_GG_LEX_RULES, // 17
+    TOK_GG_LEX_RULE, // 17
+    TOK_GG_LEX_RULES, // 18
 
     /* Grammar grammar :) */
-    TOK_GG_GRAMMARS, // 18
-    TOK_GG_GRAMMAR, // 19
-    TOK_GG_TOKENS, // 20
-    TOK_GG_SINGLE_GRAMMAR, // 21
-    TOK_GG_MULTI_GRAMMAR, // 22
+    TOK_GG_GRAMMARS, // 19
+    TOK_GG_GRAMMAR, // 20
+    TOK_GG_TOKENS, // 21
+    TOK_GG_SINGLE_GRAMMAR, // 22
+    TOK_GG_MULTI_GRAMMAR, // 23
 
     /* Artificial grammar */
-    TOK_AUGMENT, // 23
+    TOK_AUGMENT, // 24
 };
 
 enum

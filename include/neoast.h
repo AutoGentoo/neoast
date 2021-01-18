@@ -22,6 +22,12 @@ typedef struct GrammarState_prv GrammarState;
 typedef struct CanonicalCollection_prv CanonicalCollection;
 
 typedef void (*parser_expr) (void* dest, void** values);
+typedef int32_t (*lexer_expr) (
+        const char* lex_text,
+        void* lex_val,
+        uint32_t len,
+        ParsingStack* ll_state);
+typedef void (*parser_destructor) (void* self);
 
 enum
 {
@@ -76,6 +82,7 @@ struct GrammarParser_prv
     LexerRule* const* lexer_rules;
     const GrammarRule* grammar_rules;
     const char* const* token_names;
+    parser_destructor const* destructors;
 
     // Also number of columns
     uint32_t token_n;
@@ -99,12 +106,6 @@ struct ParserBuffers_prv
     uint32_t val_s;
     uint32_t table_n;
 };
-
-typedef int32_t (*lexer_expr) (
-        const char* lex_text,
-        void* lex_val,
-        uint32_t len,
-        ParsingStack* ll_state);
 
 struct LexerRule_prv
 {

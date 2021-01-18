@@ -254,6 +254,47 @@ void put_grammar_rule_action(
 }
 
 static inline
+void put_destructor_action(const struct KeyVal* destructor, FILE* fp)
+{
+    fprintf(fp, "static void\n%s_destructor("
+                CODEGEN_UNION"* self)\n{\n"
+                "    {", destructor->key);
+
+    const char* search = NULL;
+    const char* start = destructor->value;
+
+    while ((search = strchr(start, '$')))
+    {
+        if (search[1] == '$')
+        {
+            // Check if this string is in a comment or string
+            const char* finish_red = check_grammar_arg_skip(start, search);
+            if (finish_red > search)
+            {
+                // Skip this '$'
+                search = finish_red;
+            } else
+            {
+                // Print the content until this point
+                fwrite(start, 1, search - start, fp);
+
+                // Print the argument
+                fprintf(fp, "self->%s", destructor->key);
+                start = search + 2;
+                continue;
+            }
+        }
+
+        // Not an argument
+        fwrite(start, 1, search - start, fp);
+        start = search;
+    }
+
+    fputs(start, fp);
+    fputs("}\n}\n\n", fp);
+}
+
+static inline
 void put_lexer_rule_regex(LexerRule* self, FILE* fp)
 {
     fputs("        ", fp);
@@ -619,6 +660,8 @@ int codegen_write(const struct File* self, FILE* fp)
             case KEY_VAL_STATE:
                 lex_state_n++;
                 break;
+            case KEY_VAL_DESTRUCTOR:
+                break;
         }
     }
 
@@ -640,6 +683,7 @@ int codegen_write(const struct File* self, FILE* fp)
             macro_i = 0;
     const char** tokens = calloc(token_n, sizeof(char*));
     const struct KeyVal** typed_tokens = calloc(token_n, sizeof(struct KeyVal*));
+    const struct KeyVal** destructors = calloc(token_n, sizeof(struct KeyVal*));
 
     const char** lexer_states = malloc(sizeof(char*) * (lex_state_n));
     uint8_t* precedence_table = calloc(token_n, sizeof(uint8_t));
@@ -682,26 +726,6 @@ int codegen_write(const struct File* self, FILE* fp)
         }
     }
 
-    // Generate the precedence table
-    for (struct KeyVal* iter = self->header; iter; iter = iter->next)
-    {
-        int token_id;
-        switch (iter->type)
-        {
-            case KEY_VAL_LEFT:
-            case KEY_VAL_RIGHT:
-                token_id = codegen_index(tokens, iter->key, token_n);
-                if (token_id == -1 || token_id >= action_n)
-                    fprintf(stderr, "Invalid token for precedence '%s'\n", iter->key);
-
-                precedence_table[token_id] = iter->type == KEY_VAL_LEFT ? PRECEDENCE_LEFT : PRECEDENCE_RIGHT;
-
-                break;
-            default:
-                break;
-        }
-    }
-
     tokens[grammar_i++] = "TOK_AUGMENT";
 
     assert(typed_token_i == typed_token_n);
@@ -734,6 +758,39 @@ int codegen_write(const struct File* self, FILE* fp)
         }
     }
 
+    // Dump the destructor actions
+    // Generate the precedence table
+    // Generate the destructor table
+    for (struct KeyVal* iter = self->header; iter; iter = iter->next)
+    {
+        int token_id;
+        switch (iter->type)
+        {
+            case KEY_VAL_LEFT:
+            case KEY_VAL_RIGHT:
+                token_id = codegen_index(tokens, iter->key, token_n);
+                if (token_id == -1 || token_id >= action_n)
+                    fprintf(stderr, "Invalid token for precedence '%s'\n", iter->key);
+
+                precedence_table[token_id] = iter->type == KEY_VAL_LEFT ? PRECEDENCE_LEFT : PRECEDENCE_RIGHT;
+                break;
+            case KEY_VAL_DESTRUCTOR:
+                // Install destructor in every token with this type
+                for (int i = 0; i < token_n; i++)
+                {
+                    if (typed_tokens[i] && strcmp(typed_tokens[i]->value, iter->key) == 0)
+                    {
+                        destructors[i] = iter;
+                    }
+                }
+
+                // Dump this destructor action
+                put_destructor_action(iter, fp);
+            default:
+                break;
+        }
+    }
+
     fputs("// Lexer states\n", fp);
     put_enum(0, lex_state_n, lexer_states, fp);
 
@@ -762,6 +819,7 @@ int codegen_write(const struct File* self, FILE* fp)
         put_lexer_rule_action(iter, state_name, ll_rule_count[state_id] - 1, fp);
     }
 
+    // Dump the lexer rules
     LexerRule** ll_rules = malloc(sizeof(LexerRule*) * lex_state_n);
     for (int i = 0; i < lex_state_n; i++)
     {
@@ -797,6 +855,22 @@ int codegen_write(const struct File* self, FILE* fp)
     put_lexer_rule_count(ll_rule_count, lex_state_n, fp);
     put_lexer_states(lexer_states, lex_state_n, fp);
 
+    // Dump the destructor rules
+    fputs("static const\nparser_destructor token_destructors[] = {\n", fp);
+    for (int i = 0; i < token_n; i++)
+    {
+        if (!destructors[i])
+        {
+            fprintf(fp, "        NULL, // %s\n", tokens[i]);
+        }
+        else
+        {
+            fprintf(fp, "        (parser_destructor) %s_destructor, // %s\n", destructors[i]->key, tokens[i]);
+        }
+    }
+    fputs("};\n\n", fp);
+
+    // Dump the grammar rule actions
     uint32_t grammar_n = 0;
     uint32_t grammar_tok_n = 0;
     for (struct GrammarRuleProto* rule_iter = self->grammar_rules;
@@ -837,6 +911,7 @@ int codegen_write(const struct File* self, FILE* fp)
     grammar_n++;
     grammar_tok_n++;
 
+    // Dump the grammar rules as well as augment rule
     GrammarRule* gg_rules = malloc(sizeof(GrammarRule) * grammar_n);
     int32_t* grammar_table = malloc(sizeof(uint32_t) * grammar_tok_n);
     uint32_t grammar_tok_offset_c = 0;
@@ -890,7 +965,7 @@ int codegen_write(const struct File* self, FILE* fp)
             .lexer_rules = ll_rules,
             .grammar_n = grammar_n,
             .grammar_rules = gg_rules,
-            .ascii_mappings = ascii_mappings
+            .ascii_mappings = ascii_mappings,
     };
 
     // Dump parser instantiation
@@ -920,7 +995,8 @@ int codegen_write(const struct File* self, FILE* fp)
                 "        .lexer_rules = lexer_rules,\n"
                 "        .grammar_n = %d,\n"
                 "        .grammar_rules = grammar_rules,\n"
-                "        .ascii_mappings = ascii_mappings\n",
+                "        .ascii_mappings = ascii_mappings,\n"
+                "        .destructors = token_destructors\n",
                 lex_state_n, action_n, grammar_n
     );
     fputs("};\n\n", fp);
@@ -1028,6 +1104,7 @@ int codegen_write(const struct File* self, FILE* fp)
     free(gg_rules);
     free(grammar_table);
     free(typed_tokens);
+    free(destructors);
     free(lexer_states);
     free(precedence_table);
     free(tokens);

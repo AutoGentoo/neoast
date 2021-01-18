@@ -8,7 +8,6 @@
 
 // This is default, just want to test the parser
 %option parser_type="LALR(1)"
-//%option disable_locks="TRUE"
 %option debug_table="TRUE"
 %option debug_ids="$d+-/*^()ES"
 %option prefix="calc"

@@ -109,6 +109,59 @@ void lr_parse_error(const uint32_t* parsing_table,
     fprintf(stderr, "\n");
 }
 
+static void parser_run_destructors(
+        const GrammarParser* parser,
+        const ParserBuffers* buffers,
+        uint32_t i)
+{
+    // Tokens head of i are 'packed' and all of them need to be freed
+    // Tokens behind i need to be freed based on the contents of the parsing stack
+    // Tokens behind i are reduced tokens
+
+    if (!parser->destructors)
+    {
+        // Destructors have not been defined
+        return;
+    }
+
+    // First free the tokens head of i
+    uint32_t current_token;
+    while ((current_token = buffers->token_table[i++])) // search for EOF
+    {
+        assert(current_token < parser->token_n);
+        if (parser->destructors[current_token])
+        {
+            // A destructor is defined for this token
+            // Call the destructor on this object
+            parser->destructors[current_token](
+                    OFFSET_VOID_PTR(buffers->value_table,
+                                    buffers->val_s,
+                                    i));
+        }
+    }
+
+    // Free the reduced tokens
+    assert(buffers->parsing_stack->pos % 2 == 1);
+    while (buffers->parsing_stack->pos > 1) // last hold the initialize state '0'
+    {
+        STACK_POP(buffers->parsing_stack); // state
+        uint32_t index = STACK_POP(buffers->parsing_stack);
+        current_token = buffers->token_table[index];
+
+        assert(current_token < parser->token_n);
+        if (parser->destructors[current_token])
+        {
+            void* self_ptr = OFFSET_VOID_PTR(buffers->value_table,
+                                             buffers->val_s, index);
+
+            // A destructor is defined for this token
+            // Call the destructor on this object
+            parser->destructors[current_token](self_ptr);
+            memset(self_ptr, 0, buffers->val_s);
+        }
+    }
+}
+
 int32_t parser_parse_lr(
         const GrammarParser* parser,
         const uint32_t* parsing_table,
@@ -137,6 +190,9 @@ int32_t parser_parse_lr(
                            parser->token_names, current_state,
                            tok, prev_tok,
                            parser->token_n);
+
+            // We need to free the remaining objects in this map
+            parser_run_destructors(parser, buffers, i);
             return -1;
         } else if (table_value & TOK_SHIFT_MASK)
         {
