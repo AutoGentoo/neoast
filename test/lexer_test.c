@@ -69,7 +69,7 @@ void initialize_parser()
     p.grammar_n = 0;
     p.grammar_rules = 0;
 
-    static uint32_t lex_n = ARR_LEN(l_rules);
+    static uint32_t lex_n = NEOAST_ARR_LEN(l_rules);
 
     p.lex_state_n = 1;
     p.lex_n = &lex_n;
@@ -89,7 +89,7 @@ CTEST(test_lexer)
     CodegenUnion llval;
 
     ParserBuffers* buf = parser_allocate_buffers(32, 32, 8, sizeof(CodegenUnion));
-    STACK_PUSH(buf->lexing_state_stack, 0);
+    NEOAST_STACK_PUSH(buf->lexing_state_stack, 0);
 
     uint32_t len = strlen(lexer_input);
     uint32_t offset = 0;
