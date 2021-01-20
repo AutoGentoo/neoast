@@ -19,7 +19,7 @@
  * @param lval destination of the lexer rule
  * @return next token in buffer
  */
-int
+int32_t
 lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, unsigned int len, unsigned int* offset);
 
 /**

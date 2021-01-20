@@ -34,6 +34,8 @@ struct Options {
     unsigned long max_lex_tokens;
     unsigned long max_token_len;
     unsigned long max_lex_state_depth;
+
+    lexer_option_t lexer_opts;
 };
 
 static inline
@@ -553,6 +555,10 @@ static void codegen_handle_option(
     else if (strcmp(option->key, "max_lex_state_depth") == 0)
     {
         self->max_lex_state_depth = strtoul(option->value, NULL, 0);
+    }
+    else if (strcmp(option->key, "lex_match_longest") == 0)
+    {
+        self->lexer_opts |= codegen_parse_bool(option->value) ? LEXER_OPT_LONGEST_MATCH : 0;
     }
     else
     {

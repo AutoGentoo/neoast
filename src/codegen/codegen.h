@@ -69,6 +69,8 @@ enum
     TOK_AUGMENT, // 24
 };
 
+NEOAST_COMPILE_ASSERT(TOK_AUGMENT == 24, assert_token_length);
+
 enum
 {
     LEX_STATE_LEXER_RULES = 1,

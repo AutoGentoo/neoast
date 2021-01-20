@@ -14,6 +14,8 @@
 #define NEOAST_STACK_POP(stack) (stack)->data[--((stack)->pos)]
 #define NEOAST_STACK_PEEK(stack) (stack)->data[(stack)->pos - 1]
 
+#define NEOAST_COMPILE_ASSERT(assertion, name) extern int name ## _gbl_assertion_compile___[(assertion) ? 1 : -1]
+
 typedef struct LexerRule_prv LexerRule;
 typedef struct GrammarParser_prv GrammarParser;
 typedef struct GrammarRule_prv GrammarRule;
@@ -61,6 +63,11 @@ enum
     ),
 };
 
+typedef enum
+{
+    LEXER_OPT_LONGEST_MATCH = 1 << 0,
+} lexer_option_t;
+
 enum
 {
     PRECEDENCE_NONE,
@@ -91,6 +98,7 @@ struct GrammarParser_prv
     // Also number of columns
     uint32_t token_n;
     uint32_t action_token_n;
+    lexer_option_t lexer_opts;
 };
 
 struct ParsingStack_prv
