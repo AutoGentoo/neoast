@@ -4,7 +4,6 @@
 
 #include "lexer.h"
 #include "codegen.h"
-#include <parser.h>
 #include <string.h>
 #include <stdlib.h>
 #include <parsergen/canonical_collection.h>
@@ -19,7 +18,9 @@ const char* tok_names_errors[] = {
         "eof",
         "option",
         "header",
+        "bottom",
         "union",
+        "destructor",
         "delimiter",
         "lex_state",
         "regex",
@@ -112,10 +113,14 @@ static int32_t ll_option(const char* lex_text, CodegenUnion* lex_val)
 
     return TOK_OPTION;
 }
-static int32_t ll_macro(const char* lex_text, CodegenUnion* lex_val)
+static int32_t ll_macro(const char* lex_text, CodegenUnion* lex_val, uint32_t len)
 {
     // Find the white space delimiter
-    char* split = strchr(lex_text + 1, ' ');
+    const char* split = strchr(lex_text + 1, ' ');
+    if (!split)
+    {
+        split = lex_text + len;
+    }
     char* key = strndup(lex_text + 1, split - lex_text - 1);
 
     // Find the start of the regex rule
@@ -711,6 +716,7 @@ int gen_parser_init(GrammarParser* self)
     self->token_n = TOK_AUGMENT;
     self->token_names = tok_names_errors;
     self->ascii_mappings = NULL;
+    self->lexer_opts = 0;
 
     precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
 
