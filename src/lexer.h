@@ -19,8 +19,10 @@
 #ifndef NEOAST_LEXER_H
 #define NEOAST_LEXER_H
 
-#include <stdio.h>
-#include <cre2.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <neoast.h>
 
 /**
@@ -34,7 +36,8 @@
  * @return next token in buffer
  */
 int32_t
-lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, unsigned int len, unsigned int* offset);
+lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, unsigned int len,
+         unsigned int* offset);
 
 /**
  * Use the lexer to get every token in a string
@@ -47,6 +50,12 @@ lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* bu
  * @param val_n offset of a value (size of value union)
  * @return number of parsed tokens
  */
-int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* parse, const ParserBuffers* buf);
+int32_t lexer_fill_table(const char* input, uint32_t len, const GrammarParser* parse, const ParserBuffers* buf);
+
+void lexer_init(GrammarParser* self);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //NEOAST_LEXER_H

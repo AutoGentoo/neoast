@@ -17,13 +17,16 @@
 
 #ifndef NEOAST_H
 #define NEOAST_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
 
 #include <stdint.h>
-#include <stdio.h>
-#include <cre2.h>
 
 #define NEOAST_ASCII_MAX ('~' + 1)
 #define NEOAST_ARR_LEN(arr) ((sizeof(arr)) / sizeof(((arr)[0])))
@@ -44,13 +47,13 @@ typedef struct LR_1_prv LR_1;
 typedef struct GrammarState_prv GrammarState;
 typedef struct CanonicalCollection_prv CanonicalCollection;
 
-typedef void (*parser_expr) (void* dest, void** values);
-typedef int32_t (*lexer_expr) (
+typedef void (* parser_expr)(void* dest, void** values);
+typedef int32_t (* lexer_expr)(
         const char* lex_text,
         void* lex_val,
         uint32_t len,
         ParsingStack* ll_state);
-typedef void (*parser_destructor) (void* self);
+typedef void (* parser_destructor)(void* self);
 
 enum
 {
@@ -102,7 +105,7 @@ struct GrammarRule_prv
 
 struct GrammarParser_prv
 {
-    cre2_options_t* regex_opts;
+    void* lexer;
     uint32_t grammar_n;
     uint32_t lex_state_n;
     const uint32_t* lex_n;
@@ -138,7 +141,7 @@ struct ParserBuffers_prv
 
 struct LexerRule_prv
 {
-    cre2_regexp_t* regex;
+    void* regex;
     lexer_expr expr;
     int32_t tok;
     const char* regex_raw;
@@ -149,9 +152,9 @@ struct LexerRule_prv
 uint32_t parser_init(GrammarParser* self);
 void parser_free(GrammarParser* self);
 
-ParsingStack* parser_allocate_stack(size_t stack_n);
+ParsingStack* parser_allocate_stack(uint32_t stack_n);
 void parser_free_stack(ParsingStack* self);
-ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, int max_lex_state_depth, size_t val_s);
+ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, int max_lex_state_depth, uint32_t val_s);
 void parser_free_buffers(ParserBuffers* self);
 void parser_reset_buffers(const ParserBuffers* self);
 
@@ -167,6 +170,10 @@ int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* par
 
 int
 lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, uint32_t len, uint32_t* offset);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

@@ -16,12 +16,13 @@
  */
 
 
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "lexer.h"
 #include "parser.h"
 
-int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* parse, const ParserBuffers* buf)
+int32_t lexer_fill_table(const char* input, uint32_t len, const GrammarParser* parse, const ParserBuffers* buf)
 {
     void* current_val = buf->value_table;
     int i = 0;
@@ -65,6 +66,7 @@ lex_next(const char* input,
         uint32_t state_index = NEOAST_STACK_PEEK(buf->lexing_state_stack);
         while(i < parser->lex_n[state_index])
         {
+            /*
             cre2_string_t match;
             LexerRule* rule = &parser->lexer_rules[state_index][i];
 
@@ -84,6 +86,8 @@ lex_next(const char* input,
                     break;
                 }
             }
+             */
+            // TODO
 
             i++;
         }

@@ -23,40 +23,16 @@
 
 uint32_t parser_init(GrammarParser* self)
 {
-    self->regex_opts = cre2_opt_new();
-    cre2_opt_set_one_line(self->regex_opts, 1);
-
-    uint32_t error = 0;
-    for (uint32_t i = 0; i < self->lex_state_n; i++)
-    {
-        for (uint32_t j = 0; j < self->lex_n[i]; j++)
-        {
-            const char* pattern = self->lexer_rules[i][j].regex_raw;
-            if ((self->lexer_rules[i][j].regex =
-                    cre2_new(pattern, (uint32_t)strlen(pattern), self->regex_opts)) == NULL) {
-                fprintf(stderr, "Failed to compile regex \"%s\"\n", pattern);
-                error++;
-            }
-        }
-    }
-
-    return error;
+    lexer_init(self);
+    return 0;
 }
 
 void parser_free(GrammarParser* self)
 {
-    for (uint32_t i = 0; i < self->lex_state_n; i++)
-    {
-        for (uint32_t j = 0; j < self->lex_n[i]; j++)
-        {
-            cre2_delete(self->lexer_rules[i][j].regex);
-        }
-    }
-
-    cre2_opt_delete(self->regex_opts);
+    ;
 }
 
-ParsingStack* parser_allocate_stack(size_t stack_n)
+ParsingStack* parser_allocate_stack(uint32_t stack_n)
 {
     ParsingStack* out = malloc(sizeof(ParsingStack) + sizeof(uint32_t) * stack_n);
     out->pos = 0;
@@ -69,7 +45,7 @@ void parser_free_stack(ParsingStack* self)
     free(self);
 }
 
-ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, int max_lex_state_depth, size_t val_s)
+ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, int max_lex_state_depth, uint32_t val_s)
 {
     ParserBuffers* buffers = malloc(sizeof(ParserBuffers));
     buffers->lexing_state_stack = parser_allocate_stack(max_lex_state_depth);
