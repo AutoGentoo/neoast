@@ -65,6 +65,7 @@ expr_first:
     | expr '*' expr        {$$ = $1 * $3;}
     | expr '^' expr        {$$ = pow($1, $3);}
     | '(' expr ')'         {$$ = $2;}
+    ;
 
 expr: TOK_N                            {$$ = $1;}
     | expr_first '+' expr_first        {$$ = $1 + $3;}
