@@ -16,6 +16,7 @@
  */
 
 
+#include <alloca.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
@@ -30,8 +31,8 @@ uint32_t token_to_index(uint32_t token, const GrammarParser* parser)
     {
         if (parser->ascii_mappings)
         {
-            fprintf(stderr, "ASCII characters are not valid grammar tokens\n");
-            abort();
+            fprintf(stderr, "ASCII is not a valid grammar token '%c'\n", token);
+            exit(2);
         }
     }
     else if (parser->ascii_mappings)
@@ -242,8 +243,9 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             // rule describing this expression
             if (!expand_count)
             {
-                fprintf(stderr, "Could not find a rule to describe token '%d'\n", potential_token);
-                abort();
+                fprintf(stderr, "Could not find a rule to describe token '%d'\n",
+                        potential_token);
+                exit(2);
             }
         }
     }
@@ -321,7 +323,7 @@ void gs_resolve(CanonicalCollection* cc, GrammarState* state)
         state->action_states[next_token]->head_item = new_item;
     }
 
-    for (int32_t token = cc->parser->token_n - 1; token >= 0; token--)
+    for (int32_t token = (int32_t)cc->parser->token_n - 1; token >= 0; token--)
     {
         if (!state->action_states[token])
             continue;

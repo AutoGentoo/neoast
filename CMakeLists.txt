@@ -20,14 +20,13 @@ endif()
 
 include(cmake/policy.cmake)
 
-# Unit and integration testing
-include(cmake/test.cmake)
-
 add_subdirectory(src)
 add_subdirectory(third_party)
 
 include(cmake/neoast.cmake)
 
 if (ENABLE_NEOAST_TESTS)
+    # Unit and integration testing
+    include(cmake/test.cmake)
     add_subdirectory(test)
 endif()

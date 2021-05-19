@@ -154,6 +154,7 @@ int get_named_token(const char* token_name, const char* const* tokens, uint32_t 
     }
 
     fprintf(stderr, "Invalid token name '%s'\n", token_name);
+    exit(2);
     return -1;
 }
 
@@ -958,7 +959,12 @@ int codegen_write(const struct File* self, FILE* fp)
             for (struct Token* tok_iter = rule_single_iter->tokens; tok_iter; tok_iter = tok_iter->next)
             {
                 grammar_table[grammar_tok_offset_c] = codegen_index(tokens, tok_iter->name, token_n) + NEOAST_ASCII_MAX;
-                assert(grammar_table[grammar_tok_offset_c] != -1 && "Invalid token name");
+                if (grammar_table[grammar_tok_offset_c] == -1)
+                {
+                    fprintf(stderr, "Invalid token name in grammar '%s'\n",
+                            tok_iter->name);
+                    exit(2);
+                }
                 grammar_tok_offset_c++;
                 gg_tok_n++;
             }
@@ -985,7 +991,10 @@ int codegen_write(const struct File* self, FILE* fp)
             .lexer_rules = ll_rules,
             .grammar_n = grammar_n,
             .grammar_rules = gg_rules,
-            .ascii_mappings = ascii_mappings,
+            .ascii_mappings = NULL, // yes we want NULL
+                                    // the intermediate parser generator will
+                                    // convert ascii characters to non ascii
+                                    // mapped tokens
     };
 
     // Dump parser instantiation
