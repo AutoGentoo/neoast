@@ -509,9 +509,9 @@ static LexerRule ll_rules_grammar[] = {
         {.regex_raw = "/\\*", .expr = ll_regex_enter_comment},
         {.regex_raw = "%%", .expr = (lexer_expr) ll_exit_state},
         {.regex_raw = ID_X WS_OPT ":", .expr = (lexer_expr) ll_g_rule},
+        {.regex_raw = ASCII, .expr = (lexer_expr) ll_g_tok_ascii},
         {.regex_raw = "{", .expr = (lexer_expr) ll_match_brace},
         {.regex_raw = ID_X, .expr = (lexer_expr) ll_g_tok},
-        {.regex_raw = ASCII, .expr = (lexer_expr) ll_g_tok_ascii},
         {.regex_raw = "\\|", .tok = TOK_G_OR},
         {.regex_raw = ";", .tok = TOK_G_TERM},
 };

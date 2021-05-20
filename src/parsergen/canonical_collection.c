@@ -164,7 +164,9 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
         for (LR_1* item = self->head_item; item; item = item->next)
         {
             if (item->final_item)
+            {
                 continue;
+            }
 
             // Find if this rule can be expanded
             uint32_t potential_token = item->grammar->grammar[item->item_i];
