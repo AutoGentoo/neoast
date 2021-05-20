@@ -44,7 +44,7 @@ void parser_free(GrammarParser* self);
 
 ParsingStack* parser_allocate_stack(uint64_t stack_n);
 void parser_free_stack(ParsingStack* self);
-ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, int max_lex_state_depth, size_t val_s);
+ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, int max_lex_state_depth, int parsing_stack_n, size_t val_s);
 void parser_free_buffers(ParserBuffers* self);
 void parser_reset_buffers(const ParserBuffers* self);
 

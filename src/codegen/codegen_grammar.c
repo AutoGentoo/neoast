@@ -752,8 +752,16 @@ int gen_parser_init(GrammarParser* self)
     CanonicalCollection* cc = canonical_collection_init(self);
     canonical_collection_resolve(cc, LALR_1);
 
-    GEN_parsing_table = canonical_collection_generate(cc, precedence_table);
+    uint8_t error;
+    GEN_parsing_table = canonical_collection_generate(cc, precedence_table, &error);
     canonical_collection_free(cc);
+
+    if (error)
+    {
+        fprintf(stderr, "Failed to generate parsing table for codegen grammar!\n");
+        free(GEN_parsing_table);
+        return 1;
+    }
 
     return 0;
 }

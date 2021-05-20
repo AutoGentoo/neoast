@@ -33,7 +33,7 @@ uint32_t parser_init(GrammarParser* self)
         {
             const char* pattern = self->lexer_rules[i][j].regex_raw;
             if ((self->lexer_rules[i][j].regex =
-                    cre2_new(pattern, (uint32_t)strlen(pattern), self->regex_opts)) == NULL) {
+                    cre2_new(pattern, (int32_t)strlen(pattern), self->regex_opts)) == NULL) {
                 fprintf(stderr, "Failed to compile regex \"%s\"\n", pattern);
                 error++;
             }
@@ -69,11 +69,14 @@ void parser_free_stack(ParsingStack* self)
     free(self);
 }
 
-ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len, int max_lex_state_depth, size_t val_s)
+ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len,
+                                       int max_lex_state_depth,
+                                       int parsing_stack_n,
+                                       size_t val_s)
 {
     ParserBuffers* buffers = malloc(sizeof(ParserBuffers));
     buffers->lexing_state_stack = parser_allocate_stack(max_lex_state_depth);
-    buffers->parsing_stack = parser_allocate_stack(1024);
+    buffers->parsing_stack = parser_allocate_stack(parsing_stack_n);
 
     buffers->token_table = malloc(sizeof(uint32_t) * max_lex_tokens);
     buffers->value_table = malloc(val_s * max_lex_tokens);

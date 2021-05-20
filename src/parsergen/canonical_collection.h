@@ -52,11 +52,10 @@ struct CanonicalCollection_prv
     GrammarState** all_states;
 };
 
-uint8_t lr_1_firstof(uint8_t dest[], uint32_t token, const GrammarParser* parser);
 void lookahead_merge(uint8_t dest[], const uint8_t src[], uint32_t n);
 CanonicalCollection* canonical_collection_init(const GrammarParser* parser);
 void canonical_collection_resolve(CanonicalCollection* self, parser_t p_type);
-uint32_t* canonical_collection_generate(const CanonicalCollection* self, const uint8_t* precedence_table);
+uint32_t* canonical_collection_generate(const CanonicalCollection* self, const uint8_t* precedence_table, uint8_t* error);
 
 void canonical_collection_free(CanonicalCollection* self);
 
