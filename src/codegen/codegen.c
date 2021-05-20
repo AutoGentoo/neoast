@@ -48,6 +48,7 @@ struct Options {
     unsigned long max_lex_tokens;
     unsigned long max_token_len;
     unsigned long max_lex_state_depth;
+    unsigned long parsing_stack_n;
 
     lexer_option_t lexer_opts;
 };
@@ -571,6 +572,10 @@ static void codegen_handle_option(
     {
         self->max_lex_state_depth = strtoul(option->value, NULL, 0);
     }
+    else if (strcmp(option->key, "parsing_stack_size") == 0)
+    {
+        self->parsing_stack_n = strtoul(option->value, NULL, 0);
+    }
     else if (strcmp(option->key, "lex_match_longest") == 0)
     {
         self->lexer_opts |= codegen_parse_bool(option->value) ? LEXER_OPT_LONGEST_MATCH : 0;
@@ -749,6 +754,7 @@ int codegen_write(const struct File* self, FILE* fp)
 
     tokens[grammar_i++] = "TOK_AUGMENT";
 
+
     assert(typed_token_i == typed_token_n);
     assert(action_i == action_n);
     assert(grammar_i == token_n);
@@ -812,7 +818,9 @@ int codegen_write(const struct File* self, FILE* fp)
         }
     }
 
-    fputs("// Lexer states\n", fp);
+    fputs("// Lexer states\n"
+          "#ifndef NEOAST_EXTERNAL_INCLUDE\n"
+          "#define NEOAST_EXTERNAL_INCLUDE\n", fp);
     put_enum(0, lex_state_n, lexer_states, fp);
 
     // Dump all lexer rule actions
@@ -959,10 +967,11 @@ int codegen_write(const struct File* self, FILE* fp)
             for (struct Token* tok_iter = rule_single_iter->tokens; tok_iter; tok_iter = tok_iter->next)
             {
                 grammar_table[grammar_tok_offset_c] = codegen_index(tokens, tok_iter->name, token_n) + NEOAST_ASCII_MAX;
-                if (grammar_table[grammar_tok_offset_c] == -1)
+                if (grammar_table[grammar_tok_offset_c] < NEOAST_ASCII_MAX)
                 {
                     fprintf(stderr, "Invalid token name in grammar '%s'\n",
                             tok_iter->name);
+                    fprintf(stderr, "Has this token been declared by %%token?\n");
                     exit(2);
                 }
                 grammar_tok_offset_c++;
@@ -974,6 +983,7 @@ int codegen_write(const struct File* self, FILE* fp)
             gg_current->expr = (parser_expr) rule_single_iter->function;
             gg_current->token = rule_tok + NEOAST_ASCII_MAX;
             gg_current->grammar = (uint32_t*) &grammar_table[grammar_table_offset];
+
             gg_current->tok_n = gg_tok_n;
         }
     }
@@ -1028,9 +1038,10 @@ int codegen_write(const struct File* self, FILE* fp)
     fputs("};\n\n", fp);
 
     CanonicalCollection* cc = canonical_collection_init(&parser);
-    canonical_collection_resolve(cc, LALR_1);
+    canonical_collection_resolve(cc, options.parser_type);
 
-    uint32_t* parsing_table = canonical_collection_generate(cc, precedence_table);
+    uint8_t error;
+    uint32_t* parsing_table = canonical_collection_generate(cc, precedence_table, &error);
 
     if (options.debug_table)
     {
@@ -1055,7 +1066,16 @@ int codegen_write(const struct File* self, FILE* fp)
         if (!options.debug_ids) options.debug_ids = fallback;
         for (int i = 0; i < token_n - 1; i++)
         {
-            fprintf(fp, "//  %s => '%c'\n", tokens[i], options.debug_ids[i]);
+            if (strncmp(tokens[i], "ASCII_CHAR_0x", 13) == 0)
+            {
+                fprintf(fp, "//  %s => '%c' ('%c')\n",
+                        tokens[i], options.debug_ids[i],
+                        (char)strtol(tokens[i] + 13, NULL, 16));
+            }
+            else
+            {
+                fprintf(fp, "//  %s => '%c'\n", tokens[i], options.debug_ids[i]);
+            }
         }
 
         fputs("\n", fp);
@@ -1091,12 +1111,13 @@ int codegen_write(const struct File* self, FILE* fp)
 
     fprintf(fp, "void* %s_allocate_buffers()\n"
                 "{\n"
-                "    return parser_allocate_buffers(%lu, %lu, %lu, sizeof("CODEGEN_UNION"));\n"
+                "    return parser_allocate_buffers(%lu, %lu, %lu, %lu, sizeof("CODEGEN_UNION"));\n"
                 "}\n\n",
                 options.prefix,
                 options.max_lex_tokens,
                 options.max_token_len,
-                options.max_lex_state_depth);
+                options.max_lex_state_depth,
+                options.parsing_stack_n);
 
     fprintf(fp, "void %s_free_buffers(void* self)\n"
                 "{\n"
@@ -1115,7 +1136,8 @@ int codegen_write(const struct File* self, FILE* fp)
                 "    \n"
                 "    if (output_idx < 0) return (typeof(t.%s))0;\n"
                 "    return ((" CODEGEN_UNION "*)((ParserBuffers*)buffers)->value_table)[output_idx].%s;\n"
-                "}\n\n",
+                "}\n\n"
+                "#endif\n",
                 _start->value, options.prefix,
                 _start->value, _start->value, _start->value);
 
@@ -1147,5 +1169,5 @@ int codegen_write(const struct File* self, FILE* fp)
     free(ll_rule_count);
     macro_engine_free(m_engine);
 
-    return 0;
+    return error;
 }

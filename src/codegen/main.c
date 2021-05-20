@@ -57,7 +57,7 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    ParserBuffers* buf = parser_allocate_buffers(1024, 1024, 16, sizeof(CodegenUnion));
+    ParserBuffers* buf = parser_allocate_buffers(1024, 1024, 16, 1024, sizeof(CodegenUnion));
     int tok_n = lexer_fill_table(input, file_size, &parser, buf);
     if (tok_n < 0)
     {
@@ -91,12 +91,12 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    codegen_write(f, fp);
+    int error = codegen_write(f, fp);
     fclose(fp);
 
     parser_free_buffers(buf);
     parser_free(&parser);
     free(input);
     file_free(f);
-    return 0;
+    return error;
 }

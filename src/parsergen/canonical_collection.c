@@ -31,13 +31,18 @@ uint32_t token_to_index(uint32_t token, const GrammarParser* parser)
     {
         if (parser->ascii_mappings)
         {
-            fprintf(stderr, "ASCII is not a valid grammar token '%c'\n", token);
+            fprintf(stderr, "ASCII is not a valid grammar token '%c' [%d]\n",
+                    token, token);
             exit(2);
         }
     }
     else if (parser->ascii_mappings)
     {
         return token - NEOAST_ASCII_MAX;
+    }
+    else
+    {
+        assert(token < parser->token_n);
     }
 
     return token;
@@ -105,7 +110,10 @@ void lookahead_merge(uint8_t dest[], const uint8_t src[], uint32_t n)
 }
 
 
-uint8_t lr_1_firstof(uint8_t dest[], uint32_t token, const GrammarParser* parser)
+uint8_t lr_1_firstof_impl(uint8_t dest[],
+                          uint32_t token,
+                          const GrammarParser* parser,
+                          int32_t already_visited[2])
 {
     token = token_to_index(token, parser);
     if (token < parser->action_token_n)
@@ -116,6 +124,10 @@ uint8_t lr_1_firstof(uint8_t dest[], uint32_t token, const GrammarParser* parser
     }
 
     uint8_t merge_current_lookahead = 0;
+    int32_t already_visited_clone[2] = {
+            (int32_t)token,
+            already_visited[0],
+    };
 
     // This rule can be expanded
     // Recursively get the first of this token
@@ -131,7 +143,8 @@ uint8_t lr_1_firstof(uint8_t dest[], uint32_t token, const GrammarParser* parser
 
         // Recursive grammar rules
         // We can skip this one
-        if (token_to_index(rule->grammar[0], parser) == token)
+        if (token_to_index(rule->grammar[0], parser) == token
+            || token == already_visited[1])
         {
             continue;
         }
@@ -139,12 +152,20 @@ uint8_t lr_1_firstof(uint8_t dest[], uint32_t token, const GrammarParser* parser
         if (token_to_index(rule->token, parser) == token)
         {
             merge_current_lookahead =
-                    lr_1_firstof(dest, rule->grammar[0], parser)
+                    lr_1_firstof_impl(dest, rule->grammar[0], parser, already_visited_clone)
                     || merge_current_lookahead;
         }
     }
 
     return merge_current_lookahead;
+}
+
+uint8_t lr_1_firstof(uint8_t dest[],
+                      uint32_t token,
+                      const GrammarParser* parser)
+{
+    int32_t already_visited[2] = {-1, -1};
+    return lr_1_firstof_impl(dest, token, parser, already_visited);
 }
 
 static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
@@ -207,7 +228,9 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
                 }
             }
 
-            if (already_expanded[token_to_index(potential_token, parser) - parser->action_token_n])
+            uint32_t tok_idx = token_to_index(potential_token, parser) - parser->action_token_n;
+            assert(tok_idx < (parser->token_n - parser->action_token_n));
+            if (already_expanded[tok_idx])
             {
                 // This is already expanded
                 // We need to merge the lookahead with every other
@@ -461,7 +484,9 @@ uint32_t* cc_allocate_table(const CanonicalCollection* self)
     return calloc(self->state_n * self->parser->token_n, sizeof(uint32_t));
 }
 
-uint32_t* canonical_collection_generate(const CanonicalCollection* self, const uint8_t* precedence_table)
+uint32_t* canonical_collection_generate(const CanonicalCollection* self,
+                                        const uint8_t* precedence_table,
+                                        uint8_t* error)
 {
     uint32_t rr_conflicts = 0, sr_conflicts = 0;
     uint32_t* table = cc_allocate_table(self); // zeroes
@@ -508,9 +533,22 @@ uint32_t* canonical_collection_generate(const CanonicalCollection* self, const u
                     // This is an accept
                     action_mask = TOK_ACCEPT_MASK;
                     grammar_id = 0;
-                    assert(state->head_item == item
-                           && !item->next
-                           && "Accept state cannot have multiple rules");
+                    if (!(state->head_item == item && !item->next))
+                    {
+                        // Print the entire state for debugging
+                        for (const LR_1* iter_p = state->head_item; iter_p; iter_p = iter_p->next)
+                        {
+                            // Print the rule
+                            printf("%s: ", self->parser->token_names[token_to_index(iter_p->grammar->token, self->parser)]);
+                            for (int j = 0; j < iter_p->grammar->tok_n; j++)
+                            {
+                                printf("%s ", self->parser->token_names[token_to_index(iter_p->grammar->grammar[j], self->parser)]);
+                            }
+                            printf("\n");
+                        }
+
+                        assert(0 && "Accept state cannot have multiple rules");
+                    }
                 }
                 else
                 {
@@ -569,6 +607,15 @@ uint32_t* canonical_collection_generate(const CanonicalCollection* self, const u
     if (sr_conflicts)
     {
         fprintf(stderr, "Warning: %d SR conflicts\n", sr_conflicts);
+    }
+
+    if (rr_conflicts || sr_conflicts)
+    {
+        *error = 1;
+    }
+    else
+    {
+        *error = 0;
     }
 
     return table;

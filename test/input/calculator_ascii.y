@@ -68,8 +68,8 @@ expr_first:
     ;
 
 expr:
-      expr_first                 { $$ = $1; }
-    | expr '+' expr_first        {$$ = $1 + $3;}
-    | expr '-' expr_first        {$$ = $1 - $3;}
+      expr_first                { $$ = $1; }
+    | expr '+' expr             {$$ = $1 + $3;}
+    | expr '-' expr             {$$ = $1 - $3;}
     ;
 %%
