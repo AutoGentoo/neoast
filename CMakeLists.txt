@@ -9,7 +9,7 @@ option(ENABLE_NEOAST_TESTS "Build+execute neoast's tests" OFF)
 set(ASAN_LIB "libasan.so" CACHE STRING "Path to address sanitizer library")
 set(RE2_BUILD_TESTING CACHE STRING OFF)
 
-add_compile_options(-g -fno-omit-frame-pointer)
+add_compile_options(-g -fno-omit-frame-pointer -O0)
 add_link_options(-fno-omit-frame-pointer)
 
 if (NOT "${SANITIZER}" STREQUAL "")
@@ -20,14 +20,13 @@ endif()
 
 include(cmake/policy.cmake)
 
-# Unit and integration testing
-include(cmake/test.cmake)
-
 add_subdirectory(src)
 add_subdirectory(third_party)
 
 include(cmake/neoast.cmake)
 
 if (ENABLE_NEOAST_TESTS)
+    # Unit and integration testing
+    include(cmake/test.cmake)
     add_subdirectory(test)
 endif()

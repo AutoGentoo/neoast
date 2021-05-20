@@ -83,6 +83,18 @@ CTEST(test_parser_ascii)
     calc_ascii_free();
 }
 
+CTEST(test_parser_ascii_order_of_ops)
+{
+    assert_int_equal(calc_ascii_init(), 0);
+    void* buffers = calc_ascii_allocate_buffers();
+
+    const char* input = "3 + 5 * 5 + 3 * 6 + 3";
+    double result = calc_ascii_parse(buffers, input);
+    assert_double_equal(result, 3 + 5 * 5 + 3 * 6 + 3, 0.001);
+    calc_ascii_free_buffers(buffers);
+    calc_ascii_free();
+}
+
 CTEST(test_destructor)
 {
     assert_int_equal(required_use_init(), 0);

@@ -208,14 +208,16 @@ int32_t parser_parse_lr(
             // We need to free the remaining objects in this map
             parser_run_destructors(parser, buffers, i);
             return -1;
-        } else if (table_value & TOK_SHIFT_MASK)
+        }
+        else if (table_value & TOK_SHIFT_MASK)
         {
             current_state = table_value & TOK_MASK;
             NEOAST_STACK_PUSH(buffers->parsing_stack, i);
             NEOAST_STACK_PUSH(buffers->parsing_stack, current_state);
             prev_tok = tok;
             tok = buffers->token_table[++i];
-        } else if (table_value & TOK_REDUCE_MASK)
+        }
+        else if (table_value & TOK_REDUCE_MASK)
         {
             // Reduce this rule
             current_state = g_lr_reduce(parser, buffers->parsing_stack, parsing_table,
@@ -223,9 +225,10 @@ int32_t parser_parse_lr(
                                         buffers->token_table, buffers->value_table, buffers->val_s,
                                         &dest_idx);
             prev_tok = parser->grammar_rules[table_value & TOK_MASK].token - NEOAST_ASCII_MAX;
-        } else if (table_value & TOK_ACCEPT_MASK)
+        }
+        else if (table_value & TOK_ACCEPT_MASK)
         {
-            return dest_idx;
+            return (int32_t)dest_idx;
         }
     }
 }

@@ -23,6 +23,7 @@
 %token ')'
 
 %type <number> expr
+%type <number> expr_first
 %type <number> program
 %start <number> program
 
@@ -58,12 +59,17 @@ program: expr     {$$ = $1;}
      |            {$$ = 0;}
      ;
 
-expr: TOK_N                {$$ = $1;}
-    | expr '+' expr        {$$ = $1 + $3;}
-    | expr '-' expr        {$$ = $1 - $3;}
+expr_first:
+      TOK_N                {$$ = $1;}
     | expr '/' expr        {$$ = $1 / $3;}
     | expr '*' expr        {$$ = $1 * $3;}
     | expr '^' expr        {$$ = pow($1, $3);}
     | '(' expr ')'         {$$ = $2;}
+    ;
+
+expr:
+      expr_first                 { $$ = $1; }
+    | expr '+' expr_first        {$$ = $1 + $3;}
+    | expr '-' expr_first        {$$ = $1 - $3;}
     ;
 %%

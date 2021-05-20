@@ -15,6 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE
 
 #include "lexer.h"
 #include "codegen.h"
@@ -35,7 +36,7 @@ const char* tok_names_errors[] = {
         "bottom",
         "union",
         "destructor",
-        "delimiter",
+        "==",
         "lex_state",
         "regex",
         "expr_def",
@@ -127,6 +128,7 @@ static int32_t ll_option(const char* lex_text, CodegenUnion* lex_val)
 
     return TOK_OPTION;
 }
+
 static int32_t ll_macro(const char* lex_text, CodegenUnion* lex_val, uint32_t len)
 {
     // Find the white space delimiter
@@ -418,6 +420,8 @@ static int32_t ll_regex_quote(const char* lex_text, CodegenUnion* lex_val, uint3
         lex_val->string = strndup(regex_buffer.buffer, regex_buffer.n);
         free(regex_buffer.buffer);
         regex_buffer.buffer = NULL;
+        regex_buffer.s = 0;
+        regex_buffer.n = 0;
         NEOAST_STACK_POP(lexer_state);
         return TOK_REGEX_RULE;
     }
@@ -432,13 +436,13 @@ static int32_t ll_regex_add_to_buffer(const char* lex_text, void* lex_val, uint3
     (void) lex_val;
     (void) lexer_state;
 
-    if (len + regex_buffer.n >= regex_buffer.s)
+    while (len + regex_buffer.n >= regex_buffer.s)
     {
         regex_buffer.s *= 2;
         regex_buffer.buffer = realloc(regex_buffer.buffer, regex_buffer.s);
     }
 
-    strncpy(regex_buffer.buffer + regex_buffer.n, lex_text, len);
+    memcpy(regex_buffer.buffer + regex_buffer.n, lex_text, len);
     regex_buffer.n += len;
     return -1;
 }
@@ -505,17 +509,19 @@ static LexerRule ll_rules_grammar[] = {
         {.regex_raw = "/\\*", .expr = ll_regex_enter_comment},
         {.regex_raw = "%%", .expr = (lexer_expr) ll_exit_state},
         {.regex_raw = ID_X WS_OPT ":", .expr = (lexer_expr) ll_g_rule},
+        {.regex_raw = ASCII, .expr = (lexer_expr) ll_g_tok_ascii},
         {.regex_raw = "{", .expr = (lexer_expr) ll_match_brace},
         {.regex_raw = ID_X, .expr = (lexer_expr) ll_g_tok},
-        {.regex_raw = ASCII, .expr = (lexer_expr) ll_g_tok_ascii},
         {.regex_raw = "\\|", .tok = TOK_G_OR},
         {.regex_raw = ";", .tok = TOK_G_TERM},
 };
 
 static LexerRule ll_rules_match_brace[] = {
+        {.regex_raw = "'[\\x00-\\x7F]'", .expr = ll_add_to_buffer},
+        {.regex_raw = "(\"[^\"]*\")", .expr = ll_add_to_buffer},
         {.regex_raw = "}", .expr = (lexer_expr) ll_decrement_brace},
         {.regex_raw = "{", .expr = ll_increment_brace},
-        {.regex_raw = "([^}{]+)", .expr = ll_add_to_buffer},
+        {.regex_raw = "([^}{\"\']+)", .expr = ll_add_to_buffer},
 };
 
 static LexerRule  ll_rules_regex[] = {
@@ -729,6 +735,7 @@ int gen_parser_init(GrammarParser* self)
     self->action_token_n = TOK_GG_FILE;
     self->token_n = TOK_AUGMENT;
     self->token_names = tok_names_errors;
+    self->destructors = NULL;
     self->ascii_mappings = NULL;
     self->lexer_opts = 0;
 
