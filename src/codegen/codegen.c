@@ -615,7 +615,8 @@ int codegen_write(const struct File* self, FILE* fp)
             .prefix = "neoast",
             .max_token_len = 1024,
             .max_lex_tokens = 1024,
-            .max_lex_state_depth = 16
+            .max_lex_state_depth = 16,
+            .parsing_stack_n = 1024,
     };
 
     MacroEngine* m_engine = macro_engine_init();

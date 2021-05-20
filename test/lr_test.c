@@ -139,7 +139,7 @@ CTEST(test_parser)
                               ";";  // b
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, sizeof(CodegenUnion));
+    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CodegenUnion));
 
     int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
     assert_int_equal(tok_n, 5);

@@ -33,7 +33,7 @@ uint32_t parser_init(GrammarParser* self)
         {
             const char* pattern = self->lexer_rules[i][j].regex_raw;
             if ((self->lexer_rules[i][j].regex =
-                    cre2_new(pattern, (uint32_t)strlen(pattern), self->regex_opts)) == NULL) {
+                    cre2_new(pattern, (int32_t)strlen(pattern), self->regex_opts)) == NULL) {
                 fprintf(stderr, "Failed to compile regex \"%s\"\n", pattern);
                 error++;
             }
