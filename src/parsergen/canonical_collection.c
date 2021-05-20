@@ -245,8 +245,9 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
             // rule describing this expression
             if (!expand_count)
             {
-                fprintf(stderr, "Could not find a rule to describe token '%d'\n",
-                        potential_token);
+                fprintf(stderr,
+                        "Could not find a rule to describe token '%s'\n",
+                        parser->token_names[potential_token - NEOAST_ASCII_MAX]);
                 exit(2);
             }
         }

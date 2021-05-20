@@ -991,10 +991,7 @@ int codegen_write(const struct File* self, FILE* fp)
             .lexer_rules = ll_rules,
             .grammar_n = grammar_n,
             .grammar_rules = gg_rules,
-            .ascii_mappings = NULL, // yes we want NULL
-                                    // the intermediate parser generator will
-                                    // convert ascii characters to non ascii
-                                    // mapped tokens
+            .ascii_mappings = ascii_mappings,
     };
 
     // Dump parser instantiation
