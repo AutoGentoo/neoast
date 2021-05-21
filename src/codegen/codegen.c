@@ -330,8 +330,11 @@ uint32_t put_lexer_rule(LexerRule* self, const char* state_name, uint32_t offset
 {
     if (self->expr)
     {
-        fprintf(fp, "        {.regex_raw = &ll_rules_state_%s_regex_table[%d], .expr = (lexer_expr) ll_rule_%s_%02d}, // %s\n",
-                state_name, offset, state_name, rule_i, self->regex_raw);
+        fprintf(fp, "        {"
+                    ".expr = (lexer_expr) ll_rule_%s_%02d, "
+                    ".regex_raw = &ll_rules_state_%s_regex_table[%d],"
+                    "}, // %s\n",
+                state_name,  rule_i, state_name, offset, self->regex_raw);
     } else
     {
         // TODO Add support for quick token optimization in code gen
@@ -1024,17 +1027,17 @@ int codegen_write(const struct File* self, FILE* fp)
     put_ascii_mappings(ascii_mappings, fp);
 
     fprintf(fp, "static GrammarParser parser = {\n"
-                "        .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,\n"
-                "        .token_names = token_names,\n"
-                "        .lex_state_n = %d,\n"
-                "        .action_token_n = %d,\n"
-                "        .lex_n = lexer_rule_n,\n"
-                "        .lexer_rules = lexer_rules,\n"
                 "        .grammar_n = %d,\n"
-                "        .grammar_rules = grammar_rules,\n"
+                "        .lex_state_n = %d,\n"
+                "        .lex_n = lexer_rule_n,\n"
                 "        .ascii_mappings = ascii_mappings,\n"
-                "        .destructors = token_destructors\n",
-                lex_state_n, action_n, grammar_n
+                "        .lexer_rules = lexer_rules,\n"
+                "        .grammar_rules = grammar_rules,\n"
+                "        .token_names = token_names,\n"
+                "        .destructors = token_destructors,\n"
+                "        .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,\n"
+                "        .action_token_n = %d,\n",
+            grammar_n, lex_state_n, action_n
     );
     fputs("};\n\n", fp);
 
@@ -1122,7 +1125,7 @@ int codegen_write(const struct File* self, FILE* fp)
 
     fprintf(fp, "void %s_free_buffers(void* self)\n"
                 "{\n"
-                "    parser_free_buffers(self);\n"
+                "    parser_free_buffers((ParserBuffers*)self);\n"
                 "}\n\n",
                 options.prefix);
 

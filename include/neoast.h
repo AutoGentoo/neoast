@@ -17,6 +17,11 @@
 
 #ifndef NEOAST_H
 #define NEOAST_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -169,6 +174,10 @@ int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* par
 
 int
 lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, uint32_t len, uint32_t* offset);
+#endif
+
+#ifdef __cplusplus
+};
 #endif
 
 #endif
