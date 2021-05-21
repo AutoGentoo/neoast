@@ -144,7 +144,8 @@ uint8_t lr_1_firstof_impl(uint8_t dest[],
         // Recursive grammar rules
         // We can skip this one
         if (token_to_index(rule->grammar[0], parser) == token
-            || token == already_visited[1])
+            || token == already_visited[1]
+            || token_to_index(rule->grammar[0], parser) == already_visited[1])
         {
             continue;
         }
@@ -533,22 +534,6 @@ uint32_t* canonical_collection_generate(const CanonicalCollection* self,
                     // This is an accept
                     action_mask = TOK_ACCEPT_MASK;
                     grammar_id = 0;
-                    if (!(state->head_item == item && !item->next))
-                    {
-                        // Print the entire state for debugging
-                        for (const LR_1* iter_p = state->head_item; iter_p; iter_p = iter_p->next)
-                        {
-                            // Print the rule
-                            printf("%s: ", self->parser->token_names[token_to_index(iter_p->grammar->token, self->parser)]);
-                            for (int j = 0; j < iter_p->grammar->tok_n; j++)
-                            {
-                                printf("%s ", self->parser->token_names[token_to_index(iter_p->grammar->grammar[j], self->parser)]);
-                            }
-                            printf("\n");
-                        }
-
-                        assert(0 && "Accept state cannot have multiple rules");
-                    }
                 }
                 else
                 {

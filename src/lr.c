@@ -128,7 +128,7 @@ static void parser_run_destructors(
         const ParserBuffers* buffers,
         uint32_t i)
 {
-    // Tokens head of i are 'packed' and all of them need to be freed
+    // Tokens ahead of i are 'packed' and all of them need to be freed
     // Tokens behind i need to be freed based on the contents of the parsing stack
     // Tokens behind i are reduced tokens
 
@@ -138,9 +138,9 @@ static void parser_run_destructors(
         return;
     }
 
-    // First free the tokens head of i
+    // First free the tokens ahead of i
     uint32_t current_token;
-    while ((current_token = buffers->token_table[i++])) // search for EOF
+    while ((current_token = buffers->token_table[i])) // search for EOF
     {
         assert(current_token < parser->token_n);
         if (parser->destructors[current_token])
@@ -152,6 +152,8 @@ static void parser_run_destructors(
                                     buffers->val_s,
                                     i));
         }
+
+        i++;
     }
 
     // Free the reduced tokens

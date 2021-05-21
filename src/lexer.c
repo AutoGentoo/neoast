@@ -23,7 +23,7 @@
 
 int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* parse, const ParserBuffers* buf)
 {
-    void* current_val = buf->value_table;
+    char* current_val = buf->value_table;
     int i = 0;
     NEOAST_STACK_PUSH(buf->lexing_state_stack, 0);
     uint32_t offset = 0;
@@ -34,6 +34,7 @@ int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* par
             fprintf(stderr, "Unmatched token near '%.*s' (state '%d')\n",
                     (uint32_t)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
                     &input[offset - 1], NEOAST_STACK_PEEK(buf->lexing_state_stack));
+            // TODO (free tokens)
             return -1;
         }
 
@@ -68,13 +69,13 @@ lex_next(const char* input,
             cre2_string_t match;
             LexerRule* rule = &parser->lexer_rules[state_index][i];
 
-            if (cre2_match(rule->regex, input, len,
-                           *offset, len, CRE2_ANCHOR_START,
+            if (cre2_match(rule->regex, input, (int32_t)len,
+                           (int32_t)*offset, (int32_t)len, CRE2_ANCHOR_START,
                            &match, 1))
             {
                 if (match.length > longest_match_length)
                 {
-                    longest_match = i;
+                    longest_match = (int32_t)i;
                     longest_match_length = match.length;
                 }
 
@@ -120,7 +121,7 @@ lex_next(const char* input,
                 // Check if this token is an ascii character and needs to be converted
                 if (parser->ascii_mappings && token < NEOAST_ASCII_MAX)
                 {
-                    int32_t mapping = parser->ascii_mappings[token];
+                    int32_t mapping = (int32_t)parser->ascii_mappings[token];
                     if (mapping <= NEOAST_ASCII_MAX)
                     {
                         fprintf(stderr, "Token '%c' needs to be explicitly defined\n", token);
