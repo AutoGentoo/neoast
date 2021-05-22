@@ -16,7 +16,7 @@
  */
 
 /* 
- * This file is part of the Amber framework (https://github.com/Kronos3/Amber)
+ * This file is part of the  framework (https://github.com/Kronos3/)
  * Copyright (c) 2021 Andrei Tumbar.
  * 
  * This program is free software: you can redistribute it and/or modify  

@@ -102,7 +102,7 @@ CTEST(test_lexer)
 
     CodegenUnion llval;
 
-    ParserBuffers* buf = parser_allocate_buffers(32, 32, 8, 1024, sizeof(CodegenUnion));
+    ParserBuffers* buf = parser_allocate_buffers(32, 32, 8, 1024, sizeof(CodegenUnion), sizeof(CodegenUnion));
     NEOAST_STACK_PUSH(buf->lexing_state_stack, 0);
 
     uint32_t len = strlen(lexer_input);

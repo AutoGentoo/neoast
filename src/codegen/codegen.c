@@ -27,7 +27,8 @@
 #include <util/util.h>
 #include <stddef.h>
 
-#define CODEGEN_UNION "NeoastValue"
+#define CODEGEN_STRUCT "NeoastValue"
+#define CODEGEN_UNION "NeoastUnion"
 
 #define CODEGEN_ERROR(...) \
 do {                                \
@@ -41,6 +42,7 @@ struct Options {
     // Should we dump the table
     int debug_table;
     int disable_locks;
+    char* track_position_type;
     char* debug_ids;
     char* prefix;
     parser_t parser_type; // LALR(1) or CLR(1)
@@ -87,11 +89,14 @@ void put_lexer_rule_action(struct LexerRuleProto* self, const char* state_name, 
     fprintf(fp, "static int32_t\nll_rule_%s_%02d(const char* yytext, "
                 CODEGEN_UNION"* yyval, "
                 "unsigned int len, "
-                "ParsingStack* lex_state)\n{\n"
+                "ParsingStack* lex_state, "
+                "TokenPosition* position"
+                ")\n{\n"
                 "    (void) yytext;\n"
                 "    (void) yyval;\n"
                 "    (void) len;\n"
                 "    (void) lex_state;\n"
+                "    (void) position;\n"
                 "    {", state_name, regex_i);
     fputs(self->function, fp);
     fputs("}\n    return -1;\n}\n\n", fp);
@@ -156,7 +161,6 @@ int get_named_token(const char* token_name, const char* const* tokens, uint32_t 
 
     fprintf(stderr, "Invalid token name '%s'\n", token_name);
     exit(2);
-    return -1;
 }
 
 static inline
@@ -166,11 +170,14 @@ const char* put_grammar_rule_arg(
         struct GrammarRuleSingleProto* self,
         const char** tokens,
         const struct KeyVal** typed_tokens,
+        const char* track_position_type,
         uint32_t token_n,
         FILE* fp)
 {
+    int search_offset = 1;
     if (search[1] == '$')
     {
+        // Return value
         int expression_token = get_named_token(parent->name, tokens, token_n);
         if (expression_token == -1)
         {
@@ -182,9 +189,14 @@ const char* put_grammar_rule_arg(
         fprintf(fp, "dest->%s", typed_tokens[expression_token]->value);
         return search + 2;
     }
+    else if (search[1] == 'p')
+    {
+        // Positional token
+        search_offset = 2;
+    }
 
     char* out;
-    uint32_t arg_num = strtoul(search + 1, &out, 10);
+    uint32_t arg_num = strtoul(search + search_offset, &out, 10);
     if (arg_num == 0)
     {
         fprintf(stderr, "Invalid argument index '0', use '$$' for destination\n");
@@ -204,14 +216,28 @@ const char* put_grammar_rule_arg(
         return NULL;
     }
 
-    int token_id = get_named_token(tok->name, tokens, token_n);
-    if (!typed_tokens[token_id])
+    if (search[1] == 'p')
     {
-        fprintf(stderr, "Token '%s' does not have a type\n", tok->name);
-        return NULL;
+        if (track_position_type)
+        {
+            fprintf(fp, "((const %s*)&args[%d].position)", track_position_type, arg_num - 1);
+        }
+        else
+        {
+            fprintf(fp, "((const TokenPosition*)&args[%d].position)", arg_num - 1);
+        }
     }
+    else
+    {
+        int token_id = get_named_token(tok->name, tokens, token_n);
+        if (!typed_tokens[token_id])
+        {
+            fprintf(stderr, "Token '%s' does not have a type\n", tok->name);
+            return NULL;
+        }
 
-    fprintf(fp, "args[%d].%s", arg_num - 1, typed_tokens[token_id]->value);
+        fprintf(fp, "args[%d].value.%s", arg_num - 1, typed_tokens[token_id]->value);
+    }
 
     return out;
 }
@@ -222,13 +248,14 @@ void put_grammar_rule_action(
         struct GrammarRuleSingleProto* self,
         const char** tokens,
         const struct KeyVal** typed_tokens,
+        const char* track_position_type,
         uint32_t token_n,
         uint32_t rule_n,
         FILE* fp)
 {
     fprintf(fp, "static void\ngg_rule_r%02d("
                 CODEGEN_UNION"* dest, "
-                CODEGEN_UNION"* args)\n{\n"
+                CODEGEN_STRUCT"* args)\n{\n"
                 "    (void) dest;\n"
                 "    (void) args;\n"
                 "    {", rule_n);
@@ -241,7 +268,7 @@ void put_grammar_rule_action(
     const char* start = self->function;
     while ((search = strchr(start, '$')))
     {
-        if ((search[1] >= '0' && search[1] <= '9') || search[1] == '$')
+        if ((search[1] >= '0' && search[1] <= '9') || search[1] == '$' || search[1] == 'p')
         {
             // Check if this string is in a comment or string
             const char* finish_red = check_grammar_arg_skip(start, search);
@@ -255,9 +282,12 @@ void put_grammar_rule_action(
                 fwrite(start, 1, search - start, fp);
 
                 // Print the argument
-                start = put_grammar_rule_arg(search, parent, self, tokens, typed_tokens, token_n, fp);
+                start = put_grammar_rule_arg(search, parent, self, tokens, typed_tokens,
+                                             track_position_type, token_n, fp);
                 if (!start)
-                    return;
+                {
+                    exit(2);
+                }
                 continue;
             }
         }
@@ -551,6 +581,14 @@ static void codegen_handle_option(
     {
         self->debug_table = codegen_parse_bool(option->value);
     }
+    else if (strcmp(option->key, "track_position") == 0)
+    {
+        self->lexer_opts |= codegen_parse_bool(option->value) ? LEXER_OPT_TOKEN_POS : 0;
+    }
+    else if (strcmp(option->key, "track_position_type") == 0)
+    {
+        self->track_position_type = option->value;
+    }
     else if (strcmp(option->key, "disable_locks") == 0)
     {
         self->disable_locks = codegen_parse_bool(option->value);
@@ -615,6 +653,7 @@ int codegen_write(const struct File* self, FILE* fp)
             .disable_locks = 0,
             .parser_type = LALR_1,
             .debug_ids = NULL,
+            .track_position_type = NULL,
             .prefix = "neoast",
             .max_token_len = 1024,
             .max_lex_tokens = 1024,
@@ -775,7 +814,16 @@ int codegen_write(const struct File* self, FILE* fp)
         fputc('\n', fp);
     }
 
-    fprintf(fp, "typedef union {%s} " CODEGEN_UNION ";\n\n", _union->value);
+    fprintf(fp, "typedef union {%s} " CODEGEN_UNION ";\n", _union->value);
+    if (options.lexer_opts & LEXER_OPT_TOKEN_POS)
+    {
+        fprintf(fp, "typedef struct {" CODEGEN_UNION " value; TokenPosition position;} " CODEGEN_STRUCT ";\n\n");
+    }
+    else
+    {
+        fprintf(fp, "typedef struct {" CODEGEN_UNION " value;}" CODEGEN_STRUCT ";\n\n");
+    }
+
     fputs("// Tokens\n", fp);
     put_enum(NEOAST_ASCII_MAX + 1, token_n - 1, tokens + 1, fp);
 
@@ -914,7 +962,9 @@ int codegen_write(const struct File* self, FILE* fp)
              rule_single_iter;
              rule_single_iter = rule_single_iter->next)
         {
-            put_grammar_rule_action(rule_iter, rule_single_iter, tokens, typed_tokens, token_n, grammar_n + 1, fp);
+            put_grammar_rule_action(rule_iter, rule_single_iter, tokens, typed_tokens,
+                                    options.track_position_type,
+                                    token_n, grammar_n + 1, fp);
             grammar_n++;
 
             // Find the number of tokens in this rule
@@ -1036,8 +1086,9 @@ int codegen_write(const struct File* self, FILE* fp)
                 "        .token_names = token_names,\n"
                 "        .destructors = token_destructors,\n"
                 "        .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,\n"
-                "        .action_token_n = %d,\n",
-            grammar_n, lex_state_n, action_n
+                "        .action_token_n = %d,\n"
+                "        .lexer_opts = (lexer_option_t)%d,\n",
+            grammar_n, lex_state_n, action_n, options.lexer_opts
     );
     fputs("};\n\n", fp);
 
@@ -1112,16 +1163,32 @@ int codegen_write(const struct File* self, FILE* fp)
                 "    }\n"
                 "}\n\n",
                 options.prefix);
-
-    fprintf(fp, "void* %s_allocate_buffers()\n"
-                "{\n"
-                "    return parser_allocate_buffers(%lu, %lu, %lu, %lu, sizeof("CODEGEN_UNION"));\n"
-                "}\n\n",
+    if (options.lexer_opts & LEXER_OPT_TOKEN_POS)
+    {
+        fprintf(fp, "void* %s_allocate_buffers()\n"
+                    "{\n"
+                    "    return parser_allocate_buffers(%lu, %lu, %lu, %lu, "
+                    "sizeof("CODEGEN_STRUCT"), offsetof(" CODEGEN_STRUCT ", position));\n"
+                    "}\n\n",
                 options.prefix,
                 options.max_lex_tokens,
                 options.max_token_len,
                 options.max_lex_state_depth,
                 options.parsing_stack_n);
+    }
+    else
+    {
+        fprintf(fp, "void* %s_allocate_buffers()\n"
+                    "{\n"
+                    "    return parser_allocate_buffers(%lu, %lu, %lu, %lu, "
+                    "sizeof(" CODEGEN_STRUCT "), sizeof(" CODEGEN_STRUCT "));\n"
+                    "}\n\n",
+                options.prefix,
+                options.max_lex_tokens,
+                options.max_token_len,
+                options.max_lex_state_depth,
+                options.parsing_stack_n);
+    }
 
     fprintf(fp, "void %s_free_buffers(void* self)\n"
                 "{\n"

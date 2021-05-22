@@ -39,6 +39,7 @@ uint32_t g_lr_reduce(
         uint32_t* token_table,
         void* val_table,
         size_t val_s,
+        size_t union_s,
         uint32_t* dest_idx
 )
 {
@@ -46,8 +47,8 @@ uint32_t g_lr_reduce(
     // due to this rule
     uint32_t arg_count = parser->grammar_rules[reduce_rule].tok_n;
 
-    void* dest = alloca(val_s);
-    void* args = alloca(val_s * arg_count);
+    char* dest = alloca(val_s);
+    char* args = alloca(val_s * arg_count);
 
     uint32_t idx = *dest_idx;
     for (uint32_t i = 0; i < arg_count; i++)
@@ -67,14 +68,32 @@ uint32_t g_lr_reduce(
         result_token -= NEOAST_ASCII_MAX;
         assert(result_token > 0);
     }
+
     if (parser->grammar_rules[reduce_rule].expr)
     {
         parser->grammar_rules[reduce_rule].expr(
                 dest,
-                args);
+                (void**) args);
+
+        // Copy the result back into the table
         memcpy(OFFSET_VOID_PTR(val_table, val_s, idx),
                dest,
                val_s);
+
+        if (parser->lexer_opts & LEXER_OPT_TOKEN_POS)
+        {
+            assert(val_s - union_s >= sizeof(TokenPosition));
+            if (arg_count > 0)
+            {
+                // Copy the positional data of the first argument back to the destination
+                memcpy(dest + union_s, args + union_s, sizeof(TokenPosition));
+            }
+            else
+            {
+                // No argument (empty rule), no positional data available
+                memset(dest + union_s, 0, sizeof(TokenPosition));
+            }
+        }
     }
 
     // Fill the result
@@ -224,7 +243,8 @@ int32_t parser_parse_lr(
             // Reduce this rule
             current_state = g_lr_reduce(parser, buffers->parsing_stack, parsing_table,
                                         table_value & TOK_MASK,
-                                        buffers->token_table, buffers->value_table, buffers->val_s,
+                                        buffers->token_table, buffers->value_table,
+                                        buffers->val_s, buffers->union_s,
                                         &dest_idx);
             prev_tok = parser->grammar_rules[table_value & TOK_MASK].token - NEOAST_ASCII_MAX;
         }

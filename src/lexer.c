@@ -49,7 +49,7 @@ int32_t
 lex_next(const char* input,
          const GrammarParser* parser,
          const ParserBuffers* buf,
-         void* lval,
+         char* lval,
          uint32_t len,
          uint32_t* offset)
 {
@@ -94,28 +94,49 @@ lex_next(const char* input,
             int32_t token;
             LexerRule* rule = &parser->lexer_rules[state_index][longest_match];
 
+            TokenPosition* position;
+            if (parser->lexer_opts & LEXER_OPT_TOKEN_POS)
+            {
+                position = (TokenPosition*) (lval + buf->union_s);
+                position->line = buf->position->line;
+                position->col_start = *offset - buf->position->line_start_offset + 1;
+            }
+            else
+            {
+                position = NULL;
+            }
+
             if (rule->expr)
             {
                 if (longest_match_length < buf->max_token_length)
                 {
                     memcpy(buf->text_buffer, input + *offset, longest_match_length);
                     buf->text_buffer[longest_match_length] = 0;
-                    token = rule->expr(buf->text_buffer, lval, longest_match_length, buf->lexing_state_stack);
-                } else
+                    token = rule->expr(buf->text_buffer, lval, longest_match_length, buf->lexing_state_stack, position);
+                }
+                else
                 {
                     char* m_buff = strndup(input + *offset, longest_match_length);
-                    token = rule->expr(m_buff, lval, longest_match_length, buf->lexing_state_stack);
+                    token = rule->expr(m_buff, lval, longest_match_length, buf->lexing_state_stack, position);
                     free(m_buff);
                 }
-            } else if (rule->tok)
+            }
+            else if (rule->tok)
             {
                 token = rule->tok;
-            } else
+            }
+            else
             {
                 token = -1; // skip
             }
 
             *offset += longest_match_length;
+            if (parser->lexer_opts & LEXER_OPT_TOKEN_POS && buf->position->line != position->line)
+            {
+                buf->position->line = position->line;
+                buf->position->line_start_offset = *offset;
+            }
+
             if (token > 0)
             {
                 // Check if this token is an ascii character and needs to be converted

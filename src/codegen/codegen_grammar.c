@@ -80,6 +80,7 @@ struct KeyVal* key_val_build(key_val_t type, char* key, char* value)
 
     return self;
 }
+
 static struct Token* token_build(char* name)
 {
     struct Token* self = malloc(sizeof(struct Token));
@@ -97,6 +98,7 @@ static int32_t ll_enter_lex(const char* lex_text, void* lex_val, uint32_t len, P
     NEOAST_STACK_PUSH(ll_state, LEX_STATE_LEXER_RULES);
     return TOK_DELIMITER;
 }
+
 static int32_t ll_enter_grammar(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* ll_state)
 {
     (void) lex_text;
@@ -106,6 +108,7 @@ static int32_t ll_enter_grammar(const char* lex_text, void* lex_val, uint32_t le
     NEOAST_STACK_PUSH(ll_state, LEX_STATE_GRAMMAR_RULES);
     return TOK_DELIMITER;
 }
+
 static int32_t ll_exit_state(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* ll_state)
 {
     (void) lex_text;
@@ -115,6 +118,7 @@ static int32_t ll_exit_state(const char* lex_text, void* lex_val, uint32_t len, 
     NEOAST_STACK_POP(ll_state);
     return TOK_DELIMITER;
 }
+
 static int32_t ll_option(const char* lex_text, CodegenUnion* lex_val)
 {
     // Skip over '%option '
@@ -149,6 +153,7 @@ static int32_t ll_macro(const char* lex_text, CodegenUnion* lex_val, uint32_t le
     lex_val->key_val = key_val_build(KEY_VAL_MACRO, key, value);
     return TOK_OPTION;
 }
+
 static int32_t ll_token(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = lex_text + 7;
@@ -159,6 +164,7 @@ static int32_t ll_token(const char* lex_text, CodegenUnion* lex_val)
                                      strdup(find_token_start), NULL);
     return TOK_OPTION;
 }
+
 static int32_t ll_token_ascii(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = strchr(lex_text + 7, '\'');
@@ -167,9 +173,10 @@ static int32_t ll_token_ascii(const char* lex_text, CodegenUnion* lex_val)
 
     lex_val->key_val = key_val_build(KEY_VAL_TOKEN_ASCII,
                                      key, NULL);
-    lex_val->key_val->options = (uint8_t)find_token_start[1];
+    lex_val->key_val->options = (uint8_t) find_token_start[1];
     return TOK_OPTION;
 }
+
 static int32_t ll_start(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* type_start = strchr(lex_text + 5, '<');
@@ -183,6 +190,7 @@ static int32_t ll_start(const char* lex_text, CodegenUnion* lex_val)
                                      strndup(type_start + 1, type_end - type_start - 1));
     return TOK_OPTION;
 }
+
 static int32_t ll_state(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = lex_text + 7;
@@ -193,6 +201,7 @@ static int32_t ll_state(const char* lex_text, CodegenUnion* lex_val)
                                      strdup(find_token_start), NULL);
     return TOK_OPTION;
 }
+
 static int32_t ll_type(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* type_start = strchr(lex_text + 5, '<');
@@ -206,6 +215,7 @@ static int32_t ll_type(const char* lex_text, CodegenUnion* lex_val)
                                      strndup(type_start + 1, type_end - type_start - 1));
     return TOK_OPTION;
 }
+
 static int32_t ll_destructor(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* type_start = strchr(lex_text + 5, '<');
@@ -216,6 +226,7 @@ static int32_t ll_destructor(const char* lex_text, CodegenUnion* lex_val)
                                      NULL);
     return TOK_DESTRUCTOR;
 }
+
 static int32_t ll_token_with_type(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* type_start = strchr(lex_text + 6, '<');
@@ -229,6 +240,7 @@ static int32_t ll_token_with_type(const char* lex_text, CodegenUnion* lex_val)
                                      strndup(type_start + 1, type_end - type_start - 1));
     return TOK_OPTION;
 }
+
 static int32_t ll_token_with_type_ascii(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* type_start = strchr(lex_text + 6, '<');
@@ -240,9 +252,10 @@ static int32_t ll_token_with_type_ascii(const char* lex_text, CodegenUnion* lex_
     lex_val->key_val = key_val_build(KEY_VAL_TOKEN_TYPE_ASCII,
                                      key,
                                      strndup(type_start + 1, type_end - type_start - 1));
-    lex_val->key_val->options = (uint8_t)find_token_start[1];
+    lex_val->key_val->options = (uint8_t) find_token_start[1];
     return TOK_OPTION;
 }
+
 static int32_t ll_left(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = lex_text + 6;
@@ -252,6 +265,7 @@ static int32_t ll_left(const char* lex_text, CodegenUnion* lex_val)
     lex_val->key_val = key_val_build(KEY_VAL_LEFT, strdup(find_token_start), NULL);
     return TOK_OPTION;
 }
+
 static int32_t ll_left_ascii(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = strchr(lex_text + 6, '\'');
@@ -259,9 +273,10 @@ static int32_t ll_left_ascii(const char* lex_text, CodegenUnion* lex_val)
     asprintf(&key, "ASCII_CHAR_0x%02X", find_token_start[1]);
 
     lex_val->key_val = key_val_build(KEY_VAL_LEFT, key, NULL);
-    lex_val->key_val->options = (uint8_t)find_token_start[1];
+    lex_val->key_val->options = (uint8_t) find_token_start[1];
     return TOK_OPTION;
 }
+
 static int32_t ll_right(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = lex_text + 7;
@@ -271,6 +286,7 @@ static int32_t ll_right(const char* lex_text, CodegenUnion* lex_val)
     lex_val->key_val = key_val_build(KEY_VAL_RIGHT, strdup(find_token_start), NULL);
     return TOK_OPTION;
 }
+
 static int32_t ll_right_ascii(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = strchr(lex_text + 7, '\'');
@@ -278,7 +294,7 @@ static int32_t ll_right_ascii(const char* lex_text, CodegenUnion* lex_val)
     asprintf(&key, "ASCII_CHAR_0x%02X", find_token_start[1]);
 
     lex_val->key_val = key_val_build(KEY_VAL_RIGHT, key, NULL);
-    lex_val->key_val->options = (uint8_t)find_token_start[1];
+    lex_val->key_val->options = (uint8_t) find_token_start[1];
     return TOK_OPTION;
 }
 
@@ -292,12 +308,14 @@ static int32_t ll_g_rule(const char* lex_text, CodegenUnion* lex_val)
     lex_val->string = strndup(lex_text, gg_rule_end - lex_text);
     return TOK_G_EXPR_DEF;
 }
-static int32_t ll_g_tok (const char* lex_text, CodegenUnion* lex_val)
+
+static int32_t ll_g_tok(const char* lex_text, CodegenUnion* lex_val)
 {
     lex_val->token = token_build(strdup(lex_text));
     return TOK_G_TOK;
 }
-static int32_t ll_g_tok_ascii (const char* lex_text, CodegenUnion* lex_val)
+
+static int32_t ll_g_tok_ascii(const char* lex_text, CodegenUnion* lex_val)
 {
     char* token = NULL;
     asprintf(&token, "ASCII_CHAR_0x%02X", lex_text[1]);
@@ -308,11 +326,13 @@ static int32_t ll_g_tok_ascii (const char* lex_text, CodegenUnion* lex_val)
 static int32_t ll_match_brace(const char* lex_text,
                               void* lex_val,
                               uint32_t len,
-                              ParsingStack* lexer_state)
+                              ParsingStack* lexer_state,
+                              TokenPosition* position)
 {
     (void) lex_text;
     (void) lex_val;
     (void) len;
+    (void) position;
 
     NEOAST_STACK_PUSH(lexer_state, LEX_STATE_MATCH_BRACE);
     brace_buffer.s = 1024;
@@ -322,9 +342,11 @@ static int32_t ll_match_brace(const char* lex_text,
     return -1;
 }
 
-static int32_t ll_lex_state(const char* lex_text, CodegenUnion* lex_val, uint32_t len, ParsingStack* ll_state)
+static int32_t
+ll_lex_state(const char* lex_text, CodegenUnion* lex_val, uint32_t len, ParsingStack* ll_state, PositionData* position)
 {
     (void) len;
+    (void) position;
 
     const char* start_ptr = strchr(lex_text, '<');
     const char* end_ptr = strchr(lex_text, '>');
@@ -338,11 +360,13 @@ static int32_t ll_lex_state(const char* lex_text, CodegenUnion* lex_val, uint32_
 static int32_t ll_lex_state_exit(const char* lex_text,
                                  CodegenUnion* lex_val,
                                  uint32_t len,
-                                 ParsingStack* ll_state)
+                                 ParsingStack* ll_state,
+                                 PositionData* position)
 {
     (void) lex_text;
     (void) lex_val;
     (void) len;
+    (void) position;
 
     NEOAST_STACK_POP(ll_state);
     return -1;
@@ -351,11 +375,13 @@ static int32_t ll_lex_state_exit(const char* lex_text,
 static int32_t ll_build_regex(const char* lex_text,
                               void* lex_val,
                               uint32_t len,
-                              ParsingStack* lexer_state)
+                              ParsingStack* lexer_state,
+                              PositionData* position)
 {
     (void) lex_text;
     (void) lex_val;
     (void) len;
+    (void) position;
 
     NEOAST_STACK_PUSH(lexer_state, LEX_STATE_REGEX);
     regex_buffer.s = 256;
@@ -365,10 +391,12 @@ static int32_t ll_build_regex(const char* lex_text,
     return -1;
 }
 
-static int32_t ll_decrement_brace(const char* lex_text, CodegenUnion* lex_val, uint32_t len, ParsingStack* lexer_state)
+static int32_t ll_decrement_brace(const char* lex_text, CodegenUnion* lex_val, uint32_t len, ParsingStack* lexer_state,
+                                  TokenPosition* position)
 {
     (void) lex_text;
     (void) len;
+    (void) position;
 
     brace_buffer.counter--;
     if (brace_buffer.counter <= 0)
@@ -379,23 +407,26 @@ static int32_t ll_decrement_brace(const char* lex_text, CodegenUnion* lex_val, u
         free(brace_buffer.buffer);
         brace_buffer.buffer = NULL;
         return TOK_G_ACTION;
-    }
-    else
+    } else
     {
         brace_buffer.buffer[brace_buffer.n++] = '}';
     }
     return -1;
 }
+
 static int32_t ll_increment_brace()
 {
     brace_buffer.counter++;
     brace_buffer.buffer[brace_buffer.n++] = '{';
     return -1;
 }
-static int32_t ll_add_to_buffer(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state)
+
+static int32_t
+ll_add_to_buffer(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state, TokenPosition* position)
 {
     (void) lex_val;
     (void) lexer_state;
+    (void) position;
 
     if (len + brace_buffer.n >= brace_buffer.s)
     {
@@ -408,10 +439,12 @@ static int32_t ll_add_to_buffer(const char* lex_text, void* lex_val, uint32_t le
     return -1;
 }
 
-static int32_t ll_regex_quote(const char* lex_text, CodegenUnion* lex_val, uint32_t len, ParsingStack* lexer_state)
+static int32_t ll_regex_quote(const char* lex_text, CodegenUnion* lex_val, uint32_t len, ParsingStack* lexer_state,
+                              TokenPosition* position)
 {
     (void) lex_text;
     (void) len;
+    (void) position;
 
     // Make sure this quote is not escaped
     if (!regex_buffer.n || regex_buffer.buffer[regex_buffer.n - 1] != '\\')
@@ -431,10 +464,12 @@ static int32_t ll_regex_quote(const char* lex_text, CodegenUnion* lex_val, uint3
     return -1;
 }
 
-static int32_t ll_regex_add_to_buffer(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state)
+static int32_t ll_regex_add_to_buffer(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state,
+                                      TokenPosition* position)
 {
     (void) lex_val;
     (void) lexer_state;
+    (void) position;
 
     while (len + regex_buffer.n >= regex_buffer.s)
     {
@@ -447,21 +482,25 @@ static int32_t ll_regex_add_to_buffer(const char* lex_text, void* lex_val, uint3
     return -1;
 }
 
-static int32_t ll_regex_enter_comment(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state)
+static int32_t ll_regex_enter_comment(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state,
+                                      TokenPosition* position)
 {
     (void) lex_text;
     (void) lex_val;
     (void) len;
+    (void) position;
 
     NEOAST_STACK_PUSH(lexer_state, LEX_STATE_COMMENT);
     return -1;
 }
 
-static int32_t ll_regex_exit_comment(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state)
+static int32_t ll_regex_exit_comment(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* lexer_state,
+                                     TokenPosition* position)
 {
     (void) lex_text;
     (void) lex_val;
     (void) len;
+    (void) position;
 
     NEOAST_STACK_POP(lexer_state);
     return -1;
@@ -524,7 +563,7 @@ static LexerRule ll_rules_match_brace[] = {
         {.regex_raw = "([^}{\"\']+)", .expr = ll_add_to_buffer},
 };
 
-static LexerRule  ll_rules_regex[] = {
+static LexerRule ll_rules_regex[] = {
         {.regex_raw = "\"", .expr = (lexer_expr) ll_regex_quote},
         {.regex_raw = "[^\"]+", .expr = ll_regex_add_to_buffer}
 };
@@ -571,43 +610,43 @@ const uint32_t grammars[][7] = {
 
         /* TOK_GG_KEY_VALS => */
         {TOK_OPTION},
-        {TOK_HEADER, TOK_G_ACTION},
-        {TOK_UNION, TOK_G_ACTION},
-        {TOK_BOTTOM, TOK_G_ACTION},
-        {TOK_DESTRUCTOR, TOK_G_ACTION},
+        {TOK_HEADER,            TOK_G_ACTION},
+        {TOK_UNION,             TOK_G_ACTION},
+        {TOK_BOTTOM,            TOK_G_ACTION},
+        {TOK_DESTRUCTOR,        TOK_G_ACTION},
 
         /* TOK_GG_HEADER */
         {TOK_GG_KEY_VALS},
-        {TOK_GG_KEY_VALS, TOK_GG_HEADER},
+        {TOK_GG_KEY_VALS,       TOK_GG_HEADER},
 
         /* Lexer Rules */
-        {TOK_REGEX_RULE, TOK_G_ACTION},
+        {TOK_REGEX_RULE,        TOK_G_ACTION},
         {TOK_GG_LEX_RULE},
-        {TOK_GG_LEX_RULE, TOK_GG_LEX_RULES},
-        {TOK_LEX_STATE, TOK_GG_LEX_RULES},
+        {TOK_GG_LEX_RULE,       TOK_GG_LEX_RULES},
+        {TOK_LEX_STATE,         TOK_GG_LEX_RULES},
 
         /* Grammar rules */
         // TOK_GG_TOKENS =>
         {TOK_G_TOK},
-        {TOK_G_TOK, TOK_GG_TOKENS},
+        {TOK_G_TOK,             TOK_GG_TOKENS},
 
         // TOK_GG_SINGLE_GRAMMAR =>
-        {TOK_GG_TOKENS, TOK_G_ACTION},
+        {TOK_GG_TOKENS,         TOK_G_ACTION},
 
         // TOK_GG_MULTI_GRAMMAR =>
         {TOK_GG_SINGLE_GRAMMAR},
-        {TOK_GG_SINGLE_GRAMMAR, TOK_G_OR, TOK_GG_MULTI_GRAMMAR},
+        {TOK_GG_SINGLE_GRAMMAR, TOK_G_OR,             TOK_GG_MULTI_GRAMMAR},
         {TOK_G_ACTION}, // empty rule
 
         // TOK_GG_GRAMMAR =>
-        {TOK_G_EXPR_DEF, TOK_GG_MULTI_GRAMMAR, TOK_G_TERM},
+        {TOK_G_EXPR_DEF,        TOK_GG_MULTI_GRAMMAR, TOK_G_TERM},
 
         // TOK_GG_GRAMMARS =>
         {TOK_GG_GRAMMAR},
-        {TOK_GG_GRAMMAR, TOK_GG_GRAMMARS},
+        {TOK_GG_GRAMMAR,        TOK_GG_GRAMMARS},
 
         // TOK_GG_FILE =>
-        {TOK_GG_HEADER, TOK_DELIMITER, TOK_GG_LEX_RULES, TOK_DELIMITER, TOK_DELIMITER, TOK_GG_GRAMMARS, TOK_DELIMITER}
+        {TOK_GG_HEADER,         TOK_DELIMITER,        TOK_GG_LEX_RULES, TOK_DELIMITER, TOK_DELIMITER, TOK_GG_GRAMMARS, TOK_DELIMITER}
 };
 
 static void gg_key_val_add_next(CodegenUnion* dest, CodegenUnion* args)
@@ -615,23 +654,28 @@ static void gg_key_val_add_next(CodegenUnion* dest, CodegenUnion* args)
     dest->key_val = args[0].key_val;
     dest->key_val->next = args[1].key_val;
 }
+
 static void gg_build_header(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->key_val = key_val_build(KEY_VAL_HEADER, NULL, args[1].string);
 }
+
 static void gg_build_union(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->key_val = key_val_build(KEY_VAL_UNION, NULL, args[1].string);
 }
+
 static void gg_build_bottom(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->key_val = key_val_build(KEY_VAL_BOTTOM, NULL, args[1].string);
 }
+
 static void gg_build_destructor(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->key_val = args[0].key_val;
     dest->key_val->value = args[1].string;
 }
+
 static void gg_build_l_rule_1(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->l_rule = malloc(sizeof(struct LexerRuleProto));
@@ -640,11 +684,13 @@ static void gg_build_l_rule_1(CodegenUnion* dest, CodegenUnion* args)
     dest->l_rule->lexer_state = NULL;
     dest->l_rule->next = NULL;
 }
+
 static void gg_build_l_rule_2(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->l_rule = args[0].l_rule;
     dest->l_rule->next = args[1].l_rule;
 }
+
 static void gg_build_l_rule_3(CodegenUnion* dest, CodegenUnion* args)
 {
     // Every rule here is part of this state
@@ -654,11 +700,13 @@ static void gg_build_l_rule_3(CodegenUnion* dest, CodegenUnion* args)
         iter->lexer_state = args[0].string;
     }
 }
+
 static void gg_build_tok(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->token = args[0].token;
     dest->token->next = args[1].token;
 }
+
 static void gg_build_single(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->g_single_rule = malloc(sizeof(struct GrammarRuleSingleProto));
@@ -666,11 +714,13 @@ static void gg_build_single(CodegenUnion* dest, CodegenUnion* args)
     dest->g_single_rule->tokens = args[0].token;
     dest->g_single_rule->function = args[1].string;
 }
+
 static void gg_build_multi(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->g_single_rule = args[0].g_single_rule;
     dest->g_single_rule->next = args[2].g_single_rule;
 }
+
 static void gg_build_multi_empty(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->g_single_rule = malloc(sizeof(struct GrammarRuleSingleProto));
@@ -678,6 +728,7 @@ static void gg_build_multi_empty(CodegenUnion* dest, CodegenUnion* args)
     dest->g_single_rule->tokens = NULL;
     dest->g_single_rule->function = args[0].string;
 }
+
 static void gg_build_grammar(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->g_rule = malloc(sizeof(struct GrammarRuleProto));
@@ -685,11 +736,13 @@ static void gg_build_grammar(CodegenUnion* dest, CodegenUnion* args)
     dest->g_rule->rules = args[1].g_single_rule;
     dest->g_rule->next = NULL;
 }
+
 static void gg_build_grammars(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->g_rule = args[0].g_rule;
     dest->g_rule->next = args[1].g_rule;
 }
+
 static void gg_build_file(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->file = malloc(sizeof(struct File));
@@ -701,26 +754,26 @@ static void gg_build_file(CodegenUnion* dest, CodegenUnion* args)
 static const GrammarRule gg_rules[] = {
         {.token=TOK_AUGMENT, .tok_n=1, .grammar=grammars[0]},
         {.token=TOK_GG_KEY_VALS, .tok_n=1, .grammar=grammars[1]},
-        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[2],        .expr = (parser_expr) gg_build_header},
-        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[3],        .expr = (parser_expr) gg_build_union},
-        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[4],        .expr = (parser_expr) gg_build_bottom},
-        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[5],        .expr = (parser_expr) gg_build_destructor},
+        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[2], .expr = (parser_expr) gg_build_header},
+        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[3], .expr = (parser_expr) gg_build_union},
+        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[4], .expr = (parser_expr) gg_build_bottom},
+        {.token=TOK_GG_KEY_VALS, .tok_n=2, .grammar=grammars[5], .expr = (parser_expr) gg_build_destructor},
         {.token=TOK_GG_HEADER, .tok_n=1, .grammar=grammars[6]},
-        {.token=TOK_GG_HEADER, .tok_n=2, .grammar=grammars[7],          .expr = (parser_expr) gg_key_val_add_next},
-        {.token=TOK_GG_LEX_RULE, .tok_n=2, .grammar=grammars[8],        .expr = (parser_expr) gg_build_l_rule_1},
+        {.token=TOK_GG_HEADER, .tok_n=2, .grammar=grammars[7], .expr = (parser_expr) gg_key_val_add_next},
+        {.token=TOK_GG_LEX_RULE, .tok_n=2, .grammar=grammars[8], .expr = (parser_expr) gg_build_l_rule_1},
         {.token=TOK_GG_LEX_RULES, .tok_n=1, .grammar=grammars[9]},
-        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[10],       .expr = (parser_expr) gg_build_l_rule_2},
-        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[11],       .expr = (parser_expr) gg_build_l_rule_3},
+        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[10], .expr = (parser_expr) gg_build_l_rule_2},
+        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[11], .expr = (parser_expr) gg_build_l_rule_3},
         {.token=TOK_GG_TOKENS, .tok_n=1, .grammar=grammars[12]},
-        {.token=TOK_GG_TOKENS, .tok_n=2, .grammar=grammars[13],         .expr = (parser_expr) gg_build_tok},
+        {.token=TOK_GG_TOKENS, .tok_n=2, .grammar=grammars[13], .expr = (parser_expr) gg_build_tok},
         {.token=TOK_GG_SINGLE_GRAMMAR, .tok_n=2, .grammar=grammars[14], .expr = (parser_expr) gg_build_single},
         {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=1, .grammar=grammars[15]},
-        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=3, .grammar=grammars[16],  .expr = (parser_expr) gg_build_multi},
-        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=1, .grammar=grammars[17],  .expr = (parser_expr) gg_build_multi_empty},
-        {.token=TOK_GG_GRAMMAR, .tok_n=3, .grammar=grammars[18],        .expr = (parser_expr) gg_build_grammar},
+        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=3, .grammar=grammars[16], .expr = (parser_expr) gg_build_multi},
+        {.token=TOK_GG_MULTI_GRAMMAR, .tok_n=1, .grammar=grammars[17], .expr = (parser_expr) gg_build_multi_empty},
+        {.token=TOK_GG_GRAMMAR, .tok_n=3, .grammar=grammars[18], .expr = (parser_expr) gg_build_grammar},
         {.token=TOK_GG_GRAMMARS, .tok_n=1, .grammar=grammars[19]},
-        {.token=TOK_GG_GRAMMARS, .tok_n=2, .grammar=grammars[20],       .expr = (parser_expr) gg_build_grammars},
-        {.token=TOK_GG_FILE, .tok_n=7, .grammar=grammars[21],           .expr = (parser_expr) gg_build_file},
+        {.token=TOK_GG_GRAMMARS, .tok_n=2, .grammar=grammars[20], .expr = (parser_expr) gg_build_grammars},
+        {.token=TOK_GG_FILE, .tok_n=7, .grammar=grammars[21], .expr = (parser_expr) gg_build_file},
 };
 
 uint8_t precedence_table[TOK_AUGMENT] = {0};
@@ -744,7 +797,7 @@ int gen_parser_init(GrammarParser* self)
     uint32_t regex_init_errors;
     if ((regex_init_errors = parser_init(self)))
     {
-        fprintf(stderr,"Failed to initialize %d regular expressions\n", regex_init_errors);
+        fprintf(stderr, "Failed to initialize %d regular expressions\n", regex_init_errors);
         return 1;
     }
 

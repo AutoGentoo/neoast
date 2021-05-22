@@ -234,7 +234,7 @@ CTEST(test_lalr_1_calculator)
     const char* lexer_input = "1 + (5 * 9) + 2";
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CalculatorUnion));
+    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CalculatorUnion), sizeof(CalculatorUnion));
 
     int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
     assert_int_equal(tok_n, 9);
@@ -265,7 +265,7 @@ CTEST(test_lalr_1_order_of_ops)
     const char* lexer_input = "1 + 5 * 9 + 4";
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CalculatorUnion));
+    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CalculatorUnion), sizeof(CalculatorUnion));
 
     int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
     assert_int_equal(tok_n, 7);
