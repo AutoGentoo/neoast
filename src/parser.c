@@ -72,17 +72,21 @@ void parser_free_stack(ParsingStack* self)
 ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len,
                                        int max_lex_state_depth,
                                        int parsing_stack_n,
-                                       size_t val_s)
+                                       size_t val_s,
+                                       size_t union_s)
 {
     ParserBuffers* buffers = malloc(sizeof(ParserBuffers));
     buffers->lexing_state_stack = parser_allocate_stack(max_lex_state_depth);
     buffers->parsing_stack = parser_allocate_stack(parsing_stack_n);
-
+    buffers->position = malloc(sizeof(PositionData));
+    buffers->position->line = 1;
+    buffers->position->line_start_offset = 0;
     buffers->token_table = malloc(sizeof(uint32_t) * max_lex_tokens);
     buffers->value_table = malloc(val_s * max_lex_tokens);
     buffers->text_buffer = malloc(max_token_len);
     buffers->max_token_length = max_token_len;
     buffers->val_s = val_s;
+    buffers->union_s = union_s;
     buffers->table_n = max_lex_tokens;
 
     return buffers;
@@ -92,6 +96,7 @@ void parser_free_buffers(ParserBuffers* self)
 {
     parser_free_stack(self->parsing_stack);
     parser_free_stack(self->lexing_state_stack);
+    free(self->position);
     free(self->token_table);
     free(self->value_table);
     free(self->text_buffer);

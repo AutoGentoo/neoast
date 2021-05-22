@@ -43,6 +43,7 @@ typedef struct GrammarParser_prv GrammarParser;
 typedef struct GrammarRule_prv GrammarRule;
 typedef struct ParsingStack_prv ParsingStack;
 typedef struct ParserBuffers_prv ParserBuffers;
+typedef struct TokenPosition_prv TokenPosition;
 
 // Codegen
 typedef struct LR_1_prv LR_1;
@@ -54,7 +55,8 @@ typedef int32_t (*lexer_expr) (
         const char* lex_text,
         void* lex_val,
         uint32_t len,
-        ParsingStack* ll_state);
+        ParsingStack* ll_state,
+        TokenPosition* position);
 typedef void (*parser_destructor) (void* self);
 
 enum
@@ -88,6 +90,7 @@ enum
 typedef enum
 {
     LEXER_OPT_LONGEST_MATCH = 1 << 0,
+    LEXER_OPT_TOKEN_POS = 1 << 1,
 } lexer_option_t;
 
 enum
@@ -129,16 +132,30 @@ struct ParsingStack_prv
     uint32_t data[];
 };
 
+typedef struct
+{
+    uint32_t line;
+    uint32_t line_start_offset;
+} PositionData;
+
 struct ParserBuffers_prv
 {
-    void* value_table;
-    uint32_t* token_table;
-    ParsingStack* lexing_state_stack;
-    ParsingStack* parsing_stack;
-    char* text_buffer;
-    uint32_t max_token_length;
-    uint32_t val_s;
-    uint32_t table_n;
+    void* value_table;                  //!< Value table
+    uint32_t* token_table;              //!< Token table
+    ParsingStack* lexing_state_stack;   //!< Lexer states
+    ParsingStack* parsing_stack;        //!< LR parsing stack
+    PositionData* position;             //!< Keeps track of cursor position
+    char* text_buffer;                  //!< Buffer for token
+    uint32_t max_token_length;          //!< Size of buffer for a token
+    uint32_t val_s;                     //!< Size of each value in bytes
+    uint32_t union_s;                   //!< If no token position data, this is the same as val_s
+    uint32_t table_n;                   //!< Number of tokens/values in the tables
+};
+
+struct TokenPosition_prv
+{
+    uint32_t line;
+    uint32_t col_start;
 };
 
 struct LexerRule_prv
@@ -158,7 +175,9 @@ ParsingStack* parser_allocate_stack(size_t stack_n);
 void parser_free_stack(ParsingStack* self);
 ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len,
                                        int max_lex_state_depth,
-                                       int parsing_stack_n, size_t val_s);
+                                       int parsing_stack_n,
+                                       size_t val_s,
+                                       size_t union_s);
 void parser_free_buffers(ParserBuffers* self);
 void parser_reset_buffers(const ParserBuffers* self);
 
