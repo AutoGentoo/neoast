@@ -264,13 +264,11 @@ int32_t parser_parse_lr(const GrammarParser* parser,
                 // buffer tables. As rules reduce we reduce our footprint
                 // on the buffers.
                 assert(buffers->token_table[i] == tok);
-                lex_val = OFFSET_VOID_PTR(buffers->value_table, buffers->val_s, dest_idx + 1);
-                memcpy(lex_val,
-                       OFFSET_VOID_PTR(buffers->value_table, buffers->val_s, i),
-                       buffers->val_s);
-
+                void* dest_val = OFFSET_VOID_PTR(buffers->value_table, buffers->val_s, dest_idx + 1);
+                memcpy(dest_val, lex_val, buffers->val_s);
                 buffers->token_table[dest_idx + 1] = buffers->token_table[i];
 
+                lex_val = dest_val;
                 i = dest_idx + 1;
             }
 
