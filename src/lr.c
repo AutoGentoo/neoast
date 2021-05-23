@@ -36,17 +36,16 @@ uint32_t g_lr_reduce(
         const GrammarParser* parser,
         ParsingStack* stack,
         const uint32_t* parsing_table,
-        uint32_t reduce_rule,
+        const GrammarRule* reduce_rule,
         int32_t* token_table,
         void* val_table,
         size_t val_s,
         size_t union_s,
-        uint32_t* dest_idx
-)
+        uint32_t* dest_idx)
 {
     // Find how many tokens to pop
     // due to this rule
-    uint32_t arg_count = parser->grammar_rules[reduce_rule].tok_n;
+    uint32_t arg_count = reduce_rule->tok_n;
 
     char* dest = alloca(val_s);
     char* args = alloca(val_s * arg_count);
@@ -63,16 +62,16 @@ uint32_t g_lr_reduce(
                val_s);
     }
 
-    int32_t result_token = (int32_t)parser->grammar_rules[reduce_rule].token;
+    int32_t result_token = (int32_t)reduce_rule->token;
     if (parser->ascii_mappings)
     {
         result_token -= NEOAST_ASCII_MAX;
         assert(result_token > 0);
     }
 
-    if (parser->grammar_rules[reduce_rule].expr)
+    if (reduce_rule->expr)
     {
-        parser->grammar_rules[reduce_rule].expr(
+        reduce_rule->expr(
                 dest,
                 (void**) args);
 
@@ -204,7 +203,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
     uint32_t i = 0;
     uint32_t prev_tok = 0;
     int32_t tok = lex_next(input, parser, buffers, lex_val, length, &offset);
-    buffers->token_table[i] = tok;
+    buffers->token_table[0] = tok;
 
     uint32_t dest_idx = 0; // index of the last reduction
     while (1)
@@ -250,11 +249,31 @@ int32_t parser_parse_lr(const GrammarParser* parser,
         else if (table_value & TOK_REDUCE_MASK)
         {
             // Reduce this rule
+            const GrammarRule* reduce_rule = &parser->grammar_rules[table_value & TOK_MASK];
             current_state = g_lr_reduce(parser, buffers->parsing_stack, parsing_table,
-                                        table_value & TOK_MASK,
+                                        reduce_rule,
                                         buffers->token_table, buffers->value_table,
                                         buffers->val_s, buffers->union_s,
                                         &dest_idx);
+
+            // Don't move on empty rule
+            if (i != dest_idx)
+            {
+                // Move the lookahead to the slot in front of the
+                // result. We should do this so that we don't fill up the
+                // buffer tables. As rules reduce we reduce our footprint
+                // on the buffers.
+                assert(buffers->token_table[i] == tok);
+                lex_val = OFFSET_VOID_PTR(buffers->value_table, buffers->val_s, dest_idx + 1);
+                memcpy(lex_val,
+                       OFFSET_VOID_PTR(buffers->value_table, buffers->val_s, i),
+                       buffers->val_s);
+
+                buffers->token_table[dest_idx + 1] = buffers->token_table[i];
+
+                i = dest_idx + 1;
+            }
+
             prev_tok = parser->grammar_rules[table_value & TOK_MASK].token - NEOAST_ASCII_MAX;
         }
         else if (table_value & TOK_ACCEPT_MASK)
