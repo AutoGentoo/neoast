@@ -141,10 +141,7 @@ CTEST(test_parser)
 
     ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CodegenUnion), sizeof(CodegenUnion));
 
-    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
-    assert_int_equal(tok_n, 5);
-
-    int32_t res_idx = parser_parse_lr(&p, lalr_table, buf);
+    int32_t res_idx = parser_parse_lr(&p, lalr_table, buf, lexer_input, strlen(lexer_input));
 
     parser_free_buffers(buf);
     parser_free(&p);

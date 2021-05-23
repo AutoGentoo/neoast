@@ -374,11 +374,12 @@ uint32_t put_lexer_rule(LexerRule* self, const char* state_name, uint32_t offset
 }
 
 static inline
-void put_lexer_state_rules(LexerRule* rules, int rules_n, const char* state_name, FILE* fp)
+void put_lexer_state_rules(LexerRule* rules, uint32_t rules_n,
+                           const char* state_name, FILE* fp)
 {
     // First we need to build the regex table
     fprintf(fp, "static const char ll_rules_state_%s_regex_table[] = {\n", state_name);
-    for (int i = 0; i < rules_n; i++)
+    for (uint32_t i = 0; i < rules_n; i++)
     {
         put_lexer_rule_regex(&rules[i], fp);
     }
@@ -1202,15 +1203,28 @@ int codegen_write(const struct File* self, FILE* fp)
                 "    parser_reset_buffers((ParserBuffers*)buffers);\n"
                 "    \n"
                 "    uint64_t input_len = strlen(input);\n"
-                "    if (lexer_fill_table(input, input_len, &parser, (ParserBuffers*)buffers) == -1) return (typeof(t.%s))0;\n"
-                "    int32_t output_idx = parser_parse_lr(&parser, GEN_parsing_table, (ParserBuffers*)buffers);\n"
+                "    int32_t output_idx = parser_parse_lr(&parser, GEN_parsing_table,\n"
+                "         (ParserBuffers*)buffers, input, input_len);\n"
                 "    \n"
                 "    if (output_idx < 0) return (typeof(t.%s))0;\n"
                 "    return ((" CODEGEN_UNION "*)((ParserBuffers*)buffers)->value_table)[output_idx].%s;\n"
-                "}\n\n"
+                "}\n"
+                "typeof(t.%s) %s_parse_len(void* buffers, const char* input, uint64_t input_len)\n"
+                "{\n"
+                "    parser_reset_buffers((ParserBuffers*)buffers);\n"
+                "    \n"
+                "    int32_t output_idx = parser_parse_lr(&parser, GEN_parsing_table,\n"
+                "         (ParserBuffers*)buffers, input, input_len);\n"
+                "    \n"
+                "    if (output_idx < 0) return (typeof(t.%s))0;\n"
+                "    return ((" CODEGEN_UNION "*)((ParserBuffers*)buffers)->value_table)[output_idx].%s;\n"
+                "}\n"
+                "\n"
                 "#endif\n",
                 _start->value, options.prefix,
-                _start->value, _start->value, _start->value);
+                _start->value, _start->value,
+                _start->value, options.prefix,
+                _start->value, _start->value);
 
     if (_bottom)
     {

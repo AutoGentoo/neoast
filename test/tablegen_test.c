@@ -236,9 +236,6 @@ CTEST(test_lalr_1_calculator)
 
     ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CalculatorUnion), sizeof(CalculatorUnion));
 
-    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
-    assert_int_equal(tok_n, 9);
-
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);
 
@@ -246,7 +243,7 @@ CTEST(test_lalr_1_calculator)
     uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
     assert_int_equal(error, 0);
 
-    int32_t res_idx = parser_parse_lr(&p, table, buf);
+    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_input, strlen(lexer_input));
 
     dump_table(table, cc, token_names, 0, stdout, NULL);
     assert_int_not_equal(res_idx, -1);
@@ -267,9 +264,6 @@ CTEST(test_lalr_1_order_of_ops)
 
     ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CalculatorUnion), sizeof(CalculatorUnion));
 
-    int tok_n = lexer_fill_table(lexer_input, strlen(lexer_input), &p, buf);
-    assert_int_equal(tok_n, 7);
-
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);
 
@@ -277,7 +271,7 @@ CTEST(test_lalr_1_order_of_ops)
     uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
     assert_int_equal(error, 0);
 
-    int32_t res_idx = parser_parse_lr(&p, table, buf);
+    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_input, strlen(lexer_input));
 
     // This parser has no order of ops
     assert_double_equal(((CalculatorUnion*)buf->value_table)[res_idx].number, (((1 + 5) * 9) + 4), 0.005);

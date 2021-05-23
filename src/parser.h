@@ -37,7 +37,9 @@
 int32_t parser_parse_lr(
         const GrammarParser* parser,
         const uint32_t* parsing_table,
-        const ParserBuffers* buffers);
+        const ParserBuffers* buffers,
+        const char* input,
+        size_t length);
 
 uint32_t parser_init(GrammarParser* self);
 void parser_free(GrammarParser* self);
