@@ -141,7 +141,7 @@ typedef struct
 struct ParserBuffers_prv
 {
     void* value_table;                  //!< Value table
-    uint32_t* token_table;              //!< Token table
+    int32_t* token_table;               //!< Token table
     ParsingStack* lexing_state_stack;   //!< Lexer states
     ParsingStack* parsing_stack;        //!< LR parsing stack
     PositionData* position;             //!< Keeps track of cursor position
@@ -181,18 +181,11 @@ ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len,
 void parser_free_buffers(ParserBuffers* self);
 void parser_reset_buffers(const ParserBuffers* self);
 
-int32_t parser_parse_lr(
-        const GrammarParser* parser,
-        const uint32_t* parsing_table,
-        const ParserBuffers* buffers);
-#endif
-
-#ifndef NEOAST_LEXER_H
-#define NEOAST_LEXER_H
-int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* parse, const ParserBuffers* buf);
-
-int
-lex_next(const char* input, const GrammarParser* parser, const ParserBuffers* buf, void* lval, uint32_t len, uint32_t* offset);
+int32_t parser_parse_lr(const GrammarParser* parser,
+                        const uint32_t* parsing_table,
+                        const ParserBuffers* buffers,
+                        const char* input,
+                        size_t length);
 #endif
 
 #ifdef __cplusplus

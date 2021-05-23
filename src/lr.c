@@ -20,14 +20,15 @@
 #include <alloca.h>
 #include <string.h>
 #include <assert.h>
+#include "lexer.h"
 
 static inline
-void* g_table_from_matrix(void* table,
-                          size_t row, size_t col,
-                          size_t col_n, size_t s)
+const void* g_table_from_matrix(const void* table,
+                                size_t row, size_t col,
+                                size_t col_n)
 {
-    size_t off = s * ((row * col_n) + (col));
-    return ((char*) table) + off;
+    size_t off = sizeof(uint32_t) * ((row * col_n) + (col));
+    return ((const char*) table) + off;
 }
 
 static inline
@@ -36,7 +37,7 @@ uint32_t g_lr_reduce(
         ParsingStack* stack,
         const uint32_t* parsing_table,
         uint32_t reduce_rule,
-        uint32_t* token_table,
+        int32_t* token_table,
         void* val_table,
         size_t val_s,
         size_t union_s,
@@ -62,7 +63,7 @@ uint32_t g_lr_reduce(
                val_s);
     }
 
-    int result_token = (int)parser->grammar_rules[reduce_rule].token;
+    int32_t result_token = (int32_t)parser->grammar_rules[reduce_rule].token;
     if (parser->ascii_mappings)
     {
         result_token -= NEOAST_ASCII_MAX;
@@ -101,11 +102,10 @@ uint32_t g_lr_reduce(
 
     // Check the goto
     uint32_t next_state = *(uint32_t*) g_table_from_matrix(
-            (void*) parsing_table,
+            parsing_table,
             NEOAST_STACK_PEEK(stack), // Top of stack is current state
             result_token,
-            parser->token_n,
-            sizeof(uint32_t));
+            parser->token_n);
 
     next_state &= TOK_MASK;
 
@@ -142,38 +142,27 @@ void lr_parse_error(const uint32_t* parsing_table,
     fprintf(stderr, "\n");
 }
 
+void lr_lex_error(const ParserBuffers* buf,
+                  const char* input,
+                  uint32_t offset)
+{
+    fprintf(stderr, "Unmatched token near '%.*s' (state '%d')\n",
+            (uint32_t)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
+            &input[offset - 1],
+            NEOAST_STACK_PEEK(buf->lexing_state_stack));
+}
+
 static void parser_run_destructors(
         const GrammarParser* parser,
-        const ParserBuffers* buffers,
-        uint32_t i)
+        const ParserBuffers* buffers)
 {
-    // Tokens ahead of i are 'packed' and all of them need to be freed
-    // Tokens behind i need to be freed based on the contents of the parsing stack
-    // Tokens behind i are reduced tokens
-
     if (!parser->destructors)
     {
         // Destructors have not been defined
         return;
     }
 
-    // First free the tokens ahead of i
     uint32_t current_token;
-    while ((current_token = buffers->token_table[i])) // search for EOF
-    {
-        assert(current_token < parser->token_n);
-        if (parser->destructors[current_token])
-        {
-            // A destructor is defined for this token
-            // Call the destructor on this object
-            parser->destructors[current_token](
-                    OFFSET_VOID_PTR(buffers->value_table,
-                                    buffers->val_s,
-                                    i));
-        }
-
-        i++;
-    }
 
     // Free the reduced tokens
     assert(buffers->parsing_stack->pos % 2 == 1);
@@ -197,37 +186,54 @@ static void parser_run_destructors(
     }
 }
 
-int32_t parser_parse_lr(
-        const GrammarParser* parser,
-        const uint32_t* parsing_table,
-        const ParserBuffers* buffers)
+int32_t parser_parse_lr(const GrammarParser* parser,
+                        const uint32_t* parsing_table,
+                        const ParserBuffers* buffers,
+                        const char* input,
+                        size_t length)
 {
+    // Lexer states
+    uint32_t offset = 0;
+    void* lex_val = buffers->value_table;
+    NEOAST_STACK_PUSH(buffers->lexing_state_stack, 0);
+
     // Push the initial state to the stack
     uint32_t current_state = 0;
     NEOAST_STACK_PUSH(buffers->parsing_stack, current_state);
 
     uint32_t i = 0;
     uint32_t prev_tok = 0;
-    uint32_t tok = buffers->token_table[i];
+    int32_t tok = lex_next(input, parser, buffers, lex_val, length, &offset);
+    buffers->token_table[i] = tok;
+
     uint32_t dest_idx = 0; // index of the last reduction
     while (1)
     {
+        // Check for lexing error
+        if (tok < 0)
+        {
+            // TODO Enable user specified function
+            lr_lex_error(buffers, input, offset);
+            parser_run_destructors(parser, buffers);
+            return -1;
+        }
+
         uint32_t table_value = *(uint32_t*) g_table_from_matrix(
-                (void*)parsing_table,
+                parsing_table,
                 current_state,
                 tok,
-                parser->token_n,
-                sizeof(uint32_t));
+                parser->token_n);
 
         if (table_value == TOK_SYNTAX_ERROR)
         {
+            // TODO Enable user specified function
             lr_parse_error(parsing_table,
                            parser->token_names, current_state,
                            tok, prev_tok,
                            parser->token_n);
 
             // We need to free the remaining objects in this map
-            parser_run_destructors(parser, buffers, i);
+            parser_run_destructors(parser, buffers);
             return -1;
         }
         else if (table_value & TOK_SHIFT_MASK)
@@ -236,7 +242,10 @@ int32_t parser_parse_lr(
             NEOAST_STACK_PUSH(buffers->parsing_stack, i);
             NEOAST_STACK_PUSH(buffers->parsing_stack, current_state);
             prev_tok = tok;
-            tok = buffers->token_table[++i];
+
+            lex_val += buffers->val_s;
+            tok = lex_next(input, parser, buffers, lex_val, length, &offset);
+            buffers->token_table[++i] = tok;
         }
         else if (table_value & TOK_REDUCE_MASK)
         {

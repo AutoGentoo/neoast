@@ -21,35 +21,11 @@
 #include "lexer.h"
 #include "parser.h"
 
-int32_t lexer_fill_table(const char* input, size_t len, const GrammarParser* parse, const ParserBuffers* buf)
-{
-    char* current_val = buf->value_table;
-    int i = 0;
-    NEOAST_STACK_PUSH(buf->lexing_state_stack, 0);
-    uint32_t offset = 0;
-    while ((buf->token_table[i] = lex_next(input, parse, buf, current_val, len, &offset)) && i < buf->table_n) // While not EOF
-    {
-        if (buf->token_table[i] == -1)
-        {
-            fprintf(stderr, "Unmatched token near '%.*s' (state '%d')\n",
-                    (uint32_t)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
-                    &input[offset - 1], NEOAST_STACK_PEEK(buf->lexing_state_stack));
-            // TODO (free tokens)
-            return -1;
-        }
-
-        current_val += buf->val_s;
-        i++;
-    }
-
-    return i;
-}
-
 int32_t
 lex_next(const char* input,
          const GrammarParser* parser,
          const ParserBuffers* buf,
-         char* lval,
+         void* lval,
          uint32_t len,
          uint32_t* offset)
 {
@@ -97,7 +73,7 @@ lex_next(const char* input,
             TokenPosition* position;
             if (parser->lexer_opts & LEXER_OPT_TOKEN_POS)
             {
-                position = (TokenPosition*) (lval + buf->union_s);
+                position = (TokenPosition*) (((char*)lval) + buf->union_s);
                 position->line = buf->position->line;
                 position->col_start = *offset - buf->position->line_start_offset + 1;
             }

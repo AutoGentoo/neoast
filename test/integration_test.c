@@ -106,12 +106,24 @@ CTEST(test_destructor)
     required_use_free();
 }
 
+CTEST(test_destructor_lex)
+{
+    assert_int_equal(required_use_init(), 0);
+    void* buffers = required_use_allocate_buffers();
+    void* stmt = required_use_parse(buffers, "( hello_world %%%% )");
+    assert_null(stmt);
+    required_use_stmt_free(stmt);
+    required_use_free_buffers(buffers);
+    required_use_free();
+}
+
 const static struct CMUnitTest left_scan_tests[] = {
         cmocka_unit_test(test_empty),
         cmocka_unit_test(test_parser),
         cmocka_unit_test(test_empty_ascii),
         cmocka_unit_test(test_parser_ascii),
         cmocka_unit_test(test_destructor),
+        cmocka_unit_test(test_destructor_lex),
 };
 
 int main()
