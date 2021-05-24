@@ -44,6 +44,8 @@ struct KeyVal
     key_val_t type;
     char* key;
     char* value;
+
+    struct KeyVal* back;
     struct KeyVal* next;
 };
 

@@ -15,6 +15,7 @@ struct KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, 
     }
 
     self->next = NULL;
+    self->back = NULL;
     self->type = type;
     self->key = key;
     self->value = value;
@@ -84,6 +85,11 @@ void tokens_free(struct Token* self)
 void key_val_free(struct KeyVal* self)
 {
     struct KeyVal* next;
+    if (self->back)
+    {
+        self = self->back;
+    }
+
     while (self)
     {
         next = self->next;

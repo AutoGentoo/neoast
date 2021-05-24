@@ -13,24 +13,15 @@
 %option prefix="calc"
 
 %token<number> TOK_N
-%token TOK_PLUS
-%token TOK_MINUS
-%token TOK_SLASH
-%token TOK_STAR
-%token TOK_CARET
-%token TOK_P_OPEN
-%token TOK_P_CLOSE
+%token TOK_PLUS TOK_MINUS TOK_SLASH TOK_STAR
+       TOK_CARET TOK_P_OPEN TOK_P_CLOSE
 
-%type <number> expr
-%type <number> program
+%type <number> expr program
 %start <number> program
 
 // Test global comment
 
-%left TOK_PLUS
-%left TOK_MINUS
-%left TOK_STAR
-%left TOK_SLASH
+%left TOK_PLUS TOK_MINUS TOK_STAR TOK_SLASH
 %right TOK_CARET
 
 %union {

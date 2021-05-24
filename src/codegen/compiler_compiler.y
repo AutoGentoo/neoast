@@ -279,7 +279,7 @@ pair: OPTION IDENTIFIER '=' LITERAL         { $$ = declare_option($p1, $2, $4); 
     ;
 
 header: pair                        { $$ = $1; }
-      | pair header                 { $$ = $1; $$->next = $2; }
+      | pair header                 { $$ = $1->back ? $1->back : $1; $1->next = $2; }
       ;
 
 lexer_rule: LITERAL ACTION          { $$ = declare_lexer_rule($p1, $1, $2); }

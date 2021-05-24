@@ -1080,7 +1080,7 @@ int codegen_write(const struct File* self, FILE* fp)
         int type_id = get_named_token(rule_iter->name, tokens, token_n);
         if (type_id < action_n)
         {
-            emit_error(&rule_iter->position, "Grammar rule defined for %%token - did mean %%type?");
+            emit_error(&rule_iter->position, "Grammar rule defined for %%token - did you mean %%type?");
             continue;
         }
 

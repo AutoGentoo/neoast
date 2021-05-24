@@ -47,6 +47,8 @@ kv* tokens_to_kv(
     }
 
     tokens_free(tokens);
+    assert(first->next == NULL);
+    first->back = next;
     return first;
 }
 
