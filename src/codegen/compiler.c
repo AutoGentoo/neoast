@@ -34,7 +34,7 @@ kv* tokens_to_kv(
         kv* curr = key_val_build(&iter->position,
                                  iter->ascii ? ascii_type : type,
                                  key ? strdup(key) : NULL,
-                                 iter->name ?  : NULL);
+                                 iter->name);
         iter->name = NULL;
 
         curr->next = next;
