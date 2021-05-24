@@ -158,9 +158,29 @@ void lr_lex_error(const ParserBuffers* buf,
             NEOAST_STACK_PEEK(buf->lexing_state_stack));
 }
 
+static void run_destructor(const GrammarParser* parser,
+                           const ParserBuffers* buffers,
+                           uint32_t index)
+{
+    uint32_t current_token = buffers->token_table[index];
+
+    assert(current_token < parser->token_n);
+    if (parser->destructors[current_token])
+    {
+        void* self_ptr = OFFSET_VOID_PTR(buffers->value_table,
+                                         buffers->val_s, index);
+
+        // A destructor is defined for this token
+        // Call the destructor on this object
+        parser->destructors[current_token](self_ptr);
+        memset(self_ptr, 0, buffers->val_s);
+    }
+}
+
 static void parser_run_destructors(
         const GrammarParser* parser,
-        const ParserBuffers* buffers)
+        const ParserBuffers* buffers,
+        int32_t invalid_tok_i)
 {
     if (!parser->destructors)
     {
@@ -168,7 +188,11 @@ static void parser_run_destructors(
         return;
     }
 
-    uint32_t current_token;
+    // Free the current invalid token
+    if (invalid_tok_i >= 0)
+    {
+        run_destructor(parser, buffers, invalid_tok_i);
+    }
 
     // Free the reduced tokens
     assert(buffers->parsing_stack->pos % 2 == 1);
@@ -176,19 +200,7 @@ static void parser_run_destructors(
     {
         NEOAST_STACK_POP(buffers->parsing_stack); // state
         uint32_t index = NEOAST_STACK_POP(buffers->parsing_stack);
-        current_token = buffers->token_table[index];
-
-        assert(current_token < parser->token_n);
-        if (parser->destructors[current_token])
-        {
-            void* self_ptr = OFFSET_VOID_PTR(buffers->value_table,
-                                             buffers->val_s, index);
-
-            // A destructor is defined for this token
-            // Call the destructor on this object
-            parser->destructors[current_token](self_ptr);
-            memset(self_ptr, 0, buffers->val_s);
-        }
+        run_destructor(parser, buffers, index);
     }
 }
 
@@ -220,7 +232,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
         {
             // TODO Enable user specified function
             lr_lex_error(buffers, input, offset);
-            parser_run_destructors(parser, buffers);
+            parser_run_destructors(parser, buffers, -1);
             return -1;
         }
 
@@ -247,7 +259,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
                            parser->token_n);
 
             // We need to free the remaining objects in this map
-            parser_run_destructors(parser, buffers);
+            parser_run_destructors(parser, buffers, (int32_t)i);
             return -1;
         }
         else if (table_value & TOK_SHIFT_MASK)
@@ -263,7 +275,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
         }
         else if (table_value & TOK_REDUCE_MASK)
         {
-            // Goto rules cannot occur
+            // Goto rules cannot occur here
             assert(tok < parser->action_token_n);
 
             // Reduce this rule
