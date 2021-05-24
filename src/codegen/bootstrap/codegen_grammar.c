@@ -268,7 +268,7 @@ static int32_t ll_g_rule(const char* lex_text, CodegenUnion* lex_val)
 
 static int32_t ll_g_tok(const char* lex_text, CodegenUnion* lex_val)
 {
-    lex_val->token = build_token(NULL, lex_text);
+    lex_val->token = build_token(NULL, strdup(lex_text));
     return TOK_G_TOK;
 }
 

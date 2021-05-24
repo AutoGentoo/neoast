@@ -96,7 +96,7 @@ void emit_error(const TokenPosition* position, const char* message, ...);
 int has_errors();
 
 struct KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value);
-struct Token* build_token(const TokenPosition* position, const char* name);
+struct Token* build_token(const TokenPosition* position, char* name);
 struct Token* build_token_ascii(const TokenPosition* position, char value);
 char* get_ascii_token_name(char value);
 char get_ascii_from_name(const char* name);

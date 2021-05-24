@@ -30,8 +30,6 @@
 #define CODEGEN_STRUCT "NeoastValue"
 #define CODEGEN_UNION "NeoastUnion"
 
-#define EXIT_IF_ERRORS if (has_errors()) return -1;
-
 struct Options {
     // Should we dump the table
     int debug_table;
@@ -647,14 +645,41 @@ int codegen_write(const struct File* self, FILE* fp)
     //   7. Generate table and write
     //   8. Generate entry point and buffer creation
 
-    struct KeyVal* _header = NULL;
-    struct KeyVal* _bottom = NULL;
-    struct KeyVal* _union = NULL;
-    struct KeyVal* _start = NULL;
+    const struct KeyVal* _header = NULL;
+    const struct KeyVal* _bottom = NULL;
+    const struct KeyVal* _union = NULL;
+    const struct KeyVal* _start = NULL;
 
     int action_n = 1, token_n = 1, // reserved eof
-        typed_token_n = 0, precedence_n = 0,
-        lex_state_n = 1;
+    typed_token_n = 0, precedence_n = 0,
+            lex_state_n = 1;
+
+    int destructor_s__ = 128;
+    int destructor_i__ = 0;
+    struct DestroyMe
+    {
+        void* ptr;
+        void (* func)(void*);
+    }* destructors__ = malloc(sizeof(struct DestroyMe) * destructor_s__);
+
+#define DESTROY_ME(ptr_, func_) do { \
+        if (destructor_i__ + 1 >= destructor_s__) {     \
+            destructor_s__ <<= 1;                       \
+            destructors__ = realloc(destructors__, sizeof(struct DestroyMe) * destructor_s__); \
+            destructors__[0].ptr = destructors__;       \
+        }                                               \
+        destructors__[destructor_i__].ptr = (ptr_);     \
+        destructors__[destructor_i__].func = (func_); \
+        destructor_i__++;                     \
+    } while (0)
+
+#define DESTROY_ALL while (destructor_i__--) {    \
+        destructors__[destructor_i__].func(destructors__[destructor_i__].ptr); \
+    }
+
+#define EXIT_IF_ERRORS if (has_errors()) { DESTROY_ALL return -1; }
+
+    DESTROY_ME(destructors__, free);
 
     struct Options options = {
             .debug_table = 0,
@@ -670,6 +695,7 @@ int codegen_write(const struct File* self, FILE* fp)
     };
 
     MacroEngine* m_engine = macro_engine_init();
+    DESTROY_ME(m_engine, (void (*) (void*))macro_engine_free);
 
     // Iterate a single time though the header data
     // Count all of the different header option types
@@ -765,8 +791,12 @@ int codegen_write(const struct File* self, FILE* fp)
     const char** tokens = calloc(token_n, sizeof(char*));
     const struct KeyVal** typed_tokens = calloc(token_n, sizeof(struct KeyVal*));
     const struct KeyVal** destructors = calloc(token_n, sizeof(struct KeyVal*));
+    DESTROY_ME(tokens, free);
+    DESTROY_ME(typed_tokens, free);
+    DESTROY_ME(destructors, free);
 
     uint8_t* precedence_table = calloc(token_n, sizeof(uint8_t));
+    DESTROY_ME(precedence_table, free);
 
     uint32_t ascii_mappings[NEOAST_ASCII_MAX] = {0};
 
@@ -852,6 +882,8 @@ int codegen_write(const struct File* self, FILE* fp)
     int lexer_state_s = 32;
     const char** lexer_states = malloc(sizeof(char*) * lexer_state_s);
     uint32_t* ll_rule_count = malloc(sizeof(uint32_t) * lexer_state_s);
+    DESTROY_ME(lexer_states, free);
+    DESTROY_ME(ll_rule_count, free);
 
     lexer_states[0] = "LEX_STATE_DEFAULT";
     ll_rule_count[0] = 0;
@@ -946,9 +978,12 @@ int codegen_write(const struct File* self, FILE* fp)
 
     // Dump the lexer rules
     LexerRule** ll_rules = malloc(sizeof(LexerRule*) * lex_state_n);
+    DESTROY_ME(ll_rules, free);
 
     int iterator = 0;
     ll_rules[0] = malloc(sizeof(LexerRule) * ll_rule_count[0]);
+    DESTROY_ME(ll_rules[0], free);
+
     for (struct LexerRuleProto* iter = self->lexer_rules; iter; iter = iter->next)
     {
         if (iter->lexer_state)
@@ -958,6 +993,7 @@ int codegen_write(const struct File* self, FILE* fp)
             assert(state_id > 0);
 
             ll_rules[state_id] = malloc(sizeof(LexerRule) * ll_rule_count[state_id]);
+            DESTROY_ME(ll_rules[state_id], free);
             LexerRule* current = ll_rules[state_id];
 
             for (struct LexerRuleProto* iter_s = iter->state_rules; iter_s; iter_s = iter_s->next)
@@ -970,7 +1006,9 @@ int codegen_write(const struct File* self, FILE* fp)
                 put_lexer_rule_action(iter_s, lexer_states[state_id], state_iterator, fp);
                 LexerRule* ll_rule = &ll_rules[state_id][state_iterator++];
                 ll_rule->expr = (lexer_expr) iter_s;
-                ll_rule->regex_raw = regex_expand(m_engine, iter_s->regex);
+                char* expanded_regex = regex_expand(m_engine, iter_s->regex);
+                DESTROY_ME(expanded_regex, free);
+                ll_rule->regex_raw = expanded_regex;
                 ll_rule->tok = 0;
                 if (!regex_verify(m_engine, ll_rule->regex_raw))
                 {
@@ -992,7 +1030,9 @@ int codegen_write(const struct File* self, FILE* fp)
             put_lexer_rule_action(iter, lexer_states[0], iterator, fp);
             LexerRule* ll_rule = &ll_rules[0][iterator++];
             ll_rule->expr = (lexer_expr) iter;
-            ll_rule->regex_raw = regex_expand(m_engine, iter->regex);
+            char* expanded_regex = regex_expand(m_engine, iter->regex);
+            DESTROY_ME(expanded_regex, free);
+            ll_rule->regex_raw = expanded_regex;
             ll_rule->tok = 0;
             if (!regex_verify(m_engine, ll_rule->regex_raw))
             {
@@ -1079,6 +1119,10 @@ int codegen_write(const struct File* self, FILE* fp)
     // Dump the grammar rules as well as augment rule
     GrammarRule* gg_rules = malloc(sizeof(GrammarRule) * grammar_n);
     int32_t* grammar_table = malloc(sizeof(uint32_t) * grammar_tok_n);
+
+    DESTROY_ME(gg_rules, free);
+    DESTROY_ME(grammar_table, free);
+
     uint32_t grammar_tok_offset_c = 0;
     grammar_i = 0;
 
@@ -1176,9 +1220,11 @@ int codegen_write(const struct File* self, FILE* fp)
 
     CanonicalCollection* cc = canonical_collection_init(&parser);
     canonical_collection_resolve(cc, options.parser_type);
+    DESTROY_ME(cc, (void (*) (void*))canonical_collection_free);
 
     uint8_t error;
     uint32_t* parsing_table = canonical_collection_generate(cc, precedence_table, &error);
+    DESTROY_ME(parsing_table, free);
 
     if (options.debug_table)
     {
@@ -1313,28 +1359,7 @@ int codegen_write(const struct File* self, FILE* fp)
         fputc('\n', fp);
     }
 
-    canonical_collection_free(cc);
-    free(parsing_table);
-    free(gg_rules);
-    free(grammar_table);
-    free(typed_tokens);
-    free(destructors);
-    free(lexer_states);
-    free(precedence_table);
-    free(tokens);
-
-    for (int i = 0; i < lex_state_n; i++)
-    {
-        for (int j = 0; j < ll_rule_count[i]; j++)
-        {
-            free((char*)ll_rules[i][j].regex_raw);
-        }
-        free(ll_rules[i]);
-    }
-    free(ll_rules);
-    free(ll_rule_count);
-    macro_engine_free(m_engine);
-
     EXIT_IF_ERRORS
+    DESTROY_ALL;
     return error;
 }

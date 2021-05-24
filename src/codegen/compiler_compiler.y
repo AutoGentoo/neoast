@@ -79,24 +79,23 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 %token BOTTOM
 %token TOKEN // %token
 %token DESTRUCTOR
+%token<ascii> ASCII
+%token<identifier> LITERAL
+%token<identifier> ACTION
+%token<identifier> IDENTIFIER
+%token<identifier> LEX_STATE
 %token '<'
 %token '>'
 %token ':'
 %token '|'
 %token ';'
 %token '='
-%token<ascii> ASCII
-%token<identifier> LITERAL
-%token<identifier> ACTION
-%token<identifier> IDENTIFIER
-%token<identifier> LEX_STATE
 %type<g_single_rule> single_grammar
 %type<g_single_rule> multi_grammar
 %type<g_rule> grammar
 %type<g_rule> grammars
 
 %type<key_val> header
-%type<key_val_type> unary
 %type<key_val> pair
 %type<l_rule> lexer_rules
 %type<l_rule> lexer_rule
@@ -107,6 +106,12 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 %start <file> program
 
 %destructor<identifier> { free($$); }
+%destructor<l_rule> { lexer_rule_free($$); }
+%destructor<g_single_rule> { grammar_rule_single_free($$); }
+%destructor<g_rule> { grammar_rule_multi_free($$); }
+%destructor<key_val> { key_val_free($$); }
+%destructor<token> { tokens_free($$); }
+%destructor<file> { file_free($$); }
 
 +literal        \"(\\.|[^\"\\])*\"
 +identifier     [A-Za-z_][\w]*

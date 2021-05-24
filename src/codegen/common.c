@@ -22,7 +22,7 @@ struct KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, 
     return self;
 }
 
-struct Token* build_token(const TokenPosition* position, const char* name)
+struct Token* build_token(const TokenPosition* position, char* name)
 {
     struct Token* self = malloc(sizeof(struct Token));
     if (strncmp(name, "ASCII_CHAR_0x", 13) == 0)
@@ -36,7 +36,7 @@ struct Token* build_token(const TokenPosition* position, const char* name)
         self->position = *position;
     }
 
-    self->name = strdup(name);
+    self->name = name;
     self->next = NULL;
     self->ascii = 0;
     return self;
@@ -75,8 +75,7 @@ void tokens_free(struct Token* self)
     while (self)
     {
         next = self->next;
-        assert(self->name);
-        free(self->name);
+        if (self->name) free(self->name);
         free(self);
         self = next;
     }

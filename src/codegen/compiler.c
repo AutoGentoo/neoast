@@ -13,8 +13,9 @@ kv* declare_start(const TokenPosition* p, char* union_type, char* rule)
     return key_val_build(p, KEY_VAL_START, union_type, rule);
 }
 
+static
 kv* tokens_to_kv(
-        const struct Token* tokens,
+        struct Token* tokens,
         const char* key,
         key_val_t type,
         key_val_t ascii_type,
@@ -22,7 +23,7 @@ kv* tokens_to_kv(
 {
     kv* next = NULL;
     kv* first = NULL;
-    for (const struct Token* iter = tokens; iter; iter = iter->next)
+    for (struct Token* iter = tokens; iter; iter = iter->next)
     {
         if (iter->ascii && !allow_ascii)
         {
@@ -33,7 +34,8 @@ kv* tokens_to_kv(
         kv* curr = key_val_build(&iter->position,
                                  iter->ascii ? ascii_type : type,
                                  key ? strdup(key) : NULL,
-                                 iter->name ? strdup(iter->name) : NULL);
+                                 iter->name ?  : NULL);
+        iter->name = NULL;
 
         curr->next = next;
         next = curr;
@@ -44,6 +46,7 @@ kv* tokens_to_kv(
         }
     }
 
+    tokens_free(tokens);
     return first;
 }
 

@@ -15,7 +15,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include <parser.h>
 #include <string.h>
 #include <errno.h>
@@ -32,9 +31,9 @@ void* cc_allocate_buffers();
 void cc_free_buffers(void* self);
 struct File* cc_parse_len(void* buffers, const char* input, uint64_t input_len);
 
-
-const char* path = NULL;
-const char** file_lines = NULL;
+static size_t line_n = 0;
+static const char* path = NULL;
+static const char** file_lines = NULL;
 static int error_counter = 0;
 
 static void put_position(const TokenPosition* self, const char* type)
@@ -44,6 +43,7 @@ static void put_position(const TokenPosition* self, const char* type)
     assert(self);
     assert(path);
 
+    assert(self->line < line_n);
     for (int i = (int)self->line - ERROR_CONTEXT_LINE_N; i < self->line; i++)
     {
         if (i < 0)
@@ -54,17 +54,20 @@ static void put_position(const TokenPosition* self, const char* type)
         char* newline_pos = strchr(file_lines[i], '\n');
         if (newline_pos)
         {
-            fprintf(stderr, "%03d |%.*s\n", i + 1, (int)(newline_pos - file_lines[i]), file_lines[i]);
+            fprintf(stderr,
+                    "%03d | %.*s\n", i + 1,
+                    (int)(newline_pos - file_lines[i]),
+                    file_lines[i]);
         }
         else
         {
-            fprintf(stderr, "%03d |%s\n", i + 1, file_lines[i]);
+            fprintf(stderr, "%03d | %s\n", i + 1, file_lines[i]);
         }
     }
 
     if (self->line > 0)
     {
-        for (int j = 0; j < self->col_start + 4; j++)
+        for (int j = 0; j < self->col_start + 5; j++)
         {
             fputc(' ', stderr);
         }
@@ -90,12 +93,12 @@ static char* read_file(FILE* fp, size_t* file_size)
     input[*file_size] = 0;
 
     /* Fill the file lines */
-    size_t line_n = 0;
+    line_n = 0;
     size_t line_s = *file_size >> 6;
     file_lines = malloc(sizeof(char*) * line_s);
 
     char* end = input;
-    while(end)
+    while(*end)
     {
         if (line_n + 1 >= line_s)
         {
@@ -103,12 +106,8 @@ static char* read_file(FILE* fp, size_t* file_size)
             file_lines = realloc(file_lines, sizeof(char*) * line_s);
         }
 
-        file_lines[line_n++] = end;
-        end = strchr(end, '\n');
-        if (end)
-        {
-            end++;
-        }
+        file_lines[line_n++] = *end == '\n' ? ++end : end;
+        while(*end && *end != '\n') end++;
     }
 
     return input;
@@ -160,18 +159,20 @@ int main(int argc, const char* argv[])
     size_t file_size;
     input = read_file(fp, &file_size);
     fclose(fp);
+    fp = NULL;
 
     cc_init();
     void* buf = cc_allocate_buffers();
     struct File* f = cc_parse_len(buf, input, file_size);
 
-    free(input);
     cc_free();
     cc_free_buffers(buf);
 
     if (!f)
     {
         fprintf(stderr, "Failed to parse file '%s'\n", argv[1]);
+        free(file_lines);
+        free(input);
         return 1;
     }
 
@@ -179,15 +180,17 @@ int main(int argc, const char* argv[])
     if (!fp)
     {
         fprintf(stderr, "Failed to open '%s': %s\n", argv[1], strerror(errno));
-        file_free(f);
         free(file_lines);
+        free(input);
+        file_free(f);
         return 1;
     }
 
     int error = codegen_write(f, fp);
     fclose(fp);
     free(file_lines);
-
+    free(input);
     file_free(f);
+
     return error;
 }

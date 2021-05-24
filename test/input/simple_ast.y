@@ -40,6 +40,7 @@ void required_use_stmt_free(RequiredUse* self)
 //%option disable_locks="TRUE"
 %option debug_table="TRUE"
 %option prefix="required_use"
+%option debug_ids="$ids!?()ESDRP"
 
 %union {
     char* identifier;
@@ -60,19 +61,17 @@ void required_use_stmt_free(RequiredUse* self)
 %type <use_select> depend_expr_sel
 %type <use_select> use_expr
 
-%start<required_use> program_required_use
-%type <required_use> program_required_use
+%destructor <identifier> { free($$); }
+%destructor <use_select> { if($$.target) free($$.target); }
+%destructor <required_use> { required_use_stmt_free($$); }
 
 %token '!'
 %token '?'
 %token '('
 %token ')'
 
-%option debug_ids="$ids!?()ESDRP"
-
-%destructor <identifier> { free($$); }
-%destructor <use_select> { if($$.target) free($$.target); }
-%destructor <required_use> { required_use_stmt_free($$); }
+%start<required_use> program_required_use
+%type <required_use> program_required_use
 
 
 +identifier      [A-Za-z_0-9][A-Za-z_0-9\-\+]*
