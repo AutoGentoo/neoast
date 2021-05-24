@@ -51,7 +51,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 %option parser_type="LALR(1)"
 %option prefix="cc"
 %option track_position="TRUE"
-%option debug_table="TRUE"
+%option debug_table="FALSE"
 
 %union {
     char* identifier;

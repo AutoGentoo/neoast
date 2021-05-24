@@ -161,7 +161,7 @@ const char* put_grammar_rule_arg(
         struct GrammarRuleSingleProto* self,
         const char** tokens,
         const struct KeyVal** typed_tokens,
-        const char* track_position_type,
+        const struct Options* options,
         uint32_t token_n,
         FILE* fp)
 {
@@ -212,9 +212,15 @@ const char* put_grammar_rule_arg(
 
     if (search[1] == 'p')
     {
-        if (track_position_type)
+        if (!(options->lexer_opts & LEXER_OPT_TOKEN_POS))
         {
-            fprintf(fp, "((const %s*)&args[%d].position)", track_position_type, arg_num - 1);
+            emit_error(&self->position, "Attempting to get token position without track_position=\"TRUE\"");
+            return NULL;
+        }
+
+        if (options->track_position_type)
+        {
+            fprintf(fp, "((const %s*)&args[%d].position)", options->track_position_type, arg_num - 1);
         }
         else
         {
@@ -248,7 +254,7 @@ void put_grammar_rule_action(
         struct GrammarRuleSingleProto* self,
         const char** tokens,
         const struct KeyVal** typed_tokens,
-        const char* track_position_type,
+        const struct Options* options,
         uint32_t token_n,
         uint32_t rule_n,
         FILE* fp)
@@ -283,7 +289,7 @@ void put_grammar_rule_action(
 
                 // Print the argument
                 start = put_grammar_rule_arg(search, parent, self, tokens, typed_tokens,
-                                             track_position_type, token_n, fp);
+                                             options, token_n, fp);
                 if (!start)
                 {
                     break;
@@ -1083,7 +1089,7 @@ int codegen_write(const struct File* self, FILE* fp)
              rule_single_iter = rule_single_iter->next)
         {
             put_grammar_rule_action(rule_iter, rule_single_iter, tokens, typed_tokens,
-                                    options.track_position_type,
+                                    &options,
                                     token_n, grammar_n + 1, fp);
             grammar_n++;
 
