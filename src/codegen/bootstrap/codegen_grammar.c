@@ -18,10 +18,13 @@
 #define _GNU_SOURCE
 
 #include "lexer.h"
-#include "codegen.h"
+#include "codegen/codegen.h"
 #include <string.h>
 #include <stdlib.h>
 #include <parsergen/canonical_collection.h>
+#include <stdarg.h>
+#include <assert.h>
+#include "grammar.h"
 
 #define WS_X "[\\s]+"
 #define WS_OPT "[\\s]*"
@@ -39,6 +42,7 @@ const char* tok_names_errors[] = {
         "==",
         "lex_state",
         "regex",
+        "}",
         "expr_def",
         "grammar_token",
         "|",
@@ -67,27 +71,6 @@ struct LexerTextBuffer
 
 static __thread struct LexerTextBuffer brace_buffer = {0};
 static __thread struct LexerTextBuffer regex_buffer = {0};
-
-static inline
-struct KeyVal* key_val_build(key_val_t type, char* key, char* value)
-{
-    struct KeyVal* self = malloc(sizeof(struct KeyVal));
-    self->next = NULL;
-    self->type = type;
-    self->key = key;
-    self->value = value;
-    self->options = 0;
-
-    return self;
-}
-
-static struct Token* token_build(char* name)
-{
-    struct Token* self = malloc(sizeof(struct Token));
-    self->name = name;
-    self->next = NULL;
-    return self;
-}
 
 static int32_t ll_enter_lex(const char* lex_text, void* lex_val, uint32_t len, ParsingStack* ll_state)
 {
@@ -126,7 +109,7 @@ static int32_t ll_option(const char* lex_text, CodegenUnion* lex_val)
     char* divider_1 = strchr(text_skip, '=');
     char* divider_2 = strchr(divider_1 + 2, '"');
 
-    lex_val->key_val = key_val_build(KEY_VAL_OPTION,
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_OPTION,
                                      strndup(text_skip, divider_1 - text_skip),
                                      strndup(divider_1 + 2, divider_2 - divider_1 - 2));
 
@@ -150,7 +133,7 @@ static int32_t ll_macro(const char* lex_text, CodegenUnion* lex_val, uint32_t le
     }
 
     char* value = strdup(split);
-    lex_val->key_val = key_val_build(KEY_VAL_MACRO, key, value);
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_MACRO, key, value);
     return TOK_OPTION;
 }
 
@@ -160,20 +143,17 @@ static int32_t ll_token(const char* lex_text, CodegenUnion* lex_val)
     while (*find_token_start == ' ')
         find_token_start++;
 
-    lex_val->key_val = key_val_build(KEY_VAL_TOKEN,
-                                     strdup(find_token_start), NULL);
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_TOKEN,
+                                     NULL,
+                                     strdup(find_token_start));
     return TOK_OPTION;
 }
 
 static int32_t ll_token_ascii(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = strchr(lex_text + 7, '\'');
-    char* key = NULL;
-    asprintf(&key, "ASCII_CHAR_0x%02X", find_token_start[1]);
-
-    lex_val->key_val = key_val_build(KEY_VAL_TOKEN_ASCII,
-                                     key, NULL);
-    lex_val->key_val->options = (uint8_t) find_token_start[1];
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_TOKEN_ASCII,
+                                     NULL, get_ascii_token_name(find_token_start[1]));
     return TOK_OPTION;
 }
 
@@ -185,9 +165,9 @@ static int32_t ll_start(const char* lex_text, CodegenUnion* lex_val)
     while (*find_token_start == ' ')
         find_token_start++;
 
-    lex_val->key_val = key_val_build(KEY_VAL_START,
-                                     strdup(find_token_start),
-                                     strndup(type_start + 1, type_end - type_start - 1));
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_START,
+                                     strndup(type_start + 1, type_end - type_start - 1),
+                                     strdup(find_token_start));
     return TOK_OPTION;
 }
 
@@ -197,7 +177,7 @@ static int32_t ll_state(const char* lex_text, CodegenUnion* lex_val)
     while (*find_token_start == ' ')
         find_token_start++;
 
-    lex_val->key_val = key_val_build(KEY_VAL_START,
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_START,
                                      strdup(find_token_start), NULL);
     return TOK_OPTION;
 }
@@ -210,9 +190,9 @@ static int32_t ll_type(const char* lex_text, CodegenUnion* lex_val)
     while (*find_token_start == ' ')
         find_token_start++;
 
-    lex_val->key_val = key_val_build(KEY_VAL_TYPE,
-                                     strdup(find_token_start),
-                                     strndup(type_start + 1, type_end - type_start - 1));
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_TYPE,
+                                     strndup(type_start + 1, type_end - type_start - 1),
+                                     strdup(find_token_start));
     return TOK_OPTION;
 }
 
@@ -221,7 +201,7 @@ static int32_t ll_destructor(const char* lex_text, CodegenUnion* lex_val)
     const char* type_start = strchr(lex_text + 5, '<');
     const char* type_end = strchr(type_start, '>');
 
-    lex_val->key_val = key_val_build(KEY_VAL_DESTRUCTOR,
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_DESTRUCTOR,
                                      strndup(type_start + 1, type_end - type_start - 1),
                                      NULL);
     return TOK_DESTRUCTOR;
@@ -235,24 +215,9 @@ static int32_t ll_token_with_type(const char* lex_text, CodegenUnion* lex_val)
     while (*find_token_start == ' ')
         find_token_start++;
 
-    lex_val->key_val = key_val_build(KEY_VAL_TOKEN_TYPE,
-                                     strdup(find_token_start),
-                                     strndup(type_start + 1, type_end - type_start - 1));
-    return TOK_OPTION;
-}
-
-static int32_t ll_token_with_type_ascii(const char* lex_text, CodegenUnion* lex_val)
-{
-    const char* type_start = strchr(lex_text + 6, '<');
-    const char* type_end = strchr(type_start, '>');
-    const char* find_token_start = strchr(type_end + 1, '\'');
-    char* key = NULL;
-    asprintf(&key, "ASCII_CHAR_0x%02X", find_token_start[1]);
-
-    lex_val->key_val = key_val_build(KEY_VAL_TOKEN_TYPE_ASCII,
-                                     key,
-                                     strndup(type_start + 1, type_end - type_start - 1));
-    lex_val->key_val->options = (uint8_t) find_token_start[1];
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_TOKEN_TYPE,
+                                     strndup(type_start + 1, type_end - type_start - 1),
+                                     strdup(find_token_start));
     return TOK_OPTION;
 }
 
@@ -262,18 +227,14 @@ static int32_t ll_left(const char* lex_text, CodegenUnion* lex_val)
     while (*find_token_start == ' ')
         find_token_start++;
 
-    lex_val->key_val = key_val_build(KEY_VAL_LEFT, strdup(find_token_start), NULL);
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_LEFT, NULL, strdup(find_token_start));
     return TOK_OPTION;
 }
 
 static int32_t ll_left_ascii(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = strchr(lex_text + 6, '\'');
-    char* key = NULL;
-    asprintf(&key, "ASCII_CHAR_0x%02X", find_token_start[1]);
-
-    lex_val->key_val = key_val_build(KEY_VAL_LEFT, key, NULL);
-    lex_val->key_val->options = (uint8_t) find_token_start[1];
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_LEFT, NULL, get_ascii_token_name(find_token_start[1]));
     return TOK_OPTION;
 }
 
@@ -283,18 +244,14 @@ static int32_t ll_right(const char* lex_text, CodegenUnion* lex_val)
     while (*find_token_start == ' ')
         find_token_start++;
 
-    lex_val->key_val = key_val_build(KEY_VAL_RIGHT, strdup(find_token_start), NULL);
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_RIGHT, NULL, strdup(find_token_start));
     return TOK_OPTION;
 }
 
 static int32_t ll_right_ascii(const char* lex_text, CodegenUnion* lex_val)
 {
     const char* find_token_start = strchr(lex_text + 7, '\'');
-    char* key = NULL;
-    asprintf(&key, "ASCII_CHAR_0x%02X", find_token_start[1]);
-
-    lex_val->key_val = key_val_build(KEY_VAL_RIGHT, key, NULL);
-    lex_val->key_val->options = (uint8_t) find_token_start[1];
+    lex_val->key_val = key_val_build(NULL, KEY_VAL_RIGHT, NULL, get_ascii_token_name(find_token_start[1]));
     return TOK_OPTION;
 }
 
@@ -311,15 +268,13 @@ static int32_t ll_g_rule(const char* lex_text, CodegenUnion* lex_val)
 
 static int32_t ll_g_tok(const char* lex_text, CodegenUnion* lex_val)
 {
-    lex_val->token = token_build(strdup(lex_text));
+    lex_val->token = build_token(NULL, lex_text);
     return TOK_G_TOK;
 }
 
 static int32_t ll_g_tok_ascii(const char* lex_text, CodegenUnion* lex_val)
 {
-    char* token = NULL;
-    asprintf(&token, "ASCII_CHAR_0x%02X", lex_text[1]);
-    lex_val->token = token_build(token);
+    lex_val->token = build_token_ascii(NULL, lex_text[1]);
     return TOK_G_TOK;
 }
 
@@ -351,7 +306,7 @@ ll_lex_state(const char* lex_text, CodegenUnion* lex_val, uint32_t len, ParsingS
     const char* start_ptr = strchr(lex_text, '<');
     const char* end_ptr = strchr(lex_text, '>');
 
-    lex_val->string = strndup(start_ptr, end_ptr - start_ptr);
+    lex_val->string = strndup(start_ptr + 1, end_ptr - start_ptr - 1);
     NEOAST_STACK_PUSH(ll_state, LEX_STATE_LEX_STATE);
 
     return TOK_LEX_STATE;
@@ -369,7 +324,7 @@ static int32_t ll_lex_state_exit(const char* lex_text,
     (void) position;
 
     NEOAST_STACK_POP(ll_state);
-    return -1;
+    return TOK_END_STATE;
 }
 
 static int32_t ll_build_regex(const char* lex_text,
@@ -407,7 +362,8 @@ static int32_t ll_decrement_brace(const char* lex_text, CodegenUnion* lex_val, u
         free(brace_buffer.buffer);
         brace_buffer.buffer = NULL;
         return TOK_G_ACTION;
-    } else
+    }
+    else
     {
         brace_buffer.buffer[brace_buffer.n++] = '}';
     }
@@ -516,7 +472,6 @@ static LexerRule ll_rules_s0[] = {
         {.regex_raw = "%token" WS_X ID_X, .expr = (lexer_expr) ll_token},
         {.regex_raw = "%token" WS_X ASCII, .expr = (lexer_expr) ll_token_ascii},
         {.regex_raw = "%token" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_token_with_type},
-        {.regex_raw = "%token" WS_OPT "<"ID_X">" WS_X ASCII, .expr = (lexer_expr) ll_token_with_type_ascii},
         {.regex_raw = "%start" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_start},
         {.regex_raw = "%state" WS_X ID_X, .expr = (lexer_expr) ll_state},
         {.regex_raw = "%type" WS_OPT "<"ID_X">" WS_X ID_X, .expr = (lexer_expr) ll_type},
@@ -572,7 +527,6 @@ static LexerRule ll_rules_lex_state[] = {
         {.regex_raw = "[\n ]+"}, // skip
         {.regex_raw = "//[^\n]*\n"},
         {.regex_raw = "/\\*", .expr = ll_regex_enter_comment},
-        {.regex_raw = "==", .expr = (lexer_expr) ll_exit_state},
         {.regex_raw = "}", .expr = (lexer_expr) ll_lex_state_exit},
         {.regex_raw = "\"", .expr = (lexer_expr) ll_build_regex},
         {.regex_raw = "{", .expr = (lexer_expr) ll_match_brace},
@@ -620,10 +574,13 @@ const uint32_t grammars[][7] = {
         {TOK_GG_KEY_VALS,       TOK_GG_HEADER},
 
         /* Lexer Rules */
+        // TOK_GG_LEX_RULE =>
         {TOK_REGEX_RULE,        TOK_G_ACTION},
+        {TOK_LEX_STATE,         TOK_GG_LEX_RULES,     TOK_END_STATE},
+
+        // TOK_GG_LEX_RULES =>
         {TOK_GG_LEX_RULE},
         {TOK_GG_LEX_RULE,       TOK_GG_LEX_RULES},
-        {TOK_LEX_STATE,         TOK_GG_LEX_RULES},
 
         /* Grammar rules */
         // TOK_GG_TOKENS =>
@@ -657,17 +614,17 @@ static void gg_key_val_add_next(CodegenUnion* dest, CodegenUnion* args)
 
 static void gg_build_header(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->key_val = key_val_build(KEY_VAL_HEADER, NULL, args[1].string);
+    dest->key_val = key_val_build(NULL, KEY_VAL_TOP, NULL, args[1].string);
 }
 
 static void gg_build_union(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->key_val = key_val_build(KEY_VAL_UNION, NULL, args[1].string);
+    dest->key_val = key_val_build(NULL, KEY_VAL_UNION, NULL, args[1].string);
 }
 
 static void gg_build_bottom(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->key_val = key_val_build(KEY_VAL_BOTTOM, NULL, args[1].string);
+    dest->key_val = key_val_build(NULL, KEY_VAL_BOTTOM, NULL, args[1].string);
 }
 
 static void gg_build_destructor(CodegenUnion* dest, CodegenUnion* args)
@@ -682,23 +639,26 @@ static void gg_build_l_rule_1(CodegenUnion* dest, CodegenUnion* args)
     dest->l_rule->regex = args[0].string;
     dest->l_rule->function = args[1].string;
     dest->l_rule->lexer_state = NULL;
+    dest->l_rule->state_rules = NULL;
     dest->l_rule->next = NULL;
 }
 
 static void gg_build_l_rule_2(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->l_rule = args[0].l_rule;
+    assert(dest->l_rule->next == NULL);
     dest->l_rule->next = args[1].l_rule;
 }
 
 static void gg_build_l_rule_3(CodegenUnion* dest, CodegenUnion* args)
 {
     // Every rule here is part of this state
-    dest->l_rule = args[1].l_rule;
-    for (struct LexerRuleProto* iter = args[1].l_rule; iter; iter = iter->next)
-    {
-        iter->lexer_state = args[0].string;
-    }
+    dest->l_rule = malloc(sizeof(struct LexerRuleProto));
+    dest->l_rule->regex = NULL;
+    dest->l_rule->function = NULL;
+    dest->l_rule->lexer_state = args[0].string;
+    dest->l_rule->state_rules = args[1].l_rule;
+    dest->l_rule->next = NULL;
 }
 
 static void gg_build_tok(CodegenUnion* dest, CodegenUnion* args)
@@ -761,9 +721,9 @@ static const GrammarRule gg_rules[] = {
         {.token=TOK_GG_HEADER, .tok_n=1, .grammar=grammars[6]},
         {.token=TOK_GG_HEADER, .tok_n=2, .grammar=grammars[7], .expr = (parser_expr) gg_key_val_add_next},
         {.token=TOK_GG_LEX_RULE, .tok_n=2, .grammar=grammars[8], .expr = (parser_expr) gg_build_l_rule_1},
-        {.token=TOK_GG_LEX_RULES, .tok_n=1, .grammar=grammars[9]},
-        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[10], .expr = (parser_expr) gg_build_l_rule_2},
-        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[11], .expr = (parser_expr) gg_build_l_rule_3},
+        {.token=TOK_GG_LEX_RULE, .tok_n=3, .grammar=grammars[9], .expr = (parser_expr) gg_build_l_rule_3},
+        {.token=TOK_GG_LEX_RULES, .tok_n=1, .grammar=grammars[10]},
+        {.token=TOK_GG_LEX_RULES, .tok_n=2, .grammar=grammars[11], .expr = (parser_expr) gg_build_l_rule_2},
         {.token=TOK_GG_TOKENS, .tok_n=1, .grammar=grammars[12]},
         {.token=TOK_GG_TOKENS, .tok_n=2, .grammar=grammars[13], .expr = (parser_expr) gg_build_tok},
         {.token=TOK_GG_SINGLE_GRAMMAR, .tok_n=2, .grammar=grammars[14], .expr = (parser_expr) gg_build_single},
@@ -819,80 +779,36 @@ int gen_parser_init(GrammarParser* self)
     return 0;
 }
 
-static void
-key_val_free(struct KeyVal* self)
+void emit_warning(const TokenPosition* position, const char* message, ...)
 {
-    struct KeyVal* next;
-    while (self)
-    {
-        next = self->next;
-        free(self->key);
-        free(self->value);
-        free(self);
-        self = next;
-    }
+    (void) position;
+
+    fprintf(stderr, "Warning: ");
+
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    fputc('\n', stderr);
 }
 
-static void
-lexer_rule_free(struct LexerRuleProto* self)
+static int error_counter = 0;
+
+void emit_error(const TokenPosition* position, const char* message, ...)
 {
-    struct LexerRuleProto* next;
-    while (self)
-    {
-        next = self->next;
-        free(self->function);
-        free(self->regex);
-        free(self->lexer_state);
-        free(self);
-        self = next;
-    }
+    (void) position;
+
+    fprintf(stderr, "Error: ");
+
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    fputc('\n', stderr);
+    error_counter++;
 }
 
-static void
-tokens_free(struct Token* self)
+int has_errors()
 {
-    struct Token* next;
-    while (self)
-    {
-        next = self->next;
-        free(self->name);
-        free(self);
-        self = next;
-    }
-}
-
-static void
-grammar_rule_single_free(struct GrammarRuleSingleProto* self)
-{
-    struct GrammarRuleSingleProto* next;
-    while (self)
-    {
-        next = self->next;
-        free(self->function);
-        tokens_free(self->tokens);
-        free(self);
-        self = next;
-    }
-}
-
-static void
-grammar_rule_multi_free(struct GrammarRuleProto* self)
-{
-    struct GrammarRuleProto* next;
-    while (self)
-    {
-        next = self->next;
-        free(self->name);
-        grammar_rule_single_free(self->rules);
-        free(self);
-        self = next;
-    }
-}
-
-void file_free(struct File* self)
-{
-    key_val_free(self->header);
-    lexer_rule_free(self->lexer_rules);
-    grammar_rule_multi_free(self->grammar_rules);
-    free(self);
+    return error_counter;
 }

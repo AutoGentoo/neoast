@@ -13,7 +13,7 @@ if (NOT "${SANITIZER}" STREQUAL "")
     add_compile_options(-fsanitize=${SANITIZER})
     add_link_options(-fsanitize=${SANITIZER})
     message(STATUS "Building with -fsanitize=${SANITIZER}")
-    add_compile_options(-g -fno-omit-frame-pointer -O1)
+    add_compile_options(-g -fno-omit-frame-pointer -O0)
 endif()
 
 include(cmake/policy.cmake)

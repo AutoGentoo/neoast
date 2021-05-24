@@ -30,13 +30,7 @@
 #define CODEGEN_STRUCT "NeoastValue"
 #define CODEGEN_UNION "NeoastUnion"
 
-#define CODEGEN_ERROR(...) \
-do {                                \
-    fprintf(stderr, "Error: ");     \
-    fprintf(stderr, __VA_ARGS__);   \
-    fprintf(stderr, "\n");          \
-    return -1;                      \
-} while(0)
+#define EXIT_IF_ERRORS if (has_errors()) return -1;
 
 struct Options {
     // Should we dump the table
@@ -159,8 +153,7 @@ int get_named_token(const char* token_name, const char* const* tokens, uint32_t 
             return i;
     }
 
-    fprintf(stderr, "Invalid token name '%s'\n", token_name);
-    exit(2);
+    return -1;
 }
 
 static inline
@@ -181,12 +174,13 @@ const char* put_grammar_rule_arg(
         int expression_token = get_named_token(parent->name, tokens, token_n);
         if (expression_token == -1)
         {
+            emit_error(&self->position, "Rule not defined", parent->name);
             return NULL;
         }
 
         assert(typed_tokens[expression_token]);
 
-        fprintf(fp, "dest->%s", typed_tokens[expression_token]->value);
+        fprintf(fp, "dest->%s", typed_tokens[expression_token]->key);
         return search + 2;
     }
     else if (search[1] == 'p')
@@ -199,7 +193,7 @@ const char* put_grammar_rule_arg(
     uint32_t arg_num = strtoul(search + search_offset, &out, 10);
     if (arg_num == 0)
     {
-        fprintf(stderr, "Invalid argument index '0', use '$$' for destination\n");
+        emit_error(&self->position, "Invalid argument index '0', use '$$' for destination");
         return NULL;
     }
 
@@ -212,7 +206,9 @@ const char* put_grammar_rule_arg(
 
     if (!tok)
     {
-        fprintf(stderr, "Invalid argument index '%d', expression only has %d arguments\n", arg_num, i);
+        emit_error(&self->position,
+                   "Invalid argument index '%d', expression only has '%d' arguments",
+                   arg_num, i);
         return NULL;
     }
 
@@ -230,13 +226,19 @@ const char* put_grammar_rule_arg(
     else
     {
         int token_id = get_named_token(tok->name, tokens, token_n);
-        if (!typed_tokens[token_id])
+        if (token_id < 0)
         {
-            fprintf(stderr, "Token '%s' does not have a type\n", tok->name);
+            emit_error(&tok->position, "Token has not been defined");
             return NULL;
         }
 
-        fprintf(fp, "args[%d].value.%s", arg_num - 1, typed_tokens[token_id]->value);
+        if (!typed_tokens[token_id])
+        {
+            emit_error(&tok->position, "Token token without a type cannot be used in action");
+            return NULL;
+        }
+
+        fprintf(fp, "args[%d].value.%s", arg_num - 1, typed_tokens[token_id]->key);
     }
 
     return out;
@@ -286,7 +288,7 @@ void put_grammar_rule_action(
                                              track_position_type, token_n, fp);
                 if (!start)
                 {
-                    exit(2);
+                    break;
                 }
                 continue;
             }
@@ -296,8 +298,11 @@ void put_grammar_rule_action(
         fwrite(start, 1, search - start, fp);
         start = search;
     }
+    if (start)
+    {
+        fputs(start, fp);
+    }
 
-    fputs(start, fp);
     fputs("}\n}\n\n", fp);
 }
 
@@ -416,7 +421,7 @@ void put_lexer_rule_count(const uint32_t* ll_rule_count, int lex_state_n, FILE* 
 static inline
 void put_lexer_states(const char* const* states_names, int states, FILE* fp)
 {
-    fputs("static LexerRule* lexer_rules[] = {\n", fp);
+    fputs("static LexerRule* __neoast_lexer_rules[] = {\n", fp);
     for (int i = 0; i < states; i++)
     {
         fprintf(fp, "        ll_rules_state_%s,\n", states_names[i]);
@@ -472,7 +477,7 @@ void put_grammar_table_and_rules(
 
     // Print the grammar rules
     uint32_t grammar_offset_i = 0;
-    fputs("static const\nGrammarRule grammar_rules[] = {\n", fp);
+    fputs("static const\nGrammarRule __neoast_grammar_rules[] = {\n", fp);
     for (int i = 0; i < rule_n; i++)
     {
         if (rules[i].expr)
@@ -515,7 +520,7 @@ void put_parsing_table(const uint32_t* parsing_table, CanonicalCollection* cc, F
 static inline
 void put_ascii_mappings(const uint32_t ascii_mappings[NEOAST_ASCII_MAX], FILE* fp)
 {
-    fputs("static const\nuint32_t ascii_mappings[NEOAST_ASCII_MAX] = {\n", fp);
+    fputs("static const\nuint32_t __neoast_ascii_mappings[NEOAST_ASCII_MAX] = {\n", fp);
     int i = 0;
     for (int row = 0; i < NEOAST_ASCII_MAX; row++)
     {
@@ -542,20 +547,22 @@ int codegen_index(const char* const* array, const char* to_find, int n)
     return -1;
 }
 
-static int codegen_parse_bool(const char* bool_str)
+static int codegen_parse_bool(const struct KeyVal* self)
 {
-    if (strcmp(bool_str, "TRUE") == 0
-        || strcmp(bool_str, "true") == 0
-        || strcmp(bool_str, "True") == 0
-        || strcmp(bool_str, "1") == 0)
+    if (strcmp(self->value, "TRUE") == 0
+        || strcmp(self->value, "true") == 0
+        || strcmp(self->value, "True") == 0
+        || strcmp(self->value, "1") == 0)
         return 1;
-    else if (strcmp(bool_str, "FALSE") == 0
-             || strcmp(bool_str, "false") == 0
-             || strcmp(bool_str, "False") == 0
-             || strcmp(bool_str, "0") == 0)
+    else if (strcmp(self->value, "FALSE") == 0
+             || strcmp(self->value, "false") == 0
+             || strcmp(self->value, "False") == 0
+             || strcmp(self->value, "0") == 0)
         return 0;
 
-    fprintf(stderr, "Unable to parse boolean value '%s', assuming FALSE\n", bool_str);
+    emit_warning(&self->position,
+                 "Unable to parse boolean value '%s', assuming FALSE",
+                 self->value);
     return 0;
 }
 
@@ -575,16 +582,16 @@ static void codegen_handle_option(
         }
         else
         {
-            fprintf(stderr, "Invalid parser type '%s', supported types: 'LALR(1)', 'CLR(1)'\n", option->value);
+            emit_error(&option->position, "Invalid parser type, support types: 'LALR(1)', 'CLR(1)'");
         }
     }
     else if (strcmp(option->key, "debug_table") == 0)
     {
-        self->debug_table = codegen_parse_bool(option->value);
+        self->debug_table = codegen_parse_bool(option);
     }
     else if (strcmp(option->key, "track_position") == 0)
     {
-        self->lexer_opts |= codegen_parse_bool(option->value) ? LEXER_OPT_TOKEN_POS : 0;
+        self->lexer_opts |= codegen_parse_bool(option) ? LEXER_OPT_TOKEN_POS : 0;
     }
     else if (strcmp(option->key, "track_position_type") == 0)
     {
@@ -592,7 +599,7 @@ static void codegen_handle_option(
     }
     else if (strcmp(option->key, "disable_locks") == 0)
     {
-        self->disable_locks = codegen_parse_bool(option->value);
+        self->disable_locks = codegen_parse_bool(option);
     }
     else if (strcmp(option->key, "debug_ids") == 0)
     {
@@ -620,11 +627,11 @@ static void codegen_handle_option(
     }
     else if (strcmp(option->key, "lex_match_longest") == 0)
     {
-        self->lexer_opts |= codegen_parse_bool(option->value) ? LEXER_OPT_LONGEST_MATCH : 0;
+        self->lexer_opts |= codegen_parse_bool(option) ? LEXER_OPT_LONGEST_MATCH : 0;
     }
     else
     {
-        fprintf(stderr, "Unsupported option '%s', ignoring\n", option->key);
+        emit_error(&option->position, "Unsupported option, ignoring");
     }
 }
 
@@ -670,10 +677,11 @@ int codegen_write(const struct File* self, FILE* fp)
     {
         switch (iter->type)
         {
-            case KEY_VAL_HEADER:
+            case KEY_VAL_TOP:
                 if (_header)
                 {
-                    CODEGEN_ERROR("cannot have two %%top definitions");
+                    emit_error(&iter->position, "cannot have two %%top definitions");
+                    return -1;
                 }
 
                 _header = iter;
@@ -681,7 +689,8 @@ int codegen_write(const struct File* self, FILE* fp)
             case KEY_VAL_BOTTOM:
                 if (_bottom)
                 {
-                    CODEGEN_ERROR("cannot have two %%bottom definitions");
+                    emit_error(&iter->position, "cannot have two %%bottom definitions");
+                    return -1;
                 }
 
                 _bottom = iter;
@@ -689,7 +698,8 @@ int codegen_write(const struct File* self, FILE* fp)
             case KEY_VAL_UNION:
                 if (_union)
                 {
-                    CODEGEN_ERROR("cannot have two %%union definitions");
+                    emit_error(&iter->position, "cannot have two %%union definitions");
+                    return -1;
                 }
 
                 _union = iter;
@@ -697,7 +707,7 @@ int codegen_write(const struct File* self, FILE* fp)
             case KEY_VAL_START:
                 if (_start)
                 {
-                    CODEGEN_ERROR("cannot have two %%start definitions");
+                    emit_error(&iter->position, "cannot have two %%start definitions");
                 }
 
                 _start = iter;
@@ -708,7 +718,6 @@ int codegen_write(const struct File* self, FILE* fp)
                 token_n++;
                 break;
             case KEY_VAL_TOKEN_TYPE:
-            case KEY_VAL_TOKEN_TYPE_ASCII:
                 action_n++;
                 token_n++;
                 typed_token_n++;
@@ -727,9 +736,6 @@ int codegen_write(const struct File* self, FILE* fp)
             case KEY_VAL_MACRO:
                 macro_engine_register(m_engine, iter->key, iter->value);
                 break;
-            case KEY_VAL_STATE:
-                lex_state_n++;
-                break;
             case KEY_VAL_DESTRUCTOR:
                 break;
         }
@@ -737,25 +743,29 @@ int codegen_write(const struct File* self, FILE* fp)
 
     if (!_start || !_union)
     {
-        CODEGEN_ERROR("%%start and %%union are required");
+        TokenPosition pos = {1, 0};
+        emit_error(&pos, "%%start and %%union are required");
+        return -1;
     }
 
     if (!action_n || token_n == action_n)
     {
-        CODEGEN_ERROR("no lexer or parser tokens are defined");
+        TokenPosition pos = {1, 0};
+        emit_error(&pos, "no lexer or parser tokens are defined");
+        return -1;
     }
+
+    EXIT_IF_ERRORS
 
     token_n++; // augment token
 
     // Now that we know the count of every type, we can initialize them
     int action_i = 0, grammar_i = action_n,
-            typed_token_i = 0, lex_state_i = 1,
-            macro_i = 0;
+            typed_token_i = 0, lex_state_i = 1;
     const char** tokens = calloc(token_n, sizeof(char*));
     const struct KeyVal** typed_tokens = calloc(token_n, sizeof(struct KeyVal*));
     const struct KeyVal** destructors = calloc(token_n, sizeof(struct KeyVal*));
 
-    const char** lexer_states = malloc(sizeof(char*) * (lex_state_n));
     uint8_t* precedence_table = calloc(token_n, sizeof(uint8_t));
 
     uint32_t ascii_mappings[NEOAST_ASCII_MAX] = {0};
@@ -766,35 +776,44 @@ int codegen_write(const struct File* self, FILE* fp)
         switch (iter->type)
         {
             case KEY_VAL_TOKEN:
-                tokens[action_i++] = iter->key;
+                if (codegen_index(tokens, iter->value, action_i) != -1)
+                {
+                    emit_error(&iter->position, "Duplicate token declaration");
+                }
+                tokens[action_i++] = iter->value;
                 break;
             case KEY_VAL_TOKEN_TYPE:
+                if (codegen_index(tokens, iter->value, action_i) != -1)
+                {
+                    emit_error(&iter->position, "Duplicate token declaration");
+                }
                 typed_tokens[action_i] = iter;
-                tokens[action_i++] = iter->key;
+                tokens[action_i++] = iter->value;
                 typed_token_i++;
                 break;
             case KEY_VAL_TOKEN_ASCII:
-                ascii_mappings[iter->options] = action_i + NEOAST_ASCII_MAX;
-                tokens[action_i++] = iter->key;
-                break;
-            case KEY_VAL_TOKEN_TYPE_ASCII:
-                ascii_mappings[iter->options] = action_i + NEOAST_ASCII_MAX;
-                typed_tokens[action_i] = iter;
-                tokens[action_i++] = iter->key;
-                typed_token_i++;
+                if (codegen_index(tokens, iter->value, action_i) != -1)
+                {
+                    emit_error(&iter->position, "Duplicate token declaration");
+                }
+                ascii_mappings[get_ascii_from_name(iter->value)] = action_i + NEOAST_ASCII_MAX;
+                tokens[action_i++] = iter->value;
                 break;
             case KEY_VAL_TYPE:
+                if (codegen_index(tokens + action_n, iter->value, grammar_i - action_n) != -1)
+                {
+                    emit_error(&iter->position, "Duplicate type declaration");
+                }
                 typed_tokens[grammar_i] = iter;
-                tokens[grammar_i++] = iter->key;
+                tokens[grammar_i++] = iter->value;
                 typed_token_i++;
-                break;
-            case KEY_VAL_STATE:
-                lexer_states[lex_state_i++] = iter->key;
                 break;
             default:
                 break;
         }
     }
+
+    EXIT_IF_ERRORS
 
     tokens[grammar_i++] = "TOK_AUGMENT";
 
@@ -815,7 +834,7 @@ int codegen_write(const struct File* self, FILE* fp)
         fputc('\n', fp);
     }
 
-    fprintf(fp, "typedef union {%s} " CODEGEN_UNION ";\n", _union->value);
+    fprintf(fp, "typedef union {%s} " CODEGEN_UNION ";\n", (char*)_union->value);
     if (options.lexer_opts & LEXER_OPT_TOKEN_POS)
     {
         fprintf(fp, "typedef struct {" CODEGEN_UNION " value; TokenPosition position;} " CODEGEN_STRUCT ";\n\n");
@@ -826,15 +845,45 @@ int codegen_write(const struct File* self, FILE* fp)
     }
 
     fputs("// Tokens\n", fp);
-    put_enum(NEOAST_ASCII_MAX + 1, token_n - 1, tokens + 1, fp);
+    // We can cast this because the first field in Token is name
+    put_enum(NEOAST_ASCII_MAX + 1, token_n - 1, (const char**)tokens + 1, fp);
 
     // Map a lexer state id to each state
+    int lexer_state_s = 32;
+    const char** lexer_states = malloc(sizeof(char*) * lexer_state_s);
+    uint32_t* ll_rule_count = malloc(sizeof(uint32_t) * lexer_state_s);
+
     lexer_states[0] = "LEX_STATE_DEFAULT";
+    ll_rule_count[0] = 0;
+
+    // Dump all lexer rule actions and count number of rules in each state
     for (struct LexerRuleProto* iter = self->lexer_rules; iter; iter = iter->next)
     {
-        if (iter->lexer_state && codegen_index(lexer_states, iter->lexer_state, lex_state_n) == -1)
+        if (lex_state_n + 1 >= lexer_state_s)
         {
-            lexer_states[lex_state_n++] = iter->lexer_state;
+            lexer_state_s *= 2;
+            lexer_states = realloc(lexer_states, sizeof(char*) * lexer_state_s);
+            ll_rule_count = realloc(ll_rule_count, sizeof(uint32_t) * lexer_state_s);
+        }
+
+        if (iter->lexer_state)
+        {
+            assert(!iter->function);
+            assert(!iter->regex);
+            assert(iter->state_rules);
+            int state_id = lex_state_n++;
+            lexer_states[state_id] = iter->lexer_state;
+            ll_rule_count[state_id] = 0;
+
+            // Count the number of rules in this state
+            for (struct LexerRuleProto* iter_s = iter->state_rules; iter_s; iter_s = iter_s->next)
+            {
+                ll_rule_count[state_id]++;
+            }
+        }
+        else
+        {
+            ll_rule_count[0]++;
         }
     }
 
@@ -844,24 +893,40 @@ int codegen_write(const struct File* self, FILE* fp)
     for (struct KeyVal* iter = self->header; iter; iter = iter->next)
     {
         int token_id;
+        int install_count;
         switch (iter->type)
         {
             case KEY_VAL_LEFT:
             case KEY_VAL_RIGHT:
-                token_id = codegen_index(tokens, iter->key, token_n);
-                if (token_id == -1 || token_id >= action_n)
-                    fprintf(stderr, "Invalid token for precedence '%s'\n", iter->key);
+                token_id = codegen_index(tokens, iter->value, token_n);
+                if (token_id >= action_n)
+                {
+                    emit_warning(&iter->position, "Cannot use %%type token in precedence");
+                    continue;
+                }
+                else if (token_id < 0)
+                {
+                    emit_error(&iter->position, "Invalid token name");
+                    continue;
+                }
 
                 precedence_table[token_id] = iter->type == KEY_VAL_LEFT ? PRECEDENCE_LEFT : PRECEDENCE_RIGHT;
                 break;
             case KEY_VAL_DESTRUCTOR:
                 // Install destructor in every token with this type
+                install_count = 0;
                 for (int i = 0; i < token_n; i++)
                 {
-                    if (typed_tokens[i] && strcmp(typed_tokens[i]->value, iter->key) == 0)
+                    if (typed_tokens[i] && strcmp(typed_tokens[i]->key, iter->key) == 0)
                     {
                         destructors[i] = iter;
+                        install_count++;
                     }
+                }
+
+                if (!install_count)
+                {
+                    emit_error(&iter->position, "No token matches type '%s'", iter->key);
                 }
 
                 // Dump this destructor action
@@ -871,74 +936,80 @@ int codegen_write(const struct File* self, FILE* fp)
         }
     }
 
+    EXIT_IF_ERRORS
+
     fputs("// Lexer states\n"
           "#ifndef NEOAST_EXTERNAL_INCLUDE\n"
           "#define NEOAST_EXTERNAL_INCLUDE\n", fp);
+    // Yes this is a safe cast
     put_enum(0, lex_state_n, lexer_states, fp);
-
-    // Dump all lexer rule actions
-    // Count the number of lexer rules in each state
-    uint32_t* ll_rule_count = calloc(lex_state_n, sizeof(uint32_t));
-    for (struct LexerRuleProto* iter = self->lexer_rules; iter; iter = iter->next)
-    {
-        int state_id;
-        if (iter->lexer_state)
-        {
-            state_id = codegen_index(lexer_states, iter->lexer_state, lex_state_n);
-
-            if (state_id == -1)
-            {
-                CODEGEN_ERROR("invalid state name '%s'", iter->lexer_state);
-            }
-        } else
-        {
-            state_id = 0;
-        }
-
-        ll_rule_count[state_id]++;
-        const char* state_name = lexer_states[state_id];
-
-        put_lexer_rule_action(iter, state_name, ll_rule_count[state_id] - 1, fp);
-    }
 
     // Dump the lexer rules
     LexerRule** ll_rules = malloc(sizeof(LexerRule*) * lex_state_n);
-    for (int i = 0; i < lex_state_n; i++)
+
+    int iterator = 0;
+    ll_rules[0] = malloc(sizeof(LexerRule) * ll_rule_count[0]);
+    for (struct LexerRuleProto* iter = self->lexer_rules; iter; iter = iter->next)
     {
-        LexerRule* current = malloc(sizeof(LexerRule) * ll_rule_count[i]);
-        ll_rules[i] = current;
-        int iterator = 0;
-
-        // We're going to build a large array with every string embedded
-        uint32_t regex_length = 0;
-        for (struct LexerRuleProto* iter = self->lexer_rules; iter; iter = iter->next)
+        if (iter->lexer_state)
         {
-            if (iter->lexer_state && i != 0)
-                continue;
-            if (iter->lexer_state && strcmp(iter->lexer_state, lexer_states[i]) != 0)
-                continue;
+            int state_iterator = 0;
+            int state_id = codegen_index(lexer_states, iter->lexer_state, lex_state_n);
+            assert(state_id > 0);
 
-            LexerRule* ll_rule = &current[iterator++];
-            ll_rule->expr = (lexer_expr) iter;
-            ll_rule->regex_raw = regex_expand(m_engine, iter->regex);
-            regex_length += strlen(ll_rule->regex_raw) + 1; // We need to null terminator
-            if (!regex_verify(m_engine, ll_rule->regex_raw))
+            ll_rules[state_id] = malloc(sizeof(LexerRule) * ll_rule_count[state_id]);
+            LexerRule* current = ll_rules[state_id];
+
+            for (struct LexerRuleProto* iter_s = iter->state_rules; iter_s; iter_s = iter_s->next)
             {
-                CODEGEN_ERROR("Failed to compile regular expression '%s'\n", ll_rule->regex_raw);
+                assert(state_iterator < ll_rule_count[0]);
+                assert(iter_s->regex);
+                assert(iter_s->function);
+                assert(!iter_s->lexer_state);
+                assert(!iter_s->state_rules);
+                put_lexer_rule_action(iter_s, lexer_states[state_id], state_iterator, fp);
+                LexerRule* ll_rule = &ll_rules[state_id][state_iterator++];
+                ll_rule->expr = (lexer_expr) iter_s;
+                ll_rule->regex_raw = regex_expand(m_engine, iter_s->regex);
+                ll_rule->tok = 0;
+                if (!regex_verify(m_engine, ll_rule->regex_raw))
+                {
+                    emit_error(&iter->position, "Failed to compile regular expression");
+                }
             }
 
-            ll_rule->tok = 0;
+            assert(state_iterator == ll_rule_count[state_id]);
+            assert(lexer_states[state_id]);
+            put_lexer_state_rules(current, ll_rule_count[state_id], lexer_states[state_id], fp);
         }
-
-        assert(iterator == ll_rule_count[i]);
-        put_lexer_state_rules(current, ll_rule_count[i], lexer_states[i], fp);
+        else
+        {
+            assert(iterator < ll_rule_count[0]);
+            assert(iter->regex);
+            assert(iter->function);
+            assert(!iter->lexer_state);
+            assert(!iter->state_rules);
+            put_lexer_rule_action(iter, lexer_states[0], iterator, fp);
+            LexerRule* ll_rule = &ll_rules[0][iterator++];
+            ll_rule->expr = (lexer_expr) iter;
+            ll_rule->regex_raw = regex_expand(m_engine, iter->regex);
+            ll_rule->tok = 0;
+            if (!regex_verify(m_engine, ll_rule->regex_raw))
+            {
+                emit_error(&iter->position, "Failed to compile regular expression");
+            }
+            assert(lexer_states[0]);
+        }
     }
+
+    assert(iterator == ll_rule_count[0]);
+    put_lexer_state_rules(ll_rules[0], ll_rule_count[0], lexer_states[0], fp);
 
     put_lexer_rule_count(ll_rule_count, lex_state_n, fp);
     put_lexer_states(lexer_states, lex_state_n, fp);
 
     // Dump the destructor rules
-    fputs("static const\nparser_destructor token_destructors[] = {\n", fp);
+    fputs("static const\nparser_destructor __neoast_token_destructors[] = {\n", fp);
     for (int i = 0; i < token_n; i++)
     {
         if (!destructors[i])
@@ -959,6 +1030,14 @@ int codegen_write(const struct File* self, FILE* fp)
          rule_iter;
          rule_iter = rule_iter->next)
     {
+        // Make sure this is a %type not a %token
+        int type_id = get_named_token(rule_iter->name, tokens, token_n);
+        if (type_id < action_n)
+        {
+            emit_error(&rule_iter->position, "Grammar rule defined for %%token - did mean %%type?");
+            continue;
+        }
+
         for (struct GrammarRuleSingleProto* rule_single_iter = rule_iter->rules;
              rule_single_iter;
              rule_single_iter = rule_single_iter->next)
@@ -976,10 +1055,12 @@ int codegen_write(const struct File* self, FILE* fp)
         }
     }
 
+    EXIT_IF_ERRORS;
+
     // Add the augment rule
     struct Token augment_rule_tok = {
             .next = NULL,
-            .name = _start->key
+            .name = _start->value
     };
     struct GrammarRuleSingleProto augment_rule = {
             .next = NULL,
@@ -1008,8 +1089,8 @@ int codegen_write(const struct File* self, FILE* fp)
         int rule_tok = codegen_index(tokens, rule_iter->name, token_n);
         if (rule_tok == -1)
         {
-            fprintf(stderr, "Could not find token for rule '%s'\n", rule_iter->name);
-            exit(1);
+            emit_error(&rule_iter->position, "Could not find token for rule '%s'\n", rule_iter->name);
+            continue;
         }
 
         for (struct GrammarRuleSingleProto* rule_single_iter = rule_iter->rules;
@@ -1024,10 +1105,8 @@ int codegen_write(const struct File* self, FILE* fp)
                 grammar_table[grammar_tok_offset_c] = codegen_index(tokens, tok_iter->name, token_n) + NEOAST_ASCII_MAX;
                 if (grammar_table[grammar_tok_offset_c] < NEOAST_ASCII_MAX)
                 {
-                    fprintf(stderr, "Invalid token name in grammar '%s'\n",
-                            tok_iter->name);
-                    fprintf(stderr, "Has this token been declared by %%token?\n");
-                    exit(2);
+                    emit_error(&tok_iter->position, "Undeclared token '%s'", tok_iter->name);
+                    continue;
                 }
                 grammar_tok_offset_c++;
                 gg_tok_n++;
@@ -1043,6 +1122,7 @@ int codegen_write(const struct File* self, FILE* fp)
         }
     }
 
+    EXIT_IF_ERRORS
     assert(grammar_tok_offset_c == grammar_tok_n);
     put_grammar_table_and_rules(all_rules, gg_rules, tokens, grammar_n, fp);
 
@@ -1060,13 +1140,12 @@ int codegen_write(const struct File* self, FILE* fp)
     };
 
     // Dump parser instantiation
-    fputs("static const\nchar* token_names[] = {\n", fp);
+    fputs("static const\nchar* __neoast_token_names[] = {\n", fp);
     for (int i = 0; i < token_n - 1; i++)
     {
         if (strncmp(tokens[i], "ASCII_CHAR_0x", 13) == 0)
         {
-            uint8_t c = strtoul(&tokens[i][13], NULL, 16);
-            fprintf(fp, "        \"%c\",\n", c);
+            fprintf(fp, "        \"%c\",\n", get_ascii_from_name(tokens[i]));
         }
         else
         {
@@ -1081,17 +1160,19 @@ int codegen_write(const struct File* self, FILE* fp)
                 "        .grammar_n = %d,\n"
                 "        .lex_state_n = %d,\n"
                 "        .lex_n = lexer_rule_n,\n"
-                "        .ascii_mappings = ascii_mappings,\n"
-                "        .lexer_rules = lexer_rules,\n"
-                "        .grammar_rules = grammar_rules,\n"
-                "        .token_names = token_names,\n"
-                "        .destructors = token_destructors,\n"
+                "        .ascii_mappings = __neoast_ascii_mappings,\n"
+                "        .lexer_rules = __neoast_lexer_rules,\n"
+                "        .grammar_rules = __neoast_grammar_rules,\n"
+                "        .token_names = __neoast_token_names,\n"
+                "        .destructors = __neoast_token_destructors,\n"
                 "        .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,\n"
                 "        .action_token_n = %d,\n"
                 "        .lexer_opts = (lexer_option_t)%d,\n",
             grammar_n, lex_state_n, action_n, options.lexer_opts
     );
     fputs("};\n\n", fp);
+
+    EXIT_IF_ERRORS
 
     CanonicalCollection* cc = canonical_collection_init(&parser);
     canonical_collection_resolve(cc, options.parser_type);
@@ -1126,7 +1207,7 @@ int codegen_write(const struct File* self, FILE* fp)
             {
                 fprintf(fp, "//  %s => '%c' ('%c')\n",
                         tokens[i], options.debug_ids[i],
-                        (char)strtol(tokens[i] + 13, NULL, 16));
+                        get_ascii_from_name(tokens[i]));
             }
             else
             {
@@ -1221,10 +1302,10 @@ int codegen_write(const struct File* self, FILE* fp)
                 "}\n"
                 "\n"
                 "#endif\n",
-                _start->value, options.prefix,
-                _start->value, _start->value,
-                _start->value, options.prefix,
-                _start->value, _start->value);
+            _start->key, options.prefix,
+            _start->key, _start->key,
+            _start->key, options.prefix,
+            _start->key, _start->key);
 
     if (_bottom)
     {
@@ -1254,5 +1335,6 @@ int codegen_write(const struct File* self, FILE* fp)
     free(ll_rule_count);
     macro_engine_free(m_engine);
 
+    EXIT_IF_ERRORS
     return error;
 }

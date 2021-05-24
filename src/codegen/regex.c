@@ -129,6 +129,8 @@ char* regex_expand(MacroEngine* self, const char* regex)
         return expanded_pattern;
     }
 
+    assert(regex);
+
     // We didn't expand anything, simply dup the input
     return strdup(regex);
 }
