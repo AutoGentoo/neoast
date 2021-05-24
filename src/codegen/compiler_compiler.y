@@ -117,6 +117,8 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 +identifier     [A-Za-z_][\w]*
 +lex_state      <[A-Za-z_][\w]>[\s]*'{'
 +ascii          '[\x20-\x7E]'
++macro          \+{identifier}[ ][\s]*[^\n]+
++whitespace     [ \t\r]+
 
 ==
 
@@ -124,7 +126,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 
 // Whitespace
 "[\n]"              { position->line++; }
-"[ \t\r]+"          { /* skip */ }
+"{whitespace}"      { /* skip */ }
 "//[^\n]*"          { /* skip */ }
 "/\*"               { NEOAST_STACK_PUSH(lex_state, S_COMMENT); }
 
@@ -149,8 +151,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 "%top"              { return TOP; }
 "%bottom"           { return BOTTOM; }
 "%destructor"       { return DESTRUCTOR; }
-"\+{identifier}[ ][\s]*[^\n]+"
-                    {
+"{macro}"           {
                         // Find the white space delimiter
                         const char* split = strchr(yytext + 1, ' ');
                         assert(split);
@@ -169,7 +170,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 
 <S_LL_RULES> {
 "[\n]"              { position->line++; }
-"[ \t\r\\]+"        { /* skip */ }
+"{whitespace}"      { /* skip */ }
 "//[^\n]*"          { /* skip */ }
 "/\*"               { NEOAST_STACK_PUSH(lex_state, S_COMMENT); }
 "=="                { NEOAST_STACK_POP(lex_state); return LL; }
@@ -187,7 +188,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 
 <S_LL_STATE> {
 "[\n]"              { position->line++; }
-"[ \t\r\\]+"        { /* skip */ }
+"{whitespace}"      { /* skip */ }
 "//[^\n]*"          { /* skip */ }
 "/\*"               { NEOAST_STACK_PUSH(lex_state, S_COMMENT); }
 
@@ -200,7 +201,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 
 <S_GG_RULES> {
 "[\n]"              { position->line++; }
-"[ \t\r]+"          { /* skip */ }
+"{whitespace}"      { /* skip */ }
 "//[^\n]*"          { /* skip */ }
 "{ascii}"           { yyval->ascii = yytext[1]; return ASCII; }
 "/\*"               { NEOAST_STACK_PUSH(lex_state, S_COMMENT); }
