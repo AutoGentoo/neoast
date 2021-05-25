@@ -13,6 +13,10 @@
 %option debug_ids="$d+-/*^()ES"
 %option prefix="calc_ascii"
 
+%union {
+    double number;
+}
+
 %token<number> TOK_N
 %token '+'
 %token '-'
@@ -35,14 +39,10 @@
 %left '/'
 %right '^'
 
-%union {
-    double number;
-}
-
 ==
 // Test lex rule comment
-"[ ]+"         {return -1;}
-"[0-9]+"       {yyval->number = strtod(yytext, NULL); return TOK_N;}
+"[ ]+"        {return -1;}
+"[0-9]+"      {yyval->number = strtod(yytext, NULL); return TOK_N;}
 "\+"          {return '+';}
 "\-"          {return '-';}
 "\/"          {return '/';}
