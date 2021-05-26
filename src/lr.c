@@ -122,40 +122,78 @@ void lr_parse_error(const uint32_t* parsing_table,
                     uint32_t current_state,
                     uint32_t error_tok,
                     uint32_t prev_tok,
-                    uint32_t tok_n)
+                    uint32_t tok_n,
+                    yy_error_cb cb)
 {
     const char* current_token = token_names[error_tok];
     const char* prev_token = token_names[prev_tok];
 
-    if (p)
-    {
-        fprintf(stderr, "Error on line %d:%d\n", p->line, p->col_start);
-    }
-
-    fprintf(stderr, "Invalid syntax: unexpected token '%s' [%d] after '%s' [%d] (state %d)\n",
-            current_token, error_tok, prev_token, prev_tok, current_state);
-    fprintf(stderr, "Expected one of: ");
-
     uint32_t index_off = current_state * tok_n;
+    uint32_t* expected_tokens = alloca(sizeof(uint32_t) * tok_n);
+    uint32_t expected_tokens_n = 0;
     for (uint32_t i = 0; i < tok_n; i++)
     {
         if (parsing_table[index_off + i] != TOK_SYNTAX_ERROR)
         {
-            fprintf(stderr, "%s ", token_names[i]);
+            expected_tokens[expected_tokens_n++] = i;
         }
     }
 
-    fprintf(stderr, "\n");
+    if (cb)
+    {
+        cb(token_names, p, prev_tok, error_tok,
+           expected_tokens, expected_tokens_n);
+    }
+    else
+    {
+        if (p)
+        {
+            fprintf(stderr, "Error on line %d:%d\n", p->line, p->col_start);
+        }
+
+        fprintf(stderr, "Invalid syntax: unexpected token '%s' [%d] after '%s' [%d] (state %d)\n",
+                current_token, error_tok, prev_token, prev_tok, current_state);
+        fprintf(stderr, "Expected one of: ");
+
+        for (uint32_t i = 0; i < expected_tokens_n; i++)
+        {
+            fprintf(stderr, "%s ", token_names[expected_tokens[i]]);
+        }
+
+        fprintf(stderr, "\n");
+    }
+
 }
 
-void lr_lex_error(const ParserBuffers* buf,
-                  const char* input,
-                  uint32_t offset)
+void lr_lex_error(
+        const GrammarParser* parser,
+        const ParserBuffers* buf,
+        const char* input,
+        uint32_t offset)
 {
-    fprintf(stderr, "Unmatched token near '%.*s' (state '%d')\n",
-            (uint32_t)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
-            &input[offset - 1],
-            NEOAST_STACK_PEEK(buf->lexing_state_stack));
+    if (parser->lexer_error)
+    {
+        if (parser->lexer_opts & LEXER_OPT_TOKEN_POS)
+        {
+            TokenPosition p = {
+                    .line = buf->position->line,
+                    .col_start = offset - buf->position->line_start_offset
+            };
+
+            parser->lexer_error(input, &p, offset);
+        }
+        else
+        {
+            parser->lexer_error(input, NULL, offset);
+        }
+    }
+    else
+    {
+        fprintf(stderr, "Unmatched token near '%.*s' (state '%d')\n",
+                (uint32_t)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
+                &input[offset - 1],
+                NEOAST_STACK_PEEK(buf->lexing_state_stack));
+    }
 }
 
 static void run_destructor(const GrammarParser* parser,
@@ -230,8 +268,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
         // Check for lexing error
         if (tok < 0)
         {
-            // TODO Enable user specified function
-            lr_lex_error(buffers, input, offset);
+            lr_lex_error(parser, buffers, input, offset);
             parser_run_destructors(parser, buffers, -1);
             return -1;
         }
@@ -244,7 +281,6 @@ int32_t parser_parse_lr(const GrammarParser* parser,
 
         if (table_value == TOK_SYNTAX_ERROR)
         {
-            // TODO Enable user specified function
             const TokenPosition* p = NULL;
             if (parser->lexer_opts & LEXER_OPT_TOKEN_POS)
             {
@@ -256,7 +292,8 @@ int32_t parser_parse_lr(const GrammarParser* parser,
                            p,
                            current_state,
                            tok, prev_tok,
-                           parser->token_n);
+                           parser->token_n,
+                           parser->parser_error);
 
             // We need to free the remaining objects in this map
             parser_run_destructors(parser, buffers, (int32_t)i);

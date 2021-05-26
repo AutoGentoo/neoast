@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <cmocka.h>
+#include <neoast.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -31,9 +32,10 @@ void FUNC(name, free)(); \
 return_type FUNC(name, parse)(const void* buffers, const char* input);
 
 // Pretend headers
-DEFINE_HEADER(calc, double);
-DEFINE_HEADER(calc_ascii, double);
+DEFINE_HEADER(calc, double)
+DEFINE_HEADER(calc_ascii, double)
 DEFINE_HEADER(required_use, void*)
+DEFINE_HEADER(error, int)
 
 void required_use_stmt_free(void* self);
 
@@ -117,6 +119,75 @@ CTEST(test_destructor_lex)
     required_use_free();
 }
 
+static volatile int lexer_error_called = 0;
+static volatile int parser_error_called = 0;
+
+void lexer_error_cb(const char* input,
+                    const TokenPosition* position,
+                    uint32_t offset)
+{
+    assert_int_equal(position->line, 2);
+    assert_int_equal(position->col_start, 5);
+    assert_int_equal(offset, 6);
+    assert_int_equal(input[offset - 1], ';');
+    lexer_error_called = 1;
+}
+
+void parser_error_cb(const char* const* token_names,
+                     const TokenPosition* position,
+                     uint32_t last_token,
+                     uint32_t current_token,
+                     const uint32_t expected_tokens[],
+                     uint32_t expected_tokens_n)
+{
+    assert_non_null(token_names);
+    assert_non_null(position);
+    assert_non_null(expected_tokens);
+
+    assert_int_equal(last_token, 1);
+    assert_int_equal(current_token, 1);
+
+    assert_string_equal(token_names[last_token], "A_TOKEN");
+    assert_int_equal(expected_tokens_n, 5); /* 4 operations and EOF */
+
+    assert_string_equal(token_names[current_token], "A_TOKEN");
+
+    assert_string_equal(token_names[expected_tokens[0]], "EOF");
+    assert_string_equal(token_names[expected_tokens[1]], "/");
+    assert_string_equal(token_names[expected_tokens[2]], "*");
+    assert_string_equal(token_names[expected_tokens[3]], "-");
+    assert_string_equal(token_names[expected_tokens[4]], "+");
+
+    assert_int_equal(position->line, 1);
+    assert_int_equal(position->col_start, 14);
+
+    parser_error_called = 1;
+}
+
+CTEST(test_error_ll)
+{
+    lexer_error_called = 0;
+    assert_int_equal(error_init(), 0);
+    void* buffers = error_allocate_buffers();
+    int out = error_parse(buffers, "\n5555;");
+    assert_int_equal(out, 0);
+    assert_int_equal(lexer_error_called, 1);
+    error_free();
+    error_free_buffers(buffers);
+}
+
+CTEST(test_error_yy)
+{
+    parser_error_called = 0;
+    assert_int_equal(error_init(), 0);
+    void* buffers = error_allocate_buffers();
+    int out = error_parse(buffers, "55 + 55 + 99 99");
+    assert_int_equal(parser_error_called, 1);
+    assert_int_equal(out, 0);
+    error_free();
+    error_free_buffers(buffers);
+}
+
 const static struct CMUnitTest left_scan_tests[] = {
         cmocka_unit_test(test_empty),
         cmocka_unit_test(test_parser),
@@ -124,6 +195,8 @@ const static struct CMUnitTest left_scan_tests[] = {
         cmocka_unit_test(test_parser_ascii),
         cmocka_unit_test(test_destructor),
         cmocka_unit_test(test_destructor_lex),
+        cmocka_unit_test(test_error_ll),
+        cmocka_unit_test(test_error_yy),
 };
 
 int main()

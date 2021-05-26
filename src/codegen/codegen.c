@@ -33,10 +33,11 @@
 struct Options {
     // Should we dump the table
     int debug_table;
-    int disable_locks;
-    char* track_position_type;
-    char* debug_ids;
-    char* prefix;
+    const char* track_position_type;
+    const char* debug_ids;
+    const char* prefix;
+    const char* lexing_error_cb;
+    const char* syntax_error_cb;
     parser_t parser_type; // LALR(1) or CLR(1)
 
     unsigned long max_lex_tokens;
@@ -601,10 +602,6 @@ static void codegen_handle_option(
     {
         self->track_position_type = option->value;
     }
-    else if (strcmp(option->key, "disable_locks") == 0)
-    {
-        self->disable_locks = codegen_parse_bool(option);
-    }
     else if (strcmp(option->key, "debug_ids") == 0)
     {
         self->debug_ids = option->value;
@@ -628,6 +625,14 @@ static void codegen_handle_option(
     else if (strcmp(option->key, "parsing_stack_size") == 0)
     {
         self->parsing_stack_n = strtoul(option->value, NULL, 0);
+    }
+    else if (strcmp(option->key, "parsing_error_cb") == 0)
+    {
+        self->syntax_error_cb = option->value;
+    }
+    else if (strcmp(option->key, "lexing_error_cb") == 0)
+    {
+        self->lexing_error_cb = option->value;
     }
     else if (strcmp(option->key, "lex_match_longest") == 0)
     {
@@ -679,20 +684,21 @@ int codegen_write(const struct File* self, FILE* fp)
         destructor_i__++;                     \
     } while (0)
 
-#define DESTROY_ALL while (destructor_i__--) {    \
+#define DESTROY_ALL do { while (destructor_i__--) {    \
         destructors__[destructor_i__].func(destructors__[destructor_i__].ptr); \
-    }
+    } } while (0)
 
-#define EXIT_IF_ERRORS if (has_errors()) { DESTROY_ALL return -1; }
+#define EXIT_IF_ERRORS do { if (has_errors()) { DESTROY_ALL; return -1; } } while (0)
 
     DESTROY_ME(destructors__, free);
 
     struct Options options = {
             .debug_table = 0,
-            .disable_locks = 0,
             .parser_type = LALR_1,
             .debug_ids = NULL,
             .track_position_type = NULL,
+            .lexing_error_cb = NULL,
+            .syntax_error_cb = NULL,
             .prefix = "neoast",
             .max_token_len = 1024,
             .max_lex_tokens = 1024,
@@ -787,7 +793,7 @@ int codegen_write(const struct File* self, FILE* fp)
         return -1;
     }
 
-    EXIT_IF_ERRORS
+    EXIT_IF_ERRORS;
 
     token_n++; // augment token
 
@@ -849,7 +855,7 @@ int codegen_write(const struct File* self, FILE* fp)
         }
     }
 
-    EXIT_IF_ERRORS
+    EXIT_IF_ERRORS;
 
     tokens[grammar_i++] = "TOK_AUGMENT";
 
@@ -974,7 +980,7 @@ int codegen_write(const struct File* self, FILE* fp)
         }
     }
 
-    EXIT_IF_ERRORS
+    EXIT_IF_ERRORS;
 
     fputs("// Lexer states\n"
           "#ifndef NEOAST_EXTERNAL_INCLUDE\n"
@@ -1172,7 +1178,7 @@ int codegen_write(const struct File* self, FILE* fp)
         }
     }
 
-    EXIT_IF_ERRORS
+    EXIT_IF_ERRORS;
     assert(grammar_tok_offset_c == grammar_tok_n);
     put_grammar_table_and_rules(all_rules, gg_rules, tokens, grammar_n, fp);
 
@@ -1213,16 +1219,21 @@ int codegen_write(const struct File* self, FILE* fp)
                 "        .ascii_mappings = __neoast_ascii_mappings,\n"
                 "        .lexer_rules = __neoast_lexer_rules,\n"
                 "        .grammar_rules = __neoast_grammar_rules,\n"
+                "        .lexer_error = %s,"
+                "        .parser_error = %s,"
                 "        .token_names = __neoast_token_names,\n"
                 "        .destructors = __neoast_token_destructors,\n"
                 "        .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,\n"
                 "        .action_token_n = %d,\n"
                 "        .lexer_opts = (lexer_option_t)%d,\n",
-            grammar_n, lex_state_n, action_n, options.lexer_opts
+            grammar_n, lex_state_n,
+            options.lexing_error_cb ? options.lexing_error_cb : "NULL",
+            options.syntax_error_cb ? options.syntax_error_cb : "NULL",
+            action_n, options.lexer_opts
     );
     fputs("};\n\n", fp);
 
-    EXIT_IF_ERRORS
+    EXIT_IF_ERRORS;
 
     CanonicalCollection* cc = canonical_collection_init(&parser);
     canonical_collection_resolve(cc, options.parser_type);
@@ -1365,7 +1376,7 @@ int codegen_write(const struct File* self, FILE* fp)
         fputc('\n', fp);
     }
 
-    EXIT_IF_ERRORS
+    EXIT_IF_ERRORS;
     DESTROY_ALL;
     return error;
 }

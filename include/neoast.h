@@ -59,6 +59,24 @@ typedef int32_t (*lexer_expr) (
         TokenPosition* position);
 typedef void (*parser_destructor) (void* self);
 
+
+// User defined error callbacks
+
+// Called when no matching token could be found
+typedef void (*ll_error_cb)(
+        const char* input,              //!< Input passed in with parse()
+        const TokenPosition* position,  //!< Position of unmatched token (or NULL if track_position != TRUE)
+        uint32_t offset);               //!< Offset in bytes where no token match was found
+                                        //!< Offset from start of file
+
+typedef void (*yy_error_cb)(
+        const char* const* token_names,
+        const TokenPosition* position,
+        uint32_t last_token,
+        uint32_t current_token,
+        const uint32_t expected_tokens[],
+        uint32_t expected_tokens_n);
+
 enum
 {
     // Accept an input during an augmented state
@@ -119,6 +137,9 @@ struct GrammarParser_prv
     const GrammarRule* grammar_rules;
     const char* const* token_names;
     parser_destructor const* destructors;
+
+    ll_error_cb lexer_error;
+    yy_error_cb parser_error;
 
     // Also number of columns
     uint32_t token_n;
