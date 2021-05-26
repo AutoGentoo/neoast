@@ -16,11 +16,11 @@
  */
 
 
-#include <stdio.h>
-#include <cmocka.h>
 #include <string.h>
 #include <codegen/regex.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <cmocka.h>
 
 #define CTEST(name) static void name(void** state)
 
