@@ -139,6 +139,42 @@ void emit_error(const TokenPosition* p, const char* format, ...)
     error_counter++;
 }
 
+void lexing_error_cb(const char* input,
+                     const TokenPosition* position,
+                     uint32_t offset)
+{
+    (void) input;
+    (void) offset;
+
+    emit_error(position, "Unmatched token near:");
+}
+
+void parsing_error_cb(const char* const* token_names,
+                      const TokenPosition* position,
+                      uint32_t last_token,
+                      uint32_t current_token,
+                      const uint32_t expected_tokens[],
+                      uint32_t expected_tokens_n)
+{
+    (void) last_token;
+
+    static char error_string[1024];
+    error_string[0] = 0;
+
+    strcat(error_string, "Unexpected token %s, Expected one of: ");
+    for (int i = 0; i < expected_tokens_n; i++)
+    {
+        if (i > 0)
+        {
+            strcat(error_string, ", ");
+        }
+
+        strcat(error_string, token_names[expected_tokens[i]]);
+    }
+
+    emit_error(position, error_string, token_names[current_token]);
+}
+
 int main(int argc, const char* argv[])
 {
     if (argc != 3)
