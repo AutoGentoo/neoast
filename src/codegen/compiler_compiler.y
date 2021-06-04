@@ -8,6 +8,17 @@
 #include <stdint.h>
 #include <assert.h>
 
+void lexing_error_cb(const char* input,
+                     const TokenPosition* position,
+                     uint32_t offset);
+
+void parsing_error_cb(const char* const* token_names,
+                      const TokenPosition* position,
+                      uint32_t last_token,
+                      uint32_t current_token,
+                      const uint32_t expected_tokens[],
+                      uint32_t expected_tokens_n);
+
 struct LexerTextBuffer
 {
     int32_t counter;
@@ -52,6 +63,8 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 %option prefix="cc"
 %option track_position="TRUE"
 %option debug_table="FALSE"
+%option lexing_error_cb="lexing_error_cb"
+%option parsing_error_cb="parsing_error_cb"
 
 %union {
     char* identifier;

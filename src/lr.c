@@ -116,22 +116,20 @@ uint32_t g_lr_reduce(
     return next_state;
 }
 
-void lr_parse_error(const uint32_t* parsing_table,
-                    const char* const* token_names,
+void lr_parse_error(const GrammarParser* self,
+                    const uint32_t* parsing_table,
                     const TokenPosition* p,
                     uint32_t current_state,
                     uint32_t error_tok,
-                    uint32_t prev_tok,
-                    uint32_t tok_n,
-                    yy_error_cb cb)
+                    uint32_t prev_tok)
 {
-    const char* current_token = token_names[error_tok];
-    const char* prev_token = token_names[prev_tok];
+    const char* current_token = self->token_names[error_tok];
+    const char* prev_token = self->token_names[prev_tok];
 
-    uint32_t index_off = current_state * tok_n;
-    uint32_t* expected_tokens = alloca(sizeof(uint32_t) * tok_n);
+    uint32_t index_off = current_state * self->token_n;
+    uint32_t* expected_tokens = alloca(sizeof(uint32_t) * self->token_n);
     uint32_t expected_tokens_n = 0;
-    for (uint32_t i = 0; i < tok_n; i++)
+    for (uint32_t i = 0; i < self->token_n; i++)
     {
         if (parsing_table[index_off + i] != TOK_SYNTAX_ERROR)
         {
@@ -139,10 +137,11 @@ void lr_parse_error(const uint32_t* parsing_table,
         }
     }
 
-    if (cb)
+    if (self->parser_error)
     {
-        cb(token_names, p, prev_tok, error_tok,
-           expected_tokens, expected_tokens_n);
+        self->parser_error(
+                self->token_names, p, prev_tok, error_tok,
+                expected_tokens, expected_tokens_n);
     }
     else
     {
@@ -157,7 +156,7 @@ void lr_parse_error(const uint32_t* parsing_table,
 
         for (uint32_t i = 0; i < expected_tokens_n; i++)
         {
-            fprintf(stderr, "%s ", token_names[expected_tokens[i]]);
+            fprintf(stderr, "%s ", self->token_names[expected_tokens[i]]);
         }
 
         fprintf(stderr, "\n");
@@ -287,13 +286,11 @@ int32_t parser_parse_lr(const GrammarParser* parser,
                 p = (const TokenPosition*)(lex_val + buffers->union_s);
             }
 
-            lr_parse_error(parsing_table,
-                           parser->token_names,
+            lr_parse_error(parser,
+                           parsing_table,
                            p,
                            current_state,
-                           tok, prev_tok,
-                           parser->token_n,
-                           parser->parser_error);
+                           tok, prev_tok);
 
             // We need to free the remaining objects in this map
             parser_run_destructors(parser, buffers, (int32_t)i);
