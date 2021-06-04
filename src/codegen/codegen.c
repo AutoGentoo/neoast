@@ -1219,10 +1219,10 @@ int codegen_write(const struct File* self, FILE* fp)
                 "        .ascii_mappings = __neoast_ascii_mappings,\n"
                 "        .lexer_rules = __neoast_lexer_rules,\n"
                 "        .grammar_rules = __neoast_grammar_rules,\n"
-                "        .lexer_error = %s,"
-                "        .parser_error = %s,"
                 "        .token_names = __neoast_token_names,\n"
                 "        .destructors = __neoast_token_destructors,\n"
+                "        .lexer_error = %s,\n"
+                "        .parser_error = %s,\n"
                 "        .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,\n"
                 "        .action_token_n = %d,\n"
                 "        .lexer_opts = (lexer_option_t)%d,\n",
