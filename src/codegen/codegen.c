@@ -301,8 +301,9 @@ void put_grammar_rule_action(
 
         if (!stop)
         {
-            for (int i = 0; i < self->position.col_start -
-                                strlen(typed_tokens[expression_token]->key) - 4; i++)
+            int space_count = self->position.col_start -
+                              strlen(typed_tokens[expression_token]->key) - 4;
+            for (int i = 0; i < space_count; i++)
             {
                 fputc(' ', fp);
             }
