@@ -86,7 +86,7 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    int error = codegen_write("bootstrap_grammar", f, fp);
+    int error = codegen_write(NULL, f, fp);
     fclose(fp);
 
     parser_free_buffers(buf);

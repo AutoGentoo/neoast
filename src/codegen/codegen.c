@@ -99,7 +99,7 @@ void put_lexer_rule_action(
 
     // Put a line directive to tell the compiler
     // where to original code resides
-    if (self->position.line)
+    if (self->position.line && grammar_file_path)
     {
         fprintf(fp, "\n#line %d \"%s\"\n", self->position.line, grammar_file_path);
     }
@@ -285,7 +285,7 @@ void put_grammar_rule_action(
 
     // Put a line directive to tell the compiler
     // where to original code resides
-    if (self->position.line)
+    if (self->position.line && grammar_file_path)
     {
         // Return value
         int expression_token = get_named_token(parent->name, tokens, token_n);

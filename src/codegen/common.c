@@ -13,6 +13,11 @@ struct KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, 
     {
         self->position = *p;
     }
+    else
+    {
+        self->position.line = 0;
+        self->position.col_start = 0;
+    }
 
     self->next = NULL;
     self->back = NULL;
@@ -35,6 +40,11 @@ struct Token* build_token(const TokenPosition* position, char* name)
     if (position)
     {
         self->position = *position;
+    }
+    else
+    {
+        self->position.line = 0;
+        self->position.col_start = 0;
     }
 
     self->name = name;
@@ -62,6 +72,11 @@ struct Token* build_token_ascii(const TokenPosition* position, char value)
     if (position)
     {
         self->position = *position;
+    }
+    else
+    {
+        self->position.line = 0;
+        self->position.col_start = 0;
     }
 
     self->name = get_ascii_token_name(value);
