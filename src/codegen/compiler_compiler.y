@@ -25,12 +25,13 @@ struct LexerTextBuffer
     uint32_t s;
     uint32_t n;
     char* buffer;
+    TokenPosition start_position;
 };
 
 static __thread struct LexerTextBuffer brace_buffer = {0};
 
 static inline void ll_add_to_brace(const char* lex_text, uint32_t len);
-static inline void ll_match_brace(ParsingStack* lex_state);
+static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* start_position);
 
 }
 
@@ -48,12 +49,13 @@ static inline void ll_add_to_brace(const char* lex_text, uint32_t len)
     brace_buffer.n += len;
 }
 
-static inline void ll_match_brace(ParsingStack* lex_state)
+static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* start_position)
 {
     NEOAST_STACK_PUSH(lex_state, S_MATCH_BRACE);
     brace_buffer.s = 1024;
     brace_buffer.buffer = malloc(brace_buffer.s);
     brace_buffer.n = 0;
+    brace_buffer.start_position = *start_position;
     brace_buffer.counter = 1;
 }
 
@@ -76,6 +78,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
     struct GrammarRuleSingleProto* g_single_rule;
     struct GrammarRuleProto* g_rule;
     struct File* file;
+    struct { char* string; TokenPosition position; } action;
 }
 
 %token LL
@@ -94,7 +97,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 %token DESTRUCTOR
 %token<ascii> ASCII
 %token<identifier> LITERAL
-%token<identifier> ACTION
+%token<action> ACTION
 %token<identifier> IDENTIFIER
 %token<identifier> LEX_STATE
 %token '<'
@@ -119,6 +122,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 %start <file> program
 
 %destructor<identifier> { free($$); }
+%destructor<action> { free($$.string); }
 %destructor<l_rule> { lexer_rule_free($$); }
 %destructor<g_single_rule> { grammar_rule_single_free($$); }
 %destructor<g_rule> { grammar_rule_multi_free($$); }
@@ -179,7 +183,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
                         return MACRO;
                     }
 "{identifier}"      { yyval->identifier = strdup(yytext); return IDENTIFIER; }
-"{"                 { ll_match_brace(lex_state); }
+"{"                 { ll_match_brace(lex_state, position); }
 
 <S_LL_RULES> {
 "[\n]"              { position->line++; }
@@ -196,7 +200,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
                         return LEX_STATE;
                     }
 "{literal}"         { yyval->identifier = strndup(yytext + 1, len - 2); return LITERAL; }
-"{"                 { ll_match_brace(lex_state); }
+"{"                 { ll_match_brace(lex_state, position); }
 }
 
 <S_LL_STATE> {
@@ -207,7 +211,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 
 "{literal}"         { yyval->identifier = strndup(yytext + 1, len - 2); return LITERAL; }
 
-"{"                 { ll_match_brace(lex_state); }
+"{"                 { ll_match_brace(lex_state, position); }
 "}"                 { NEOAST_STACK_POP(lex_state); return END_STATE; }
 
 }
@@ -223,7 +227,7 @@ static inline void ll_match_brace(ParsingStack* lex_state)
 ":"                 { return ':'; }
 "\|"                { return '|'; }
 ";"                 { return ';'; }
-"{"                 { ll_match_brace(lex_state); }
+"{"                 { ll_match_brace(lex_state, position); }
 }
 
 <S_MATCH_BRACE> {
@@ -246,7 +250,8 @@ static inline void ll_match_brace(ParsingStack* lex_state)
                             // This is the outer-most brace
                             brace_buffer.buffer[brace_buffer.n++] = 0;
                             NEOAST_STACK_POP(lex_state);
-                            yyval->identifier = strndup(brace_buffer.buffer, brace_buffer.n);
+                            yyval->action.string = strndup(brace_buffer.buffer, brace_buffer.n);
+                            yyval->action.position = brace_buffer.start_position;
                             free(brace_buffer.buffer);
                             brace_buffer.buffer = NULL;
                             return ACTION;
@@ -282,12 +287,12 @@ pair: OPTION IDENTIFIER '=' LITERAL         { $$ = declare_option($p1, $2, $4); 
     | START '<' IDENTIFIER '>' IDENTIFIER   { $$ = declare_start($p1, $3, $5); }
     | TOKEN '<' IDENTIFIER '>' tokens       { $$ = declare_typed_tokens($3, $5); }
     | TYPE '<' IDENTIFIER '>' tokens        { $$ = declare_types($3, $5); }
-    | DESTRUCTOR '<' IDENTIFIER '>' ACTION  { $$ = declare_destructor($p1, $3, $5); }
+    | DESTRUCTOR '<' IDENTIFIER '>' ACTION  { $$ = declare_destructor(&$5.position, $3, $5.string); }
     | RIGHT tokens                          { $$ = declare_right($2); }
     | LEFT tokens                           { $$ = declare_left($2); }
-    | TOP ACTION                            { $$ = declare_top($p1, $2); }
-    | BOTTOM ACTION                         { $$ = declare_bottom($p1, $2); }
-    | UNION ACTION                          { $$ = declare_union($p1, $2); }
+    | TOP ACTION                            { $$ = declare_top(&$2.position, $2.string); }
+    | BOTTOM ACTION                         { $$ = declare_bottom(&$2.position, $2.string); }
+    | UNION ACTION                          { $$ = declare_union(&$2.position, $2.string); }
     | MACRO                                 { $$ = $1; }
     ;
 
@@ -295,7 +300,7 @@ header: pair                        { $$ = $1; }
       | pair header                 { $$ = $1->back ? $1->back : $1; $1->next = $2; }
       ;
 
-lexer_rule: LITERAL ACTION          { $$ = declare_lexer_rule($p1, $1, $2); }
+lexer_rule: LITERAL ACTION          { $$ = declare_lexer_rule(&$2.position, $1, $2.string); }
           ;
 
 lexer_rules: lexer_rule             { $$ = $1; }
@@ -303,14 +308,14 @@ lexer_rules: lexer_rule             { $$ = $1; }
            | LEX_STATE lexer_rules END_STATE { $$ = declare_state_rule($p1, $1, $2); }
            ;
 
-single_grammar: tokens ACTION                   { $$ = declare_single_grammar($p2, $1, $2); }
+single_grammar: tokens ACTION                   { $$ = declare_single_grammar(&$2.position, $1, $2.string); }
               ;
 
 multi_grammar: single_grammar                   { $$ = $1; }
              | single_grammar '|' multi_grammar { $$ = $1; $$->next = $3; }
 
              // Empty rule
-             | ACTION                           { $$ = declare_single_grammar($p1, NULL, $1); }
+             | ACTION                           { $$ = declare_single_grammar(&$1.position, NULL, $1.string); }
              ;
 
 grammar: IDENTIFIER ':' multi_grammar ';'       { $$ = declare_grammar($p1, $1, $3); }

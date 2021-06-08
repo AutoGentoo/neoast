@@ -91,7 +91,7 @@ struct File
 };
 
 int gen_parser_init(GrammarParser* self);
-int codegen_write(const struct File* self, FILE* fp);
+int codegen_write(const char* grammar_file_path, const struct File* self, FILE* fp);
 
 void emit_warning(const TokenPosition* position, const char* message, ...);
 void emit_error(const TokenPosition* position, const char* message, ...);
