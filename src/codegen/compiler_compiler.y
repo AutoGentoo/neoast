@@ -121,14 +121,14 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 %type <file> program
 %start <file> program
 
-%destructor<identifier> { free($$); }
-%destructor<action> { free($$.string); }
-%destructor<l_rule> { lexer_rule_free($$); }
-%destructor<g_single_rule> { grammar_rule_single_free($$); }
-%destructor<g_rule> { grammar_rule_multi_free($$); }
-%destructor<key_val> { key_val_free($$); }
-%destructor<token> { tokens_free($$); }
-%destructor<file> { file_free($$); }
+%destructor<identifier>     { free($$); }
+%destructor<action>         { free($$.string); }
+%destructor<l_rule>         { lexer_rule_free($$); }
+%destructor<g_single_rule>  { grammar_rule_single_free($$); }
+%destructor<g_rule>         { grammar_rule_multi_free($$); }
+%destructor<key_val>        { key_val_free($$); }
+%destructor<token>          { tokens_free($$); }
+%destructor<file>           { file_free($$); }
 
 +literal        \"(\\.|[^\"\\])*\"
 +identifier     [A-Za-z_][\w]*

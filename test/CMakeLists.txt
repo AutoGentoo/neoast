@@ -4,6 +4,7 @@ macro(CUnitTest name)
             LINK_LIBRARIES neoast neoast-codegen
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             ENVIRONMENT ${EXEC_ENV}
+            INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
             )
 endmacro()
 
@@ -15,6 +16,7 @@ add_mocked_test(macro_C
         LINK_LIBRARIES neoast neoast-codegen
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT ${EXEC_ENV}
+        INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
         )
 
 add_mocked_test(tablegen_C
@@ -22,6 +24,7 @@ add_mocked_test(tablegen_C
         LINK_LIBRARIES neoast neoast-codegen m neoast-util
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT ${EXEC_ENV}
+        INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
         )
 
 BuildParser(calculator_parser input/calculator.y)
@@ -39,5 +42,6 @@ add_mocked_test(integration_C
         ${error_parser_OUTPUT}
         LINK_LIBRARIES neoast m
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
         ENVIRONMENT ${EXEC_ENV}
         )

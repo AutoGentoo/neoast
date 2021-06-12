@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 enable_language(C)
 
-project(neoast VERSION "1.2")
+project(neoast VERSION "1.3")
 
 option(SANITIZER_BUILD "Build with AddressSanitizer" OFF)
 set(SANITIZER "" CACHE STRING "Compile with -fsanitize=...")
