@@ -20,6 +20,10 @@
 #define NEOAST_CODEGEN_H
 
 #include <neoast.h>
+#include <parsergen/canonical_collection.h>
+
+#define CODEGEN_STRUCT "NeoastValue"
+#define CODEGEN_UNION "NeoastUnion"
 
 typedef enum
 {
@@ -38,15 +42,17 @@ typedef enum
     KEY_VAL_DESTRUCTOR,
 } key_val_t;
 
-struct KeyVal
+typedef struct KeyVal_ KeyVal;
+
+struct KeyVal_
 {
     TokenPosition position;
     key_val_t type;
     char* key;
     char* value;
 
-    struct KeyVal* back;
-    struct KeyVal* next;
+    KeyVal* back;
+    KeyVal* next;
 };
 
 struct LexerRuleProto
@@ -85,9 +91,27 @@ struct GrammarRuleProto
 
 struct File
 {
-    struct KeyVal* header;
+    KeyVal* header;
     struct LexerRuleProto* lexer_rules;
     struct GrammarRuleProto* grammar_rules;
+};
+
+struct Options {
+    // Should we dump the table
+    int debug_table;
+    const char* track_position_type;
+    const char* debug_ids;
+    const char* prefix;
+    const char* lexing_error_cb;
+    const char* syntax_error_cb;
+    parser_t parser_type; // LALR(1) or CLR(1)
+
+    unsigned long max_lex_tokens;
+    unsigned long max_token_len;
+    unsigned long max_lex_state_depth;
+    unsigned long parsing_stack_n;
+
+    lexer_option_t lexer_opts;
 };
 
 int gen_parser_init(GrammarParser* self);
@@ -97,14 +121,14 @@ void emit_warning(const TokenPosition* position, const char* message, ...);
 void emit_error(const TokenPosition* position, const char* message, ...);
 int has_errors();
 
-struct KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value);
+KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value);
 struct Token* build_token(const TokenPosition* position, char* name);
 struct Token* build_token_ascii(const TokenPosition* position, char value);
 char* get_ascii_token_name(char value);
 char get_ascii_from_name(const char* name);
 
 void tokens_free(struct Token* self);
-void key_val_free(struct KeyVal* self);
+void key_val_free(KeyVal* self);
 void lexer_rule_free(struct LexerRuleProto* self);
 void grammar_rule_single_free(struct GrammarRuleSingleProto* self);
 void grammar_rule_multi_free(struct GrammarRuleProto* self);

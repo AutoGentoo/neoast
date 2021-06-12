@@ -72,7 +72,7 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
     char* identifier;
     char ascii;
     key_val_t key_val_type;
-    struct KeyVal* key_val;
+    KeyVal* key_val;
     struct LexerRuleProto* l_rule;
     struct Token* token;
     struct GrammarRuleSingleProto* g_single_rule;

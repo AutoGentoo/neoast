@@ -15,11 +15,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-#include <string.h>
-#include <stdlib.h>
 #include "lexer.h"
 #include "parser.h"
+
+#include <reflex/stdmatcher.h>
+
+
 
 int32_t
 lex_next(const char* input,
@@ -29,7 +30,7 @@ lex_next(const char* input,
          uint32_t len,
          uint32_t* offset)
 {
-    while (1) // while tokens are being skipped
+    while (true) // while tokens are being skipped
     {
         if (*offset >= len)
         {

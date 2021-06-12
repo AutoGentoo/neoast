@@ -28,7 +28,6 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdio.h>
-#include <cre2.h>
 
 #define NEOAST_ASCII_MAX ('~' + 1)
 #define NEOAST_ARR_LEN(arr) ((sizeof(arr)) / sizeof(((arr)[0])))
@@ -109,6 +108,11 @@ typedef enum
 {
     LEXER_OPT_LONGEST_MATCH = 1 << 0,
     LEXER_OPT_TOKEN_POS = 1 << 1,
+
+
+    // Input types for the lexer
+    // const char* is always enabled
+    LEXER_OPT_
 } lexer_option_t;
 
 enum
@@ -128,7 +132,6 @@ struct GrammarRule_prv
 
 struct GrammarParser_prv
 {
-    cre2_options_t* regex_opts;
     uint32_t grammar_n;
     uint32_t lex_state_n;
     const uint32_t* lex_n;
@@ -138,7 +141,7 @@ struct GrammarParser_prv
     const char* const* token_names;
     parser_destructor const* destructors;
 
-    ll_error_cb lexer_error;
+    // ll_error_cb lexer_error;
     yy_error_cb parser_error;
 
     // Also number of columns
@@ -181,7 +184,6 @@ struct TokenPosition_prv
 
 struct LexerRule_prv
 {
-    cre2_regexp_t* regex;
     lexer_expr expr;
     int32_t tok;
     const char* regex_raw;

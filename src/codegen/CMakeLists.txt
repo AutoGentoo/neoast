@@ -1,7 +1,7 @@
 add_library(neoast-codegen STATIC
         codegen.h
         codegen.c
-        regex.c regex.h compiler.c compiler.h common.c)
+        regex.c regex.h compiler.c compiler.h common.c cg_uti.c cg_uti.h cg_lexer.c cg_lexer.h)
 
 add_executable(neoast-bootstrap
         bootstrap/codegen_grammar.c

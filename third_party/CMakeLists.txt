@@ -2,6 +2,8 @@ if (ENABLE_NEOAST_TESTS)
     add_subdirectory(cmocka EXCLUDE_FROM_ALL)
 endif()
 
+add_subdirectory(reflex)
+
 # set(RE2_BUILD_TESTING OFF)
 
 # add_subdirectory(re2)

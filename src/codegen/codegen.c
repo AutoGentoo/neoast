@@ -23,150 +23,12 @@
 #include "stdio.h"
 #include "codegen.h"
 #include "regex.h"
+#include "cg_uti.h"
+#include "cg_lexer.h"
 #include <parsergen/canonical_collection.h>
 #include <util/util.h>
 #include <stddef.h>
 
-#define CODEGEN_STRUCT "NeoastValue"
-#define CODEGEN_UNION "NeoastUnion"
-
-struct Options {
-    // Should we dump the table
-    int debug_table;
-    const char* track_position_type;
-    const char* debug_ids;
-    const char* prefix;
-    const char* lexing_error_cb;
-    const char* syntax_error_cb;
-    parser_t parser_type; // LALR(1) or CLR(1)
-
-    unsigned long max_lex_tokens;
-    unsigned long max_token_len;
-    unsigned long max_lex_state_depth;
-    unsigned long parsing_stack_n;
-
-    lexer_option_t lexer_opts;
-};
-
-static inline
-void put_enum(int start, int n, const char* const* names, FILE* fp)
-{
-    if (!n)
-    {
-        fputs("enum {};\n\n", fp);
-        return;
-    }
-
-    fputs("enum\n{\n", fp);
-    fprintf(fp, "    %s = %d,\n", names[0], start++);
-    for (int i = 1; i < n; i++)
-    {
-        fprintf(fp, "    %s, // %d 0x%03X", names[i], start, start);
-        if (strncmp(names[i], "ASCII_CHAR_0x", 13) == 0)
-        {
-            uint8_t c = strtoul(&names[i][13], NULL, 16);
-            fprintf(fp, " '%c'\n", c);
-        }
-        else
-        {
-            fputc('\n', fp);
-        }
-        start++;
-    }
-    fputs("};\n\n", fp);
-}
-
-static inline
-void put_lexer_rule_action(
-        const char* grammar_file_path,
-        struct LexerRuleProto* self,
-        const char* state_name,
-        uint32_t regex_i,
-        FILE* fp)
-{
-    fprintf(fp, "static int32_t\nll_rule_%s_%02d(const char* yytext, "
-                CODEGEN_UNION"* yyval, "
-                "unsigned int len, "
-                "ParsingStack* lex_state, "
-                "TokenPosition* position"
-                ")\n{\n"
-                "    (void) yytext;\n"
-                "    (void) yyval;\n"
-                "    (void) len;\n"
-                "    (void) lex_state;\n"
-                "    (void) position;\n"
-                "    {", state_name, regex_i);
-
-    // Put a line directive to tell the compiler
-    // where to original code resides
-    if (self->position.line && grammar_file_path)
-    {
-        fprintf(fp, "\n#line %d \"%s\"\n", self->position.line, grammar_file_path);
-    }
-
-    fputs(self->function, fp);
-    fputs("}\n    return -1;\n}\n\n", fp);
-}
-
-static inline
-const char* check_grammar_arg_skip(const char* start, const char* search)
-{
-    // Assume we are not in comment or string
-    int current_red_zone = -1;
-    static const struct
-    {
-        const char* start_str;
-        const char* end_str;
-        uint32_t len[2];
-    } red_zone_desc[] = {
-            {"//", "\n", {2, 1}},
-            {"/*", "*/", {2, 2}},
-            {"\"", "\"", {1, 1}}
-    };
-
-    for (; (start < search || current_red_zone != -1) && *start; start++)
-    {
-        if (*start == '\\') // escape next character
-            continue;
-
-        for (int i = 0; i < sizeof(red_zone_desc) / sizeof(red_zone_desc[0]); i++)
-        {
-            if (current_red_zone == -1)
-            {
-                // Check for the start of a red zone
-                if (strncmp(start, red_zone_desc[i].start_str, red_zone_desc[i].len[0]) == 0)
-                {
-                    current_red_zone = i;
-                    start += red_zone_desc[i].len[0] - 1;
-                    break;
-                }
-            } else
-            {
-                // Check for the end of a red zone
-                if (strncmp(start, red_zone_desc[i].end_str, red_zone_desc[i].len[1]) == 0)
-                {
-                    current_red_zone = -1;
-                    start += red_zone_desc[i].len[1] - 1;
-                    break;
-                }
-            }
-        }
-    }
-
-    return start;
-}
-
-static inline
-int get_named_token(const char* token_name, const char* const* tokens, uint32_t token_n)
-{
-    for (int i = 0; i < token_n; i++)
-    {
-        if (strcmp(tokens[i], token_name) == 0)
-            return i;
-    }
-
-    return -1;
-}
 
 static inline
 const char* put_grammar_rule_arg(
@@ -174,7 +36,7 @@ const char* put_grammar_rule_arg(
         struct GrammarRuleProto* parent,
         struct GrammarRuleSingleProto* self,
         const char** tokens,
-        const struct KeyVal** typed_tokens,
+        const KeyVal** typed_tokens,
         const struct Options* options,
         uint32_t token_n,
         FILE* fp)
@@ -268,7 +130,7 @@ void put_grammar_rule_action(
         struct GrammarRuleProto* parent,
         struct GrammarRuleSingleProto* self,
         const char** tokens,
-        const struct KeyVal** typed_tokens,
+        const KeyVal** typed_tokens,
         const struct Options* options,
         uint32_t token_n,
         uint32_t rule_n,
@@ -301,8 +163,8 @@ void put_grammar_rule_action(
 
         if (!stop)
         {
-            int space_count = self->position.col_start -
-                              strlen(typed_tokens[expression_token]->key) - 4;
+            uint32_t space_count = self->position.col_start -
+                    strlen(typed_tokens[expression_token]->key) - 4;
             for (int i = 0; i < space_count; i++)
             {
                 fputc(' ', fp);
@@ -356,7 +218,7 @@ void put_grammar_rule_action(
 }
 
 static inline
-void put_destructor_action(const struct KeyVal* destructor, FILE* fp)
+void put_destructor_action(const KeyVal* destructor, FILE* fp)
 {
     fprintf(fp, "static void\n%s_destructor("
                 CODEGEN_UNION"* self)\n{\n"
@@ -396,88 +258,7 @@ void put_destructor_action(const struct KeyVal* destructor, FILE* fp)
     fputs("}\n}\n\n", fp);
 }
 
-static inline
-void put_lexer_rule_regex(LexerRule* self, FILE* fp)
-{
-    fputs("        ", fp);
-    for (const char* iter = self->regex_raw; *iter; iter++)
-    {
-        fprintf(fp, "0x%02x, ", *iter);
-    }
 
-    // Null terminator
-    fprintf(fp, "0x%02x,\n", 0);
-}
-
-static inline
-uint32_t put_lexer_rule(LexerRule* self, const char* state_name, uint32_t offset, uint32_t rule_i, FILE* fp)
-{
-    if (self->expr)
-    {
-        fprintf(fp, "        {"
-                    ".expr = (lexer_expr) ll_rule_%s_%02d, "
-                    ".regex_raw = &ll_rules_state_%s_regex_table[%d],"
-                    "}, // %s\n",
-                state_name,  rule_i, state_name, offset, self->regex_raw);
-    } else
-    {
-        // TODO Add support for quick token optimization in code gen
-    }
-
-    return strlen(self->regex_raw) + 1;
-}
-
-static inline
-void put_lexer_state_rules(LexerRule* rules, uint32_t rules_n,
-                           const char* state_name, FILE* fp)
-{
-    // First we need to build the regex table
-    fprintf(fp, "static const char ll_rules_state_%s_regex_table[] = {\n", state_name);
-    for (uint32_t i = 0; i < rules_n; i++)
-    {
-        put_lexer_rule_regex(&rules[i], fp);
-    }
-    fputs("};\n\n", fp);
-
-    fprintf(fp, "static LexerRule ll_rules_state_%s[] = {\n", state_name);
-    uint32_t offset = 0;
-    for (int i = 0; i < rules_n; i++)
-    {
-        offset += put_lexer_rule(&rules[i], state_name, offset, i, fp);
-    }
-
-    fputs("};\n\n", fp);
-}
-
-static inline
-void put_lexer_rule_count(const uint32_t* ll_rule_count, int lex_state_n, FILE* fp)
-{
-    fputs("static const uint32_t lexer_rule_n[] = {", fp);
-    for (int i = 0; i < lex_state_n; i++)
-    {
-        if (i + 1 >= lex_state_n)
-        {
-            fprintf(fp, "%d", ll_rule_count[i]);
-        }
-        else
-        {
-            fprintf(fp, "%d, ", ll_rule_count[i]);
-        }
-    }
-    fputs("};\n", fp);
-}
-
-static inline
-void put_lexer_states(const char* const* states_names, int states, FILE* fp)
-{
-    fputs("static LexerRule* __neoast_lexer_rules[] = {\n", fp);
-    for (int i = 0; i < states; i++)
-    {
-        fprintf(fp, "        ll_rules_state_%s,\n", states_names[i]);
-    }
-
-    fputs("};\n\n", fp);
-}
 
 static inline
 void put_grammar_table_and_rules(
@@ -582,112 +363,6 @@ void put_ascii_mappings(const uint32_t ascii_mappings[NEOAST_ASCII_MAX], FILE* f
     fputs("};\n\n", fp);
 }
 
-static inline
-int codegen_index(const char* const* array, const char* to_find, int n)
-{
-    for (int i = 0; i < n; i++)
-    {
-        if (strcmp(array[i], to_find) == 0)
-        {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-static int codegen_parse_bool(const struct KeyVal* self)
-{
-    if (strcmp(self->value, "TRUE") == 0
-        || strcmp(self->value, "true") == 0
-        || strcmp(self->value, "True") == 0
-        || strcmp(self->value, "1") == 0)
-        return 1;
-    else if (strcmp(self->value, "FALSE") == 0
-             || strcmp(self->value, "false") == 0
-             || strcmp(self->value, "False") == 0
-             || strcmp(self->value, "0") == 0)
-        return 0;
-
-    emit_warning(&self->position,
-                 "Unable to parse boolean value '%s', assuming FALSE",
-                 self->value);
-    return 0;
-}
-
-static void codegen_handle_option(
-        struct Options* self,
-        const struct KeyVal* option)
-{
-    if (strcmp(option->key, "parser_type") == 0)
-    {
-        if (strcmp(option->value, "LALR(1)") == 0)
-        {
-            self->parser_type = LALR_1;
-        }
-        else if (strcmp(option->value, "CLR(1)") == 0)
-        {
-            self->parser_type = CLR_1;
-        }
-        else
-        {
-            emit_error(&option->position, "Invalid parser type, support types: 'LALR(1)', 'CLR(1)'");
-        }
-    }
-    else if (strcmp(option->key, "debug_table") == 0)
-    {
-        self->debug_table = codegen_parse_bool(option);
-    }
-    else if (strcmp(option->key, "track_position") == 0)
-    {
-        self->lexer_opts |= codegen_parse_bool(option) ? LEXER_OPT_TOKEN_POS : 0;
-    }
-    else if (strcmp(option->key, "track_position_type") == 0)
-    {
-        self->track_position_type = option->value;
-    }
-    else if (strcmp(option->key, "debug_ids") == 0)
-    {
-        self->debug_ids = option->value;
-    }
-    else if (strcmp(option->key, "prefix") == 0)
-    {
-        self->prefix = option->value;
-    }
-    else if (strcmp(option->key, "max_lex_tokens") == 0)
-    {
-        self->max_lex_tokens = strtoul(option->value, NULL, 0);
-    }
-    else if (strcmp(option->key, "max_token_len") == 0)
-    {
-        self->max_token_len = strtoul(option->value, NULL, 0);
-    }
-    else if (strcmp(option->key, "max_lex_state_depth") == 0)
-    {
-        self->max_lex_state_depth = strtoul(option->value, NULL, 0);
-    }
-    else if (strcmp(option->key, "parsing_stack_size") == 0)
-    {
-        self->parsing_stack_n = strtoul(option->value, NULL, 0);
-    }
-    else if (strcmp(option->key, "parsing_error_cb") == 0)
-    {
-        self->syntax_error_cb = option->value;
-    }
-    else if (strcmp(option->key, "lexing_error_cb") == 0)
-    {
-        self->lexing_error_cb = option->value;
-    }
-    else if (strcmp(option->key, "lex_match_longest") == 0)
-    {
-        self->lexer_opts |= codegen_parse_bool(option) ? LEXER_OPT_LONGEST_MATCH : 0;
-    }
-    else
-    {
-        emit_error(&option->position, "Unsupported option, ignoring");
-    }
-}
-
 int codegen_write(
         const char* grammar_file_path,
         const struct File* self,
@@ -703,10 +378,10 @@ int codegen_write(
     //   7. Generate table and write
     //   8. Generate entry point and buffer creation
 
-    const struct KeyVal* _header = NULL;
-    const struct KeyVal* _bottom = NULL;
-    const struct KeyVal* _union = NULL;
-    const struct KeyVal* _start = NULL;
+    const KeyVal* _header = NULL;
+    const KeyVal* _bottom = NULL;
+    const KeyVal* _union = NULL;
+    const KeyVal* _start = NULL;
 
     int action_n = 1, token_n = 1, // reserved eof
     typed_token_n = 0, precedence_n = 0,
@@ -758,7 +433,7 @@ int codegen_write(
 
     // Iterate a single time though the header data
     // Count all of the different header option types
-    for (struct KeyVal* iter = self->header; iter; iter = iter->next)
+    for (KeyVal* iter = self->header; iter; iter = iter->next)
     {
         switch (iter->type)
         {
@@ -848,8 +523,8 @@ int codegen_write(
     int action_i = 0, grammar_i = action_n,
             typed_token_i = 0, lex_state_i = 1;
     const char** tokens = calloc(token_n, sizeof(char*));
-    const struct KeyVal** typed_tokens = calloc(token_n, sizeof(struct KeyVal*));
-    const struct KeyVal** destructors = calloc(token_n, sizeof(struct KeyVal*));
+    const KeyVal** typed_tokens = calloc(token_n, sizeof(KeyVal*));
+    const KeyVal** destructors = calloc(token_n, sizeof(KeyVal*));
     DESTROY_ME(tokens, free);
     DESTROY_ME(typed_tokens, free);
     DESTROY_ME(destructors, free);
@@ -860,7 +535,7 @@ int codegen_write(
     uint32_t ascii_mappings[NEOAST_ASCII_MAX] = {0};
 
     tokens[action_i++] = "EOF";
-    for (struct KeyVal* iter = self->header; iter; iter = iter->next)
+    for (KeyVal* iter = self->header; iter; iter = iter->next)
     {
         switch (iter->type)
         {
@@ -981,7 +656,7 @@ int codegen_write(
     // Dump the destructor actions
     // Generate the precedence table
     // Generate the destructor table
-    for (struct KeyVal* iter = self->header; iter; iter = iter->next)
+    for (KeyVal* iter = self->header; iter; iter = iter->next)
     {
         int token_id;
         int install_count;

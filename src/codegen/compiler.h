@@ -3,7 +3,7 @@
 
 #include "codegen.h"
 
-typedef struct KeyVal kv;
+typedef KeyVal kv;
 typedef struct LexerRuleProto lr_p;
 typedef struct GrammarRuleSingleProto grs_p;
 typedef struct GrammarRuleProto gr_p;

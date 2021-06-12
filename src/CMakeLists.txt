@@ -1,16 +1,27 @@
-add_library(neoast STATIC
-        lexer.c
+add_library(neoast_builtin_lexer STATIC
+        lexer.cc
         lexer.h
+        )
+
+add_library(neoast STATIC
         parser.h
         lr.c parser.c
         ../include/neoast.h)
 
 target_include_directories(neoast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
 target_include_directories(neoast
         PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/../include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/cre2/src)
-target_link_libraries(neoast cre2 re2 pthread)
+        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/reflex/include)
+
+target_include_directories(neoast_builtin_lexer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(neoast_builtin_lexer
+        PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/reflex/include)
+
+target_link_libraries(neoast pthread)
 target_compile_options(neoast PRIVATE -fPIC)
 
 add_subdirectory(parsergen)

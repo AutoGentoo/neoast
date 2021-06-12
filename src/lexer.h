@@ -19,8 +19,6 @@
 #ifndef NEOAST_LEXER_H
 #define NEOAST_LEXER_H
 
-#include <stdio.h>
-#include <cre2.h>
 #include <neoast.h>
 
 /**
