@@ -77,7 +77,12 @@ void put_enum(int start, int n, const char* const* names, FILE* fp)
 }
 
 static inline
-void put_lexer_rule_action(struct LexerRuleProto* self, const char* state_name, uint32_t regex_i, FILE* fp)
+void put_lexer_rule_action(
+        const char* grammar_file_path,
+        struct LexerRuleProto* self,
+        const char* state_name,
+        uint32_t regex_i,
+        FILE* fp)
 {
     fprintf(fp, "static int32_t\nll_rule_%s_%02d(const char* yytext, "
                 CODEGEN_UNION"* yyval, "
@@ -91,6 +96,14 @@ void put_lexer_rule_action(struct LexerRuleProto* self, const char* state_name, 
                 "    (void) lex_state;\n"
                 "    (void) position;\n"
                 "    {", state_name, regex_i);
+
+    // Put a line directive to tell the compiler
+    // where to original code resides
+    if (self->position.line && grammar_file_path)
+    {
+        fprintf(fp, "\n#line %d \"%s\"\n", self->position.line, grammar_file_path);
+    }
+
     fputs(self->function, fp);
     fputs("}\n    return -1;\n}\n\n", fp);
 }
@@ -251,6 +264,7 @@ const char* put_grammar_rule_arg(
 
 static inline
 void put_grammar_rule_action(
+        const char* grammar_file_path,
         struct GrammarRuleProto* parent,
         struct GrammarRuleSingleProto* self,
         const char** tokens,
@@ -267,13 +281,42 @@ void put_grammar_rule_action(
                 "    (void) args;\n"
                 "    {", rule_n);
 
+    int stop = 0;
+
+    // Put a line directive to tell the compiler
+    // where to original code resides
+    if (self->position.line && grammar_file_path)
+    {
+        // Return value
+        int expression_token = get_named_token(parent->name, tokens, token_n);
+        if (expression_token == -1)
+        {
+            emit_error(&self->position, "Rule not defined", parent->name);
+            stop = 1;
+        }
+
+        assert(typed_tokens[expression_token]);
+
+        fprintf(fp, "\n#line %d \"%s\"\n", self->position.line, grammar_file_path);
+
+        if (!stop)
+        {
+            int space_count = self->position.col_start -
+                              strlen(typed_tokens[expression_token]->key) - 4;
+            for (int i = 0; i < space_count; i++)
+            {
+                fputc(' ', fp);
+            }
+        }
+    }
+
     // Find all usages of $N or $$
     // Check if this usage should be ignored (comment or string)
     // Replace this usage with the appropriate C-value
 
     const char* search = NULL;
     const char* start = self->function;
-    while ((search = strchr(start, '$')))
+    while ((search = strchr(start, '$')) && !stop)
     {
         if ((search[1] >= '0' && search[1] <= '9') || search[1] == '$' || search[1] == 'p')
         {
@@ -303,12 +346,13 @@ void put_grammar_rule_action(
         fwrite(start, 1, search - start, fp);
         start = search;
     }
+
     if (start)
     {
         fputs(start, fp);
     }
 
-    fputs("}\n}\n\n", fp);
+    fputs("\n    }\n}\n\n", fp);
 }
 
 static inline
@@ -644,7 +688,10 @@ static void codegen_handle_option(
     }
 }
 
-int codegen_write(const struct File* self, FILE* fp)
+int codegen_write(
+        const char* grammar_file_path,
+        const struct File* self,
+        FILE* fp)
 {
     // Codegen steps:
     //   1. Write the header
@@ -1015,7 +1062,7 @@ int codegen_write(const struct File* self, FILE* fp)
                 assert(iter_s->function);
                 assert(!iter_s->lexer_state);
                 assert(!iter_s->state_rules);
-                put_lexer_rule_action(iter_s, lexer_states[state_id], state_iterator, fp);
+                put_lexer_rule_action(grammar_file_path, iter_s, lexer_states[state_id], state_iterator, fp);
                 LexerRule* ll_rule = &ll_rules[state_id][state_iterator++];
                 ll_rule->expr = (lexer_expr) iter_s;
                 char* expanded_regex = regex_expand(m_engine, iter_s->regex);
@@ -1039,7 +1086,7 @@ int codegen_write(const struct File* self, FILE* fp)
             assert(iter->function);
             assert(!iter->lexer_state);
             assert(!iter->state_rules);
-            put_lexer_rule_action(iter, lexer_states[0], iterator, fp);
+            put_lexer_rule_action(grammar_file_path, iter, lexer_states[0], iterator, fp);
             LexerRule* ll_rule = &ll_rules[0][iterator++];
             ll_rule->expr = (lexer_expr) iter;
             char* expanded_regex = regex_expand(m_engine, iter->regex);
@@ -1094,7 +1141,8 @@ int codegen_write(const struct File* self, FILE* fp)
              rule_single_iter;
              rule_single_iter = rule_single_iter->next)
         {
-            put_grammar_rule_action(rule_iter, rule_single_iter, tokens, typed_tokens,
+            put_grammar_rule_action(grammar_file_path,
+                                    rule_iter, rule_single_iter, tokens, typed_tokens,
                                     &options,
                                     token_n, grammar_n + 1, fp);
             grammar_n++;
