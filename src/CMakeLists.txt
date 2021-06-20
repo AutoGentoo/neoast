@@ -1,10 +1,8 @@
 add_library(neoast_builtin_lexer STATIC
-        lexer.cc
-        lexer.h
-        )
+        codegen/builtin_lexer/builtin_lexer.cc
+        codegen/builtin_lexer/builtin_lexer.h)
 
 add_library(neoast STATIC
-        parser.h
         lr.c parser.c
         ../include/neoast.h)
 

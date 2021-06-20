@@ -16,12 +16,10 @@
  */
 
 
-#include <parser.h>
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <assert.h>
-#include "lexer.h"
+#include <codegen/builtin_lexer/builtin_lexer.h>
 #include "codegen/codegen.h"
 #include "grammar.h"
 
@@ -63,7 +61,13 @@ int main(int argc, const char* argv[])
 
     ParserBuffers* buf = parser_allocate_buffers(1024, 1024, 16, 1024, sizeof(CodegenUnion));
 
-    int32_t result_idx = parser_parse_lr(&parser, GEN_parsing_table, buf, input, file_size);
+    void* lexer = parser.lexer_ptr;
+    void* lexer_instance = builtin_lexer_instance_new(lexer, input, file_size);
+
+    int32_t result_idx = parser_parse_lr(&parser, GEN_parsing_table, buf,
+                                         lexer_instance, builtin_lexer_next);
+
+    builtin_lexer_instance_free(lexer_instance);
 
     if (result_idx == -1)
     {

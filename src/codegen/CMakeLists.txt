@@ -1,7 +1,10 @@
 add_library(neoast-codegen STATIC
         codegen.h
-        codegen.c
-        regex.c regex.h compiler.c compiler.h common.c cg_uti.c cg_uti.h cg_lexer.c cg_lexer.h)
+        codegen.cc
+        regex.h
+        compiler.c compiler.h common.c
+        cg_util.cc cg_util.h
+        cg_lexer.cc cg_lexer.h codegen_priv.h)
 
 add_executable(neoast-bootstrap
         bootstrap/codegen_grammar.c
@@ -17,7 +20,9 @@ add_custom_command(OUTPUT ${compiler_compiler}
 
 add_executable(neoast-exec ${compiler_compiler} main.c)
 
-include_directories(neoast-codegen PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../)
+include_directories(neoast-codegen PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../
+        ${PROJECT_SOURCE_DIR}/third_party/reflex/src)
 
 target_link_libraries(neoast-codegen neoast neoast-parsergen neoast-util)
 target_link_libraries(neoast-exec neoast-codegen)

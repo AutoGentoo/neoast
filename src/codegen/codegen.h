@@ -22,9 +22,6 @@
 #include <neoast.h>
 #include <parsergen/canonical_collection.h>
 
-#define CODEGEN_STRUCT "NeoastValue"
-#define CODEGEN_UNION "NeoastUnion"
-
 typedef enum
 {
     KEY_VAL_TOP, // Key not filled
@@ -40,6 +37,7 @@ typedef enum
     KEY_VAL_START,
     KEY_VAL_UNION,
     KEY_VAL_DESTRUCTOR,
+    KEY_VAL_LEXER,
 } key_val_t;
 
 typedef struct KeyVal_ KeyVal;
@@ -94,24 +92,6 @@ struct File
     KeyVal* header;
     struct LexerRuleProto* lexer_rules;
     struct GrammarRuleProto* grammar_rules;
-};
-
-struct Options {
-    // Should we dump the table
-    int debug_table;
-    const char* track_position_type;
-    const char* debug_ids;
-    const char* prefix;
-    const char* lexing_error_cb;
-    const char* syntax_error_cb;
-    parser_t parser_type; // LALR(1) or CLR(1)
-
-    unsigned long max_lex_tokens;
-    unsigned long max_token_len;
-    unsigned long max_lex_state_depth;
-    unsigned long parsing_stack_n;
-
-    lexer_option_t lexer_opts;
 };
 
 int gen_parser_init(GrammarParser* self);

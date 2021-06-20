@@ -21,7 +21,6 @@
 #include <assert.h>
 #include <string.h>
 #include "canonical_collection.h"
-#include "parser.h"
 #include "clr_lalr.h"
 
 static inline

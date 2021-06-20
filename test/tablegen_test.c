@@ -16,7 +16,7 @@
  */
 
 
-#include <lexer.h>
+#include <builtin_lexer/lexer.h>
 #include <cmocka.h>
 #include <stdlib.h>
 #include <parsergen/canonical_collection.h>

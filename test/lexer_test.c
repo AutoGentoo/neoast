@@ -21,7 +21,7 @@
 #include <regex.h>
 #include <string.h>
 #include <stdlib.h>
-#include <lexer.h>
+#include <builtin_lexer/lexer.h>
 
 #define CTEST(name) static void name(void** state)
 
