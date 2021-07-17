@@ -19,6 +19,10 @@
 #ifndef NEOAST_CODEGEN_H
 #define NEOAST_CODEGEN_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <neoast.h>
 #include <parsergen/canonical_collection.h>
 
@@ -94,8 +98,11 @@ struct File
     struct GrammarRuleProto* grammar_rules;
 };
 
-int gen_parser_init(GrammarParser* self);
-int codegen_write(const char* grammar_file_path, const struct File* self, FILE* fp);
+int gen_parser_init(GrammarParser* self, void** lexer_ptr);
+int codegen_write(const char* grammar_file_path,
+                  const struct File* self,
+                  const char* output_file_cc,
+                  const char* output_file_hh);
 
 void emit_warning(const TokenPosition* position, const char* message, ...);
 void emit_error(const TokenPosition* position, const char* message, ...);
@@ -115,5 +122,9 @@ void grammar_rule_multi_free(struct GrammarRuleProto* self);
 void file_free(struct File* self);
 
 extern const char* tok_names_errors[];
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif //NEOAST_CODEGEN_H

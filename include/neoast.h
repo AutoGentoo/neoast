@@ -129,9 +129,6 @@ struct GrammarParser_prv
     const GrammarRule* grammar_rules;
     const char* const* token_names;
     parser_destructor const* destructors;
-
-    void* lexer_ptr;
-    void (*lexer_free)(void*);
     yy_error_cb parser_error;
 
     // Also number of columns
@@ -158,7 +155,6 @@ struct ParserBuffers_prv
     void* value_table;                  //!< Value table
     int32_t* token_table;               //!< Token table
     ParsingStack* parsing_stack;        //!< LR parsing stack
-    uint32_t max_token_length;          //!< Size of buffer for a token
     uint32_t val_s;                     //!< Size of each value in bytes
     uint32_t union_s;                   //!< If no token position data, this is the same as val_s
     uint32_t table_n;                   //!< Number of tokens/values in the tables
@@ -172,12 +168,10 @@ struct TokenPosition_prv
 
 #ifndef NEOAST_PARSER_H
 #define NEOAST_PARSER_H
-uint32_t parser_init(GrammarParser* self);
-void parser_free(GrammarParser* self);
 
 ParsingStack* parser_allocate_stack(size_t stack_n);
 void parser_free_stack(ParsingStack* self);
-ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len,
+ParserBuffers* parser_allocate_buffers(int max_tokens,
                                        int parsing_stack_n,
                                        size_t val_s,
                                        size_t union_s);

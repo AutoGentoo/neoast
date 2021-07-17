@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 enable_language(C)
+enable_language(CXX)
 
 project(neoast VERSION "1.3")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(SANITIZER_BUILD "Build with AddressSanitizer" OFF)
 set(SANITIZER "" CACHE STRING "Compile with -fsanitize=...")
@@ -13,7 +15,10 @@ if (NOT "${SANITIZER}" STREQUAL "")
     add_compile_options(-fsanitize=${SANITIZER})
     add_link_options(-fsanitize=${SANITIZER})
     message(STATUS "Building with -fsanitize=${SANITIZER}")
-    add_compile_options(-g -fno-omit-frame-pointer -O0)
+    if (${SANITIZER} STREQUAL "memory")
+        add_compile_options(-fsanitize-memory-track-origins=2 -fPIE -fPIC  -O2 -fsanitize-memory-use-after-dtor)
+    endif()
+    add_compile_options(-g -fno-omit-frame-pointer)
 endif()
 
 include(cmake/policy.cmake)

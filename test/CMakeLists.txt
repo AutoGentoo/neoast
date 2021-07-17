@@ -12,7 +12,7 @@ endmacro()
 CUnitTest(lexer)
 CUnitTest(lr)
 add_mocked_test(macro_C
-        SOURCES macro_test.c
+        SOURCES macro_test.cc
         LINK_LIBRARIES neoast neoast-codegen
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT ${EXEC_ENV}
@@ -45,3 +45,8 @@ add_mocked_test(integration_C
         INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
         ENVIRONMENT ${EXEC_ENV}
         )
+
+add_executable(reflex_test reflex_test.cpp)
+target_link_libraries(reflex_test reflex)
+target_include_directories(reflex_test PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/reflex/include)

@@ -16,10 +16,11 @@
  */
 
 
-#include <builtin_lexer/lexer.h>
-#include <cmocka.h>
 #include <stdlib.h>
 #include <string.h>
+#include <neoast.h>
+#include <codegen/builtin_lexer/builtin_lexer.h>
+#include <cmocka.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -83,9 +84,9 @@ uint32_t lalr_table[] = {
 void initialize_parser()
 {
     static LexerRule l_rules[] = {
-            {.tok = TOK_b, .regex_raw = ";"},
-            {.regex_raw = "[ ]+"},
-            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "[0-9]+"}
+            {.tok = TOK_b, .regex = ";"},
+            {.regex = "[ ]+"},
+            {.expr = (lexer_expr) ll_tok_num, .regex = "[0-9]+"}
     };
 
     static uint32_t r1[] = {
@@ -119,9 +120,6 @@ void initialize_parser()
 
     p.grammar_n = 4;
     p.grammar_rules = g_rules;
-    p.lex_n = &lex_n;
-    p.lex_state_n = 1;
-    p.lexer_rules = rules;
     p.token_n = TOK_AUGMENT;
     p.action_token_n = 3;
     p.token_names = token_error_names;
@@ -139,7 +137,7 @@ CTEST(test_parser)
                               ";";  // b
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CodegenUnion), sizeof(CodegenUnion));
+    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenUnion), sizeof(CodegenUnion));
 
     int32_t res_idx = parser_parse_lr(&p, lalr_table, buf, lexer_input, strlen(lexer_input));
 

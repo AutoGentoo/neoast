@@ -80,6 +80,12 @@ std::string CGLexerRule::get_name() const
     return variadic_string("ll_rule_%s_%02d", parent->get_name().c_str(), index);
 }
 
+CGLexerRule::CGLexerRule(const CGLexerState* parent, int index, MacroEngine &m_engine, LexerRuleProto* iter)
+: code(iter->function, &iter->position),
+  parent(parent), index(index), regex(m_engine.expand(iter->regex))
+{
+}
+
 void CGLexerState::put(std::ostream &os) const
 {
     for (const auto& rule : rules)

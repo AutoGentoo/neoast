@@ -20,23 +20,6 @@
 #include <stdlib.h>
 #include <neoast.h>
 
-uint32_t parser_init(GrammarParser* self)
-{
-    (void) self;
-
-    // TODO Possible initialization?
-    return 0;
-}
-
-void parser_free(GrammarParser* self)
-{
-    (void) self;
-
-    if (self->lexer_free && self->lexer_ptr)
-    {
-        self->lexer_free(self->lexer_ptr);
-    }
-}
 
 ParsingStack* parser_allocate_stack(size_t stack_n)
 {
@@ -51,19 +34,18 @@ void parser_free_stack(ParsingStack* self)
     free(self);
 }
 
-ParserBuffers* parser_allocate_buffers(int max_lex_tokens, int max_token_len,
+ParserBuffers* parser_allocate_buffers(int max_tokens,
                                        int parsing_stack_n,
                                        size_t val_s,
                                        size_t union_s)
 {
     ParserBuffers* buffers = malloc(sizeof(ParserBuffers));
     buffers->parsing_stack = parser_allocate_stack(parsing_stack_n);
-    buffers->token_table = malloc(sizeof(uint32_t) * max_lex_tokens);
-    buffers->value_table = malloc(val_s * max_lex_tokens);
-    buffers->max_token_length = max_token_len;
+    buffers->token_table = malloc(sizeof(uint32_t) * max_tokens);
+    buffers->value_table = malloc(val_s * max_tokens);
     buffers->val_s = val_s;
     buffers->union_s = union_s;
-    buffers->table_n = max_lex_tokens;
+    buffers->table_n = max_tokens;
 
     return buffers;
 }

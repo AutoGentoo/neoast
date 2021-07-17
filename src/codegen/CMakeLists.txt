@@ -6,11 +6,19 @@ add_library(neoast-codegen STATIC
         cg_util.cc cg_util.h
         cg_lexer.cc cg_lexer.h codegen_priv.h)
 
+add_library(builtin-lexer STATIC
+        builtin_lexer/builtin_lexer.cc
+        builtin_lexer/builtin_lexer.h)
+
+
 add_executable(neoast-bootstrap
         bootstrap/codegen_grammar.c
         bootstrap/main.c bootstrap/grammar.h)
 
-set(compiler_compiler ${CMAKE_CURRENT_BINARY_DIR}/neoast_compiler_compiler.c)
+set(compiler_compiler
+        ${CMAKE_CURRENT_BINARY_DIR}/neoast_compiler_compiler.c
+        ${CMAKE_CURRENT_BINARY_DIR}/neoast_compiler_compiler.h
+        )
 
 add_custom_command(OUTPUT ${compiler_compiler}
         COMMAND $<TARGET_FILE:neoast-bootstrap>
@@ -24,6 +32,13 @@ include_directories(neoast-codegen PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../
         ${PROJECT_SOURCE_DIR}/third_party/reflex/src)
 
-target_link_libraries(neoast-codegen neoast neoast-parsergen neoast-util)
+include_directories(builtin-lexer PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+        ${PROJECT_SOURCE_DIR}/third_party/reflex/include
+        )
+target_link_libraries(builtin-lexer reflex)
+
+target_link_libraries(neoast-codegen neoast neoast-parsergen neoast-util builtin-lexer)
 target_link_libraries(neoast-exec neoast-codegen)
 target_link_libraries(neoast-bootstrap neoast-codegen)

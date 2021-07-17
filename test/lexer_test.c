@@ -21,7 +21,7 @@
 #include <regex.h>
 #include <string.h>
 #include <stdlib.h>
-#include <builtin_lexer/lexer.h>
+#include <codegen/builtin_lexer/builtin_lexer.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -67,16 +67,17 @@ int32_t ll_tok_num(const char* yytext, CodegenUnion* yyval)
 }
 
 static GrammarParser p;
+static void* l;
 
 void initialize_parser()
 {
-    static LexerRule l_rules[] = {
-            {.regex_raw = "[ ]+", .tok = -1},
-            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "[0-9]+"}
+    static const LexerRule l_rules[] = {
+            {.regex = "[ ]+", .tok = -1},
+            {.expr = (lexer_expr) ll_tok_num, .regex = "[0-9]+"}
 
     };
 
-    static LexerRule* ll_rules[] = {
+    static const LexerRule* ll_rules[] = {
             l_rules
     };
 
@@ -85,12 +86,10 @@ void initialize_parser()
 
     static uint32_t lex_n = NEOAST_ARR_LEN(l_rules);
 
-    p.lex_state_n = 1;
-    p.lex_n = &lex_n;
-    p.lexer_rules = ll_rules;
-
     // Initialize the lexer regex rules
     parser_init(&p);
+
+    l = builtin_lexer_new(ll_rules, &lex_n, 1, NULL);
 }
 
 CTEST(test_lexer)
@@ -102,22 +101,22 @@ CTEST(test_lexer)
 
     CodegenUnion llval;
 
-    ParserBuffers* buf = parser_allocate_buffers(32, 32, 8, 1024, sizeof(CodegenUnion), sizeof(CodegenUnion));
-    NEOAST_STACK_PUSH(buf->lexing_state_stack, 0);
+    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenUnion), sizeof(CodegenUnion));
+    void* lex = builtin_lexer_instance_new(l, yyinput, strlen(lexer_input));
 
-    uint32_t len = strlen(lexer_input);
-    uint32_t offset = 0;
-    assert_int_equal(lex_next(yyinput, &p, buf, &llval, len, &offset), 1);
+    assert_int_equal(builtin_lexer_next(lex, &llval), 1);
     assert_int_equal(llval.integer, 10);
-    assert_int_equal(lex_next(yyinput, &p, buf, &llval, len, &offset), 1);
+    assert_int_equal(builtin_lexer_next(lex, &llval), 1);
     assert_int_equal(llval.integer, 20);
-    assert_int_equal(lex_next(yyinput, &p, buf, &llval, len, &offset), 1);
+    assert_int_equal(builtin_lexer_next(lex, &llval), 1);
     assert_int_equal(llval.integer, 30);
-    assert_int_equal(lex_next(yyinput, &p, buf, &llval, len, &offset), -1); // Unhandled 'a'
-    assert_int_equal(lex_next(yyinput, &p, buf, &llval, len, &offset), 0);
+    assert_int_equal(builtin_lexer_next(lex, &llval), -1); // Unhandled 'a'
+    assert_int_equal(builtin_lexer_next(lex, &llval), 0);
 
+    builtin_lexer_instance_free(lex);
     parser_free(&p);
     parser_free_buffers(buf);
+    builtin_lexer_free(l);
 }
 
 const static struct CMUnitTest lexer_tests[] = {

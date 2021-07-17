@@ -50,6 +50,8 @@ struct Code : public TokenPosition
     {
     }
 
+    bool empty() const { return code.empty(); }
+
     void put(std::ostream& ss) const
     {
         if (line && !file.empty())
@@ -85,7 +87,7 @@ struct Code : public TokenPosition
         {
             if (m.first() > last_position)
             {
-                os << code.substr(last_position, m.first());
+                os << code.substr(last_position, m.first() - last_position);
             }
 
             last_position = m.last();
@@ -197,7 +199,6 @@ struct CGToken : public TokenPosition
     virtual bool is_typed() const { return false; };
 };
 
-
 struct CGTyped : public CGToken
 {
     std::string type;           //!< Field in union
@@ -233,7 +234,7 @@ struct CGTypedAction : public CGTyped, public CGAction
 
 struct CGGrammar
 {
-
+    const GrammarRuleSingleProto* parent;
     sp<CGGrammarToken> return_type;
     std::vector<std::string> argument_types;
 
@@ -246,8 +247,13 @@ struct CGGrammar
 
     GrammarRule initialize_grammar(CodeGen* cg) const;
 
-    void put(std::ostream& os, const Options& options, int i) const
+    void put_action(std::ostream& os, const Options& options, int i) const
     {
+        if (action.empty())
+        {
+            return;
+        }
+
         os << "static void\n"
            << variadic_string("gg_rule_r%02d(%s* dest, %s* args)\n{\n",
                               i, CODEGEN_UNION, CODEGEN_UNION)
@@ -255,6 +261,19 @@ struct CGGrammar
            << "(void) args;";
 
         action.put(os, options, argument_types, "dest", "args");
+    }
+
+    void put_grammar_entry(std::ostream& os) const
+    {
+        for (struct Token* tok = parent->tokens; tok; tok = tok->next)
+        {
+            os << variadic_string("%s,%c", tok->name, tok->next ? ' ' : '\n');
+        }
+
+        if (!parent->tokens)
+        {
+            os << "// empty rule\n";
+        }
     }
 };
 

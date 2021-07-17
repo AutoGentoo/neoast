@@ -28,7 +28,7 @@
 
 #define WS_X "[\\s]+"
 #define WS_OPT "[\\s]*"
-#define ID_X "[A-z][A-z0-9_]*"
+#define ID_X "[A-Za-z_][A-Za-z0-9_]*"
 #define ASCII "'[\\x20-\\x7E]'"
 
 uint32_t* GEN_parsing_table = NULL;
@@ -463,8 +463,8 @@ static int32_t ll_regex_exit_comment(const char* lex_text, void* lex_val, uint32
 }
 
 static LexerRule ll_rules_s0[] = {
-        {.regex = "[\n ]+"}, // skip
-        {.regex = "//[^\n]*\n"},
+        {.regex = "[\\n ]+"}, // skip
+        {.regex = "//[^\\n]*\\n"},
         {.regex = "/\\*", .expr = ll_regex_enter_comment},
         {.regex = "%%", .expr = (lexer_expr) ll_enter_grammar},
         {.regex = "==", .expr = (lexer_expr) ll_enter_lex},
@@ -483,28 +483,28 @@ static LexerRule ll_rules_s0[] = {
         {.regex = "%bottom", .tok = TOK_BOTTOM},
         {.regex = "%union", .tok = TOK_UNION},
         {.regex = "%destructor" WS_OPT "<" ID_X ">", .expr = (lexer_expr) ll_destructor},
-        {.regex = "{", .expr = ll_match_brace},
+        {.regex = "\\{", .expr = ll_match_brace},
         {.regex = "\\+" ID_X WS_X "[^\n]+", .expr = (lexer_expr) ll_macro},
 };
 
 static LexerRule ll_rules_lex[] = {
-        {.regex = "[\n ]+"}, // skip
-        {.regex = "//[^\n]*\n"},
-        {.regex = "/\\*", .expr = ll_regex_enter_comment},
+        {.regex = "[\\n ]+"}, // skip
+        {.regex = "[/][/][^\\n]*\\n"},
+        {.regex = "[/]\\*", .expr = ll_regex_enter_comment},
         {.regex = "==", .expr = (lexer_expr) ll_exit_state},
-        {.regex = "<" ID_X ">" WS_OPT "{", .expr = (lexer_expr) ll_lex_state},
+        {.regex = "<" ID_X ">" WS_OPT "\\{", .expr = (lexer_expr) ll_lex_state},
         {.regex = "\"", .expr = (lexer_expr) ll_build_regex},
-        {.regex = "{", .expr = (lexer_expr) ll_match_brace},
+        {.regex = "[{]", .expr = (lexer_expr) ll_match_brace},
 };
 
 static LexerRule ll_rules_grammar[] = {
-        {.regex = "[\n ]+"}, // skip
-        {.regex = "//[^\n]*\n"},
-        {.regex = "/\\*", .expr = ll_regex_enter_comment},
+        {.regex = "[\\n ]+"}, // skip
+        {.regex = "[/][/][^\\n]*\\n"},
+        {.regex = "[/]\\*", .expr = ll_regex_enter_comment},
         {.regex = "%%", .expr = (lexer_expr) ll_exit_state},
         {.regex = ID_X WS_OPT ":", .expr = (lexer_expr) ll_g_rule},
         {.regex = ASCII, .expr = (lexer_expr) ll_g_tok_ascii},
-        {.regex = "{", .expr = (lexer_expr) ll_match_brace},
+        {.regex = "[{]", .expr = (lexer_expr) ll_match_brace},
         {.regex = ID_X, .expr = (lexer_expr) ll_g_tok},
         {.regex = "\\|", .tok = TOK_G_OR},
         {.regex = ";", .tok = TOK_G_TERM},
@@ -513,8 +513,8 @@ static LexerRule ll_rules_grammar[] = {
 static LexerRule ll_rules_match_brace[] = {
         {.regex = "'[\\x00-\\x7F]'", .expr = ll_add_to_buffer},
         {.regex = "(?:\"[^\"]*\")", .expr = ll_add_to_buffer},
-        {.regex = "}", .expr = (lexer_expr) ll_decrement_brace},
-        {.regex = "{", .expr = ll_increment_brace},
+        {.regex = "[}]", .expr = (lexer_expr) ll_decrement_brace},
+        {.regex = "[{]", .expr = ll_increment_brace},
         {.regex = "(?:[^}{\"\']+)", .expr = ll_add_to_buffer},
 };
 
@@ -524,12 +524,12 @@ static LexerRule ll_rules_regex[] = {
 };
 
 static LexerRule ll_rules_lex_state[] = {
-        {.regex = "[\n ]+"}, // skip
-        {.regex = "//[^\n]*\n"},
-        {.regex = "/\\*", .expr = ll_regex_enter_comment},
-        {.regex = "}", .expr = (lexer_expr) ll_lex_state_exit},
+        {.regex = "[\\n ]+"}, // skip
+        {.regex = "[/][/][^\\n]*\\n"},
+        {.regex = "[/]\\*", .expr = ll_regex_enter_comment},
+        {.regex = "[}]", .expr = (lexer_expr) ll_lex_state_exit},
         {.regex = "\"", .expr = (lexer_expr) ll_build_regex},
-        {.regex = "{", .expr = (lexer_expr) ll_match_brace},
+        {.regex = "[{]", .expr = (lexer_expr) ll_match_brace},
 };
 
 static LexerRule ll_rules_comment[] = {
@@ -745,7 +745,7 @@ static void ll_error(const char* input, const TokenPosition* position)
     emit_error(position, "Failed to match token");
 }
 
-int gen_parser_init(GrammarParser* self)
+int gen_parser_init(GrammarParser* self, void** lexer_ptr)
 {
     self->grammar_rules = gg_rules;
     self->grammar_n = NEOAST_ARR_LEN(gg_rules);
@@ -756,19 +756,12 @@ int gen_parser_init(GrammarParser* self)
     self->ascii_mappings = NULL;
     self->lexer_opts = 0;
 
-    self->lexer_ptr = builtin_lexer_new(ll_rules,
-                                        ll_rules_n,
-                                        NEOAST_ARR_LEN(ll_rules_n),
-                                        ll_error);
+    *lexer_ptr = builtin_lexer_new(ll_rules,
+                                   ll_rules_n,
+                                   NEOAST_ARR_LEN(ll_rules_n),
+                                   NULL);
 
     precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
-
-    uint32_t regex_init_errors;
-    if ((regex_init_errors = parser_init(self)))
-    {
-        fprintf(stderr, "Failed to initialize %d regular expressions\n", regex_init_errors);
-        return 1;
-    }
 
     // Generate the parsing table
     CanonicalCollection* cc = canonical_collection_init(self);

@@ -16,7 +16,6 @@
  */
 
 
-#include <reflex.h>
 #include <memory>
 #include <string>
 
@@ -31,116 +30,13 @@
 #include "codegen_priv.h"
 
 
-
-static inline
-void put_grammar_table_and_rules(
-        struct GrammarRuleProto* rule_symbols,
-        GrammarRule* rules,
-        const char* const* tokens,
-        uint32_t rule_n,
-        FILE* fp)
-{
-    // First put the grammar table
-    fputs("static const\nunsigned int grammar_token_table[] = {\n", fp);
-    uint32_t grammar_i = 0;
-    for (struct GrammarRuleProto* rule_iter = rule_symbols;
-         rule_iter;
-         rule_iter = rule_iter->next)
-    {
-        fprintf(fp, "        /* %s */\n", rule_iter->name);
-        for (struct GrammarRuleSingleProto* rule_single_iter = rule_iter->rules;
-             rule_single_iter;
-             rule_single_iter = rule_single_iter->next)
-        {
-            if (grammar_i == 0)
-            {
-                grammar_i++;
-                fputs("        /* ACCEPT */ ", fp);
-            }
-            else
-            {
-                fprintf(fp,"        /* R%02d */ ", grammar_i++);
-            }
-            if (rule_single_iter->tokens)
-            {
-                for (struct Token* tok = rule_single_iter->tokens; tok; tok = tok->next)
-                {
-                    fprintf(fp, "%s,%c", tok->name, tok->next ? ' ' : '\n');
-                }
-            } else
-            {
-                fputs("// empty rule\n", fp);
-            }
-        }
-
-        fputc('\n', fp);
-    }
-    fputs("};\n\n", fp);
-
-    // Print the grammar rules
-    uint32_t grammar_offset_i = 0;
-    fputs("static const\nGrammarRule __neoast_grammar_rules[] = {\n", fp);
-    for (int i = 0; i < rule_n; i++)
-    {
-        if (rules[i].expr)
-        {
-            fprintf(fp, "        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d], .expr=(parser_expr) gg_rule_r%02d},\n",
-                    tokens[rules[i].token - NEOAST_ASCII_MAX],
-                    rules[i].tok_n,
-                    grammar_offset_i,
-                    i);
-        }
-        else
-        {
-            fprintf(fp, "        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d]},\n",
-                    tokens[rules[i].token - NEOAST_ASCII_MAX],
-                    rules[i].tok_n,
-                    grammar_offset_i);
-        }
-
-        grammar_offset_i += rules[i].tok_n;
-    }
-    fputs("};\n\n", fp);
-}
-
-static inline
-void put_parsing_table(const uint32_t* parsing_table, CanonicalCollection* cc, FILE* fp)
-{
-    int i = 0;
-    fputs("static const\nuint32_t GEN_parsing_table[] = {\n", fp);
-    for (int state_i = 0; state_i < cc->state_n; state_i++)
-    {
-        fputs("        ", fp);
-        for (int tok_i = 0; tok_i < cc->parser->token_n; tok_i++, i++)
-        {
-            fprintf(fp,"0x%08X,%c", parsing_table[i], tok_i + 1 >= cc->parser->token_n ? '\n' : ' ');
-        }
-    }
-    fputs("};\n\n", fp);
-}
-
-static inline
-void put_ascii_mappings(const uint32_t ascii_mappings[NEOAST_ASCII_MAX], FILE* fp)
-{
-    fputs("static const\nuint32_t __neoast_ascii_mappings[NEOAST_ASCII_MAX] = {\n", fp);
-    int i = 0;
-    for (int row = 0; i < NEOAST_ASCII_MAX; row++)
-    {
-        fputs("        ", fp);
-        for (int col = 0; col < 6 && i < NEOAST_ASCII_MAX; col++, i++)
-        {
-            fprintf(fp, "0x%03X,%c", ascii_mappings[i], (col + 1 >= 6) ? '\n' : ' ');
-        }
-    }
-    fputs("};\n\n", fp);
-}
-
-
 std::string grammar_filename;
 
 
-struct CodeGen
+class CodeGen
 {
+    friend CGGrammar;
+
     MacroEngine m_engine;
 
     up<Code> top;
@@ -166,34 +62,16 @@ struct CodeGen
     std::map<std::string, up<Code>> destructors;
 
     std::vector<CGLexerState> ll_states;
-    std::vector<CGGrammar> gg_rules_cg;
-    up<GrammarRule[]> gg_rules;
+    std::map<std::string, std::vector<CGGrammar>> gg_rules_cg;
+    std::vector<GrammarRule> gg_rules;
     std::vector<int32_t> grammar_table;
 
     Options options;
 
-    int grammar_i;
+    uint32_t grammar_i;
+    uint32_t grammar_n;
     uint32_t ascii_mappings[NEOAST_ASCII_MAX] = {0};
-
-    CodeGen(const File* self,
-            std::ostream& cc_os,
-            std::ostream& hh_os)
-            : top(nullptr), bottom(nullptr), union_(nullptr), start(nullptr),
-              gg_rules(nullptr), lexer_input(nullptr),
-              options(), grammar_i(0), m_engine(), lexer_type(LEXER_BUILTIN)
-    {
-        parse_header(self);
-        if (has_errors()) { return; }
-
-        parse_lexer(self);
-        if (has_errors()) { return; }
-
-        parse_grammar(self);
-        if (has_errors()) { return; }
-
-        write_header(hh_os);
-        if (has_errors()) { return; }
-    }
+    std::map<int, int> precedence_mapping;
 
     void parse_header(const File* self)
     {
@@ -202,11 +80,11 @@ struct CodeGen
 
         std::map<key_val_t, std::pair<const char*, up<Code>*>>
                 single_appearance_map{
-                {KEY_VAL_TOP, {"top", &top}},
+                {KEY_VAL_TOP,    {"top",    &top}},
                 {KEY_VAL_BOTTOM, {"bottom", &bottom}},
-                {KEY_VAL_UNION, {"union", &union_}},
-                {KEY_VAL_START, {"start", &start}},
-                {KEY_VAL_LEXER, {"lexer", &lexer_input}},
+                {KEY_VAL_UNION,  {"union",  &union_}},
+                {KEY_VAL_START,  {"start",  &start}},
+                {KEY_VAL_LEXER,  {"lexer",  &lexer_input}},
         };
 
         for (KeyVal* iter = self->header; iter; iter = iter->next)
@@ -233,13 +111,15 @@ struct CodeGen
                     break;
                 case KEY_VAL_TOKEN:
                 case KEY_VAL_TOKEN_ASCII:
-                    register_action(new CGAction(iter, action_id(), iter->type == KEY_VAL_TOKEN_ASCII));
+                    register_action(
+                            std::make_shared<CGAction>(iter, action_id(), iter->type == KEY_VAL_TOKEN_ASCII)
+                    );
                     break;
                 case KEY_VAL_TOKEN_TYPE:
-                    register_action(new CGTypedAction(iter, action_id()));
+                    register_action(std::make_shared<CGTypedAction>(iter, action_id()));
                     break;
                 case KEY_VAL_TYPE:
-                    register_grammar(new CGGrammarToken(iter, 0));
+                    register_grammar(std::make_shared<CGGrammarToken>(iter, 0));
                     break;
                 case KEY_VAL_OPTION:
                     options.handle(iter);
@@ -252,13 +132,22 @@ struct CodeGen
                     {
                         emit_error(&iter->position, "Undefined token");
                     }
-                    else if (!t->is_typed())
+                    else if (!t->is_action())
                     {
-                        emit_error(&iter->position, "Token with no type cannot have a destructor");
+                        emit_error(&iter->position, "Cannot use %%type token in precedence");
                     }
                     else
                     {
-                        // TODO Setup precedence table
+                        if (precedence_mapping.find(t->id) != precedence_mapping.end())
+                        {
+                            emit_error(&iter->position, "Already defined precedence for '%s'", t->name.c_str());
+                        }
+                        else
+                        {
+                            precedence_mapping.emplace(
+                                    t->id,
+                                    iter->type == KEY_VAL_LEFT ? PRECEDENCE_LEFT : PRECEDENCE_RIGHT);
+                        }
                     }
                 }
                     break;
@@ -267,49 +156,38 @@ struct CodeGen
                     break;
                 case KEY_VAL_DESTRUCTOR:
                 {
-                    auto t = get_token(iter->key);
-                    if (!t)
+                    if (destructors.find(iter->key) != destructors.end())
                     {
-                        emit_error(&iter->position, "Undefined token");
+                        emit_error(&iter->position, "Destructor for type '%s' is already defined",
+                                   iter->key);
                     }
-                    else if (!t->is_typed())
-                    {
-                        emit_error(&iter->position, "Token with no type cannot have a destructor");
-                    }
-                    else
-                    {
-                        const auto& type = std::static_pointer_cast<CGTyped>(t)->type;
-                        if (destructors.find(type) != destructors.end())
-                        {
-                            emit_error(&iter->position, "Destructor for type '%s' is already defined",
-                                       type.c_str());
-                        }
 
-                        destructors[type] = std::make_unique<Code>(iter);
-                    }
+                    destructors[iter->key] = std::make_unique<Code>(iter);
                 }
                     break;
             }
         }
 
         // All grammar tokens are initialized with their true ids
-        for (auto& grammar_tok : grammar_tokens)
+        for (auto &grammar_tok : grammar_tokens)
         {
             assert(!grammar_tok->id);
-            grammar_tok->id = action_id() + grammar_i++;
+            grammar_tok->id = static_cast<int>(action_id() + grammar_i++);
         }
 
         // Add the augment token with the start type
         // TODO Clean this up
         const char ta[] = "TOK_AUGMENT";
-        KeyVal v {.key = const_cast<char*>(start_type.c_str()), .value=const_cast<char*>(ta)};
-        auto* augment = new CGGrammarToken(&v, action_id() + grammar_i++);
-        register_grammar(augment);
+        KeyVal v{.key = const_cast<char*>(start_type.c_str()), .value=const_cast<char*>(ta)};
+        register_grammar(std::make_shared<CGGrammarToken>(&v, static_cast<int>(action_id() + grammar_i++)));
 
         tokens.emplace_back("TOK_EOF");
-        for (const auto& i : action_tokens) { tokens.push_back(i->name); }
-        for (const auto& i : grammar_tokens) { tokens.push_back(i->name); }
+        for (const auto &i : action_tokens)
+        { tokens.push_back(i->name); }
+        for (const auto &i : grammar_tokens)
+        { tokens.push_back(i->name); }
     }
+
     void parse_lexer(const File* self)
     {
         if (!(self->lexer_rules || !options.lexer_file.empty() || lexer_input))
@@ -353,6 +231,7 @@ struct CodeGen
             lexer_type = LEXER_REFLEX_FILE;
         }
     }
+
     void parse_builtin_lexer(const File* self)
     {
         int state_n = 0;
@@ -364,7 +243,7 @@ struct CodeGen
             {
                 // Make sure the name does not overlap
                 bool duplicate_state = false;
-                for (const auto& iter_state : ll_states)
+                for (const auto &iter_state : ll_states)
                 {
                     if (iter_state.get_name() == iter->lexer_state)
                     {
@@ -382,7 +261,7 @@ struct CodeGen
                 }
 
                 ll_states.emplace_back(state_n++, iter->lexer_state);
-                auto& ls = ll_states[ll_states.size() - 1];
+                auto &ls = ll_states[ll_states.size() - 1];
 
                 for (struct LexerRuleProto* iter_s = iter->state_rules; iter_s; iter_s = iter_s->next)
                 {
@@ -401,28 +280,35 @@ struct CodeGen
             }
         }
     }
+
     void parse_grammar(const File* self)
     {
         // Add the augment rule
-        struct Token augment_rule_tok = {
+        static struct Token augment_rule_tok = {
                 .name = const_cast<char*>(start_type.c_str()),
                 .next = nullptr,
         };
 
-        struct GrammarRuleSingleProto augment_rule = {
+        struct GrammarRuleSingleProto augment_rule_single_tok = {
                 .tokens = &augment_rule_tok,
                 .next = nullptr,
         };
 
-        struct GrammarRuleProto augment_rule_parent = {
-                .name = (char*)"TOK_AUGMENT",
-                .rules = &augment_rule,
-                .next = self->grammar_rules,
-        };
+        // Add the augment rule
+        std::vector<CGGrammar> augment_grammar;
+        grammar_n = 0;
+        auto tok_augment_return = std::static_pointer_cast<CGGrammarToken>(get_token("TOK_AUGMENT"));
+        if (!tok_augment_return)
+        {
+            emit_error(nullptr, "Expected augment rule to be a grammar token");
+            return;
+        }
 
-        struct GrammarRuleProto* all_rules = &augment_rule_parent;
+        augment_grammar.emplace_back(this, tok_augment_return, &augment_rule_single_tok);
 
-        for (struct GrammarRuleProto* rule_iter = all_rules;
+        gg_rules_cg.emplace("TOK_AUGMENT", std::move(augment_grammar));
+
+        for (struct GrammarRuleProto* rule_iter = self->grammar_rules;
              rule_iter;
              rule_iter = rule_iter->next)
         {
@@ -437,30 +323,41 @@ struct CodeGen
                 emit_error(&rule_iter->position, "Only %%type can be grammar rules");
                 continue;
             }
+            else if (gg_rules_cg.find(rule_iter->name) != gg_rules_cg.end())
+            {
+                emit_error(&rule_iter->position, "Redefinition of '%s' grammar", rule_iter->name);
+                continue;
+            }
 
             auto grammar = std::static_pointer_cast<CGGrammarToken>(tok);
             assert(grammar);
 
+            std::vector<CGGrammar> grammars;
             for (struct GrammarRuleSingleProto* rule_single_iter = rule_iter->rules;
                  rule_single_iter;
                  rule_single_iter = rule_single_iter->next)
             {
-                gg_rules_cg.emplace_back(this, grammar, rule_single_iter);
+                grammars.emplace_back(this, grammar, rule_single_iter);
+                grammar_n++;
             }
+
+            gg_rules_cg.emplace(rule_iter->name, std::move(grammars));
         }
 
-        gg_rules = up<GrammarRule[]>(new GrammarRule[gg_rules_cg.size()]);
-        int i = 0;
-        for (const auto& rule : gg_rules_cg)
+        gg_rules.reserve(grammar_n);
+        for (const auto &rules : gg_rules_cg)
         {
-            gg_rules[i] = rule.initialize_grammar(this);
+            for (const auto &rule : rules.second)
+            {
+                gg_rules.emplace_back(rule.initialize_grammar(this));
+            }
         }
     }
 
-    void write_header(std::ostream& os) const
+    void write_header(std::ostream &os) const
     {
         std::string prefix_upper = options.prefix;
-        std::transform(prefix_upper.begin(), prefix_upper.end(),prefix_upper.begin(), ::toupper);
+        std::transform(prefix_upper.begin(), prefix_upper.end(), prefix_upper.begin(), ::toupper);
 
         os << "#ifndef __NEOAST_" << prefix_upper << "_H__\n"
            << "#define __NEOAST_" << prefix_upper << "_H__\n\n"
@@ -481,7 +378,8 @@ struct CodeGen
            << "#endif\n\n"
            << "#endif\n";
     }
-    void write_parser(std::ostream& os) const
+
+    void write_parser(std::ostream &os) const
     {
         os << "#define NEOAST_PARSER_CODEGEN___C\n"
            << "#define __NEOAST_GET_TOKENS__\n"
@@ -507,7 +405,7 @@ struct CodeGen
 
         // Put the destructors
         os << "// Destructors\n";
-        for (const auto& iter : destructors)
+        for (const auto &iter : destructors)
         {
             os << "static void\n"
                << iter.first << "_destructor(" CODEGEN_UNION << "* self)\n{\n    ";
@@ -518,7 +416,7 @@ struct CodeGen
         // Dump the destructor table
         os << "static const\n"
               "parser_destructor __neoast_token_destructors[] = {\n";
-        for (const auto& token_name : tokens)
+        for (const auto &token_name : tokens)
         {
             auto tok = get_token(token_name);
 
@@ -537,20 +435,39 @@ struct CodeGen
 
         write_lexer(os);
 
+        // Put grammar actions
         int gg_i = 0;
-        for (const auto& rule : gg_rules_cg)
+        for (const auto &rules : gg_rules_cg)
         {
-            rule.put(os, options, gg_i++);
+            for (const auto &rule : rules.second)
+            { rule.put_action(os, options, gg_i++); }
         }
+
+        // Put grammar table
+        put_grammar_table(os);
+
+        // Put token names
+        os << "static const\n"
+           << "char* __neoast_token_names[] = {\n";
+        for (const auto &name : tokens)
+        { os << "        " << name << ",\n"; }
+        os << "};";
+
+        put_ascii_mappings(os);
+        put_parser_definition(os);
+        put_parsing_table(os);
+        put_parsing_function(os);
+        bottom->put(os);
     }
-    void write_lexer(std::ostream& os) const
+
+    void write_lexer(std::ostream &os) const
     {
         os << "// Lexer\n";
         switch (lexer_type)
         {
             case LEXER_BUILTIN:
             {
-                for (const auto& ll_state : ll_states)
+                for (const auto &ll_state : ll_states)
                 {
                     ll_state.put(os);
                 }
@@ -566,11 +483,311 @@ struct CodeGen
 
     }
 
-    int action_id() const { return static_cast<int>(action_tokens.size()); }
-
-    sp<CGToken> get_token(const std::string& name) const
+    void put_ascii_mappings(std::ostream &os) const
     {
-        for (const auto& i : action_tokens)
+        os << "static const\n"
+           << "uint32_t __neoast_ascii_mappings[NEOAST_ASCII_MAX] = {\n";
+
+        int i = 0;
+        for (int row = 0; i < NEOAST_ASCII_MAX; row++)
+        {
+            os << "        ";
+            for (int col = 0; col < 6 && i < NEOAST_ASCII_MAX; col++, i++)
+            {
+                os << variadic_string("0x%03X,%c", ascii_mappings[i], (col + 1 >= 6) ? '\n' : ' ');
+            }
+        }
+
+        os << "};\n\n";
+    }
+
+    void put_grammar_table(std::ostream &os) const
+    {
+        // Parsing table
+
+        // First put the grammar table
+        os << "static const\n"
+              "unsigned int grammar_token_table[] = {\n";
+
+        uint32_t gg_i = 0;
+        for (const auto &rules : gg_rules_cg)
+        {
+            os << variadic_string("        /* %s */\n", rules.first.c_str());
+            for (const auto &rule : rules.second)
+            {
+                if (gg_i == 0)
+                {
+                    gg_i++;
+                    os << "        /* ACCEPT */ ";
+                }
+                else
+                {
+                    os << variadic_string("        /* R%02d */ ", gg_i++);
+                }
+
+                rule.put_grammar_entry(os);
+            }
+
+            os << "\n";
+        }
+        os << "};\n\n";
+
+        // Print the grammar rules
+        uint32_t grammar_offset_i = 0;
+        os << "static const\n"
+              "GrammarRule __neoast_grammar_rules[] = {\n";
+
+        gg_i = 0;
+        for (const auto &rule : gg_rules)
+        {
+            if (rule.expr)
+            {
+                os << variadic_string(
+                        "        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d], .expr=(parser_expr) gg_rule_r%02d},\n",
+                        tokens[rule.token - NEOAST_ASCII_MAX].c_str(),
+                        rule.tok_n,
+                        grammar_offset_i,
+                        gg_i++);
+            }
+            else
+            {
+                os << variadic_string("        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d]},\n",
+                                      tokens[rule.token - NEOAST_ASCII_MAX].c_str(),
+                                      rule.tok_n,
+                                      grammar_offset_i);
+            }
+
+            grammar_offset_i += rule.tok_n;
+        }
+        os << "};\n\n";
+    }
+
+    void put_parser_definition(std::ostream &os) const
+    {
+        os << variadic_string(
+                "static GrammarParser parser = {\n"
+                "        .grammar_n = %d,\n"
+                "        .ascii_mappings = __neoast_ascii_mappings,\n"
+                "        .grammar_rules = __neoast_grammar_rules,\n"
+                "        .token_names = __neoast_token_names,\n"
+                "        .destructors = __neoast_token_destructors,\n"
+                "        .lexer_error = %s,\n"
+                "        .parser_error = %s,\n"
+                "        .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,\n"
+                "        .action_token_n = %d,\n"
+                "        .lexer_opts = (lexer_option_t)%d,\n};\n\n",
+                grammar_n,
+                !options.syntax_error_cb.empty() ? options.syntax_error_cb.c_str() : "NULL",
+                action_tokens.size(), options.lexer_opts
+        );
+    }
+
+    void put_parsing_table(std::ostream &os) const
+    {
+        up<const char* []> token_names_ptr(new const char* [tokens.size()]);
+        int i = 0;
+        for (const auto &n : tokens)
+        { token_names_ptr[i++] = n.c_str(); }
+
+        GrammarParser parser {
+                .ascii_mappings = ascii_mappings,
+                .grammar_rules = gg_rules.data(),
+                .token_names = token_names_ptr.get(),
+                .grammar_n = grammar_n,
+                .token_n = static_cast<uint32_t>(tokens.size()),
+                .action_token_n = static_cast<uint32_t>(action_tokens.size()),
+        };
+
+        CanonicalCollection* cc = canonical_collection_init(&parser);
+        canonical_collection_resolve(cc, options.parser_type);
+
+        uint8_t error;
+        up<uint8_t[]> precedence_table(new uint8_t[tokens.size()]);
+        for (const auto& mapping : precedence_mapping)
+        {
+            precedence_table[mapping.first] = mapping.second;
+        }
+
+        uint32_t* parsing_table = canonical_collection_generate(cc, precedence_table.get(), &error);
+
+        if (error)
+        {
+            emit_error(nullptr, "Failed to generate parsing table");
+            return;
+        }
+
+        if (options.debug_table)
+        {
+            put_table_debug(os, parsing_table, cc);
+        }
+
+        // Actually put the LR parsing table
+        i = 0;
+        os << "static const\nuint32_t GEN_parsing_table[] = {\n";
+        for (int state_i = 0; state_i < cc->state_n; state_i++)
+        {
+            os << "        ";
+            for (int tok_i = 0; tok_i < cc->parser->token_n; tok_i++, i++)
+            {
+                os << variadic_string("0x%08X,%c", parsing_table[i], tok_i + 1 >= cc->parser->token_n ? '\n' : ' ');
+            }
+        }
+        os << "};\n\n";
+
+        canonical_collection_free(cc);
+    }
+    void put_table_debug(std::ostream& os,
+                         const uint32_t* table,
+                         const CanonicalCollection* cc) const
+    {
+        os << "// Token names:\n";
+
+        std::string fallback;
+        fallback.reserve(tokens.size() + 1);
+        for (int i = 0; i < tokens.size() - 1; i++)
+        {
+            if (i == 0)
+            {
+                fallback[i] = '$';
+            }
+            else if (i < action_tokens.size())
+            {
+                fallback[i] = (char) ('a' + (char) i - 1);
+            }
+            else
+            {
+                fallback[i] = (char) ('A' + (char) i - (action_tokens.size()));
+            }
+        }
+
+        const char* debug_ids = fallback.c_str();
+        if (!options.debug_ids.empty()) debug_ids = options.debug_ids.c_str();
+
+        for (int i = 0; i < tokens.size() - 1; i++)
+        {
+            if (tokens[i].substr(0, 13) == "ASCII_CHAR_0x")
+            {
+                os << variadic_string("//  %s => '%c' ('%c')\n",
+                                      tokens[i].c_str(), options.debug_ids[i],
+                                      get_ascii_from_name(tokens[i].c_str()));
+            }
+            else
+            {
+                os << variadic_string("//  %s => '%c'\n", tokens[i].c_str(), options.debug_ids[i]);
+            }
+        }
+
+        os << "\n";
+
+        // This is a bit dirty since dump table takes a FILE*
+        // and we are using an ostream not an ofstream.
+
+        char *ptr = nullptr;
+        size_t size = 0;
+        FILE* fp = open_memstream(&ptr, &size);
+
+        dump_table(table, cc, debug_ids, 0, fp, "//  ");
+        os.write(ptr, static_cast<ssize_t>(size));
+        os.flush();
+
+        fclose(fp);
+    }
+
+    void put_parsing_function(std::ostream& os) const
+    {
+        // Dump the exported symbols
+        os << "static int parser_initialized = 0;\n"
+              "uint32_t "
+           << options.prefix
+           << "_init()\n{\n"
+              "    if (!parser_initialized)\n"
+              "    {\n"
+              "        uint32_t error = parser_init(&parser);\n"
+              "        if (error)\n"
+              "            return error;\n\n"
+              "        parser_initialized = 1;\n"
+              "    }\n"
+              "    return 0;\n"
+              "}\n\n";
+
+        os << "void "
+           << options.prefix
+           << "_free()\n"
+              "{\n"
+              "    if (parser_initialized)\n"
+              "    {\n"
+              "         parser_free(&parser);\n"
+              "         parser_initialized = 0;\n"
+              "    }\n"
+              "}\n\n";
+
+        if (options.lexer_opts & LEXER_OPT_TOKEN_POS)
+        {
+            os << variadic_string(
+                    "void* %s_allocate_buffers()\n"
+                    "{\n"
+                    "    return parser_allocate_buffers(%lu, %lu, "
+                    "sizeof(" CODEGEN_STRUCT "), offsetof(" CODEGEN_STRUCT ", position));\n""}\n\n",
+                    options.prefix.c_str(),
+                    options.max_tokens,
+                    options.parsing_stack_n);
+        }
+        else
+        {
+            os << variadic_string(
+                    "void* %s_allocate_buffers()\n"
+                    "{\n"
+                    "    return parser_allocate_buffers(%lu, %lu, "
+                    "sizeof(" CODEGEN_STRUCT "), sizeof(" CODEGEN_STRUCT "));\n""}\n\n",
+                    options.prefix.c_str(),
+                    options.max_tokens,
+                    options.parsing_stack_n);
+        }
+
+        os << "void "
+           << options.prefix
+           << "_free_buffers(void* self)\n"
+              "{\n"
+              "    parser_free_buffers((ParserBuffers*)self);\n"
+              "}\n\n",
+
+        os << variadic_string(
+                "static " CODEGEN_UNION " t;\n"
+                "typeof(t.%s) %s_parse(void* buffers, const char* input)\n"
+                "{\n"
+                "    parser_reset_buffers((ParserBuffers*)buffers);\n"
+                "    \n"
+                "    uint64_t input_len = strlen(input);\n"
+                "    int32_t output_idx = parser_parse_lr(&parser, GEN_parsing_table,\n"
+                "         (ParserBuffers*)buffers, input, input_len);\n"
+                "    \n"
+                "    if (output_idx < 0) return (typeof(t.%s))0;\n"
+                "    return ((" CODEGEN_UNION "*)((ParserBuffers*)buffers)->value_table)[output_idx].%s;\n"
+                "}\n"
+                "typeof(t.%s) %s_parse_len(void* buffers, const char* input, uint64_t input_len)\n"
+                "{\n"
+                "    parser_reset_buffers((ParserBuffers*)buffers);\n"
+                "    \n"
+                "    int32_t output_idx = parser_parse_lr(&parser, GEN_parsing_table,\n"
+                "         (ParserBuffers*)buffers, input, input_len);\n"
+                "    \n"
+                "    if (output_idx < 0) return (typeof(t.%s))0;\n"
+                "    return ((" CODEGEN_UNION "*)((ParserBuffers*)buffers)->value_table)[output_idx].%s;\n"
+                "}\n"
+                "\n"
+                "#endif\n",
+                start_type.c_str(), options.prefix.c_str(),
+                start_type.c_str(), start_type.c_str(),
+                start_type.c_str(), options.prefix.c_str(),
+                start_type.c_str(), start_type.c_str());
+    }
+
+    int action_id() const
+    { return static_cast<int>(action_tokens.size()); }
+
+    sp<CGToken> get_token(const std::string &name) const
+    {
+        for (const auto &i : action_tokens)
         {
             if (i->name == name)
             {
@@ -578,7 +795,7 @@ struct CodeGen
             }
         }
 
-        for (const auto& i : grammar_tokens)
+        for (const auto &i : grammar_tokens)
         {
             if (i->name == name)
             {
@@ -589,11 +806,11 @@ struct CodeGen
         return nullptr;
     }
 
-    void register_action(CGAction* ptr)
+    void register_action(const sp<CGAction>& ptr)
     {
         if (get_token(ptr->name) != nullptr)
         {
-            emit_error(ptr, "Repeated definition of token");
+            emit_error(ptr.get(), "Repeated definition of token");
             return;
         }
 
@@ -602,25 +819,52 @@ struct CodeGen
             ascii_mappings[get_ascii_from_name(ptr->name.c_str())] = action_id() + NEOAST_ASCII_MAX;
         }
 
-        action_tokens.emplace_back(ptr);
+        action_tokens.push_back(ptr);
     }
 
-    void register_grammar(CGGrammarToken* ptr)
+    void register_grammar(const sp<CGGrammarToken>& ptr)
     {
         if (get_token(ptr->name) != nullptr)
         {
-            emit_error(ptr, "Repeated definition of token");
+            emit_error(ptr.get(), "Repeated definition of token");
             return;
         }
 
-        grammar_tokens.emplace_back(ptr);
+        grammar_tokens.push_back(ptr);
+    }
+
+public:
+    CodeGen(const File* self,
+            std::ostream &cc_os,
+            std::ostream &hh_os)
+            : top(nullptr), bottom(nullptr), union_(nullptr), start(nullptr),
+              lexer_input(nullptr),
+              options(), grammar_i(0), grammar_n(0),
+              m_engine(), lexer_type(LEXER_BUILTIN)
+    {
+        parse_header(self);
+        if (has_errors()) { return; }
+
+        parse_lexer(self);
+        if (has_errors()) { return; }
+
+        parse_grammar(self);
+        if (has_errors()) { return; }
+
+        write_header(hh_os);
+        if (has_errors()) { return; }
+
+        write_parser(cc_os);
+        if (has_errors()) { return; }
     }
 };
 
 
-CGGrammar::CGGrammar(CodeGen* cg, sp<CGGrammarToken> return_type, const GrammarRuleSingleProto* self) :
-        action(self->function, &self->position), return_type(std::move(return_type)), token_n(0)
+CGGrammar::CGGrammar(CodeGen* cg, sp<CGGrammarToken> return_type_, const GrammarRuleSingleProto* self) :
+        action(self->function ? self->function : "", &self->position), return_type(std::move(return_type_)), token_n(0),
+        parent(self)
 {
+    assert(return_type.get());
     table_offset = cg->grammar_table.size();
     argument_types.push_back(return_type->type);
 
@@ -650,7 +894,7 @@ CGGrammar::CGGrammar(CodeGen* cg, sp<CGGrammarToken> return_type, const GrammarR
 GrammarRule CGGrammar::initialize_grammar(CodeGen* cg) const
 {
     GrammarRule gg;
-    gg.expr = nullptr;
+    gg.expr = action.empty() ? nullptr : reinterpret_cast<parser_expr>(0x2);
     gg.token = return_type->id + NEOAST_ASCII_MAX;
     gg.grammar = reinterpret_cast<const uint32_t*>(&cg->grammar_table[table_offset]);
     gg.tok_n = token_n;
@@ -660,186 +904,20 @@ GrammarRule CGGrammar::initialize_grammar(CodeGen* cg) const
 
 int codegen_write(const char* grammar_file_path,
                   const File* self,
-                  FILE* fp)
+                  const char* output_file_cc,
+                  const char* output_file_hh)
 {
-    // Codegen steps:
-    //   1. Write the header
-    //   2. Generate enums and union
-    //   3. Dump lexer actions
-    //   4. Dump parser actions
-    //   5. Dump lexer rules structures (all states)
-    //   6. Dump parser rules structure
-    //   7. Generate table and write
-    //   8. Generate entry point and buffer creation
-
-
-    put_ascii_mappings(ascii_mappings, fp);
-
-    fprintf(fp, "static GrammarParser parser = {\n"
-                "        .grammar_n = %d,\n"
-                "        .lex_state_n = %d,\n"
-                "        .lex_n = lexer_rule_n,\n"
-                "        .ascii_mappings = __neoast_ascii_mappings,\n"
-                "        .lexer_rules = __neoast_lexer_rules,\n"
-                "        .grammar_rules = __neoast_grammar_rules,\n"
-                "        .token_names = __neoast_token_names,\n"
-                "        .destructors = __neoast_token_destructors,\n"
-                "        .lexer_error = %s,\n"
-                "        .parser_error = %s,\n"
-                "        .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,\n"
-                "        .action_token_n = %d,\n"
-                "        .lexer_opts = (lexer_option_t)%d,\n",
-            grammar_n, lex_state_n,
-            options.lexing_error_cb ? options.lexing_error_cb : "NULL",
-            options.syntax_error_cb ? options.syntax_error_cb : "NULL",
-            action_n, options.lexer_opts
-    );
-    fputs("};\n\n", fp);
-
-    EXIT_IF_ERRORS;
-
-    CanonicalCollection* cc = canonical_collection_init(&parser);
-    canonical_collection_resolve(cc, options.parser_type);
-    DESTROY_ME(cc, (void (*) (void*))canonical_collection_free);
-
-    uint8_t error;
-    uint32_t* parsing_table = canonical_collection_generate(cc, precedence_table, &error);
-    DESTROY_ME(parsing_table, free);
-
-    if (options.debug_table)
+    if (grammar_file_path)
     {
-        fprintf(fp, "// Token names:\n");
-        char* fallback = malloc(token_n + 1);
-        for (int i = 0; i < token_n - 1; i++)
-        {
-            if (i == 0)
-            {
-                fallback[i] = '$';
-            }
-            else if (i < action_n)
-            {
-                fallback[i] = (char)('a' + (char)i - 1);
-            }
-            else
-            {
-                fallback[i] = (char)('A' + (char)i - (action_n));
-            }
-        }
-
-        if (!options.debug_ids) options.debug_ids = fallback;
-        for (int i = 0; i < token_n - 1; i++)
-        {
-            if (strncmp(tokens[i], "ASCII_CHAR_0x", 13) == 0)
-            {
-                fprintf(fp, "//  %s => '%c' ('%c')\n",
-                        tokens[i], options.debug_ids[i],
-                        get_ascii_from_name(tokens[i]));
-            }
-            else
-            {
-                fprintf(fp, "//  %s => '%c'\n", tokens[i], options.debug_ids[i]);
-            }
-        }
-
-        fputs("\n", fp);
-        dump_table(parsing_table, cc, options.debug_ids, 0, fp, "//  ");
-        free(fallback);
+        grammar_filename = grammar_file_path;
     }
 
-    // Dump the actual parsing table
-    put_parsing_table(parsing_table, cc, fp);
+    std::ofstream os(output_file_cc);
+    std::ofstream hs(output_file_hh);
 
-    // Dump the exported symbols
-    fprintf(fp, "static int parser_initialized = 0;\n"
-                "uint32_t %s_init()\n{\n"
-                "    if (!parser_initialized)\n"
-                "    {\n"
-                "        uint32_t error = parser_init(&parser);\n"
-                "        if (error)\n"
-                "            return error;\n\n"
-                "        parser_initialized = 1;\n"
-                "    }\n"
-                "    return 0;\n"
-                "}\n\n",
-                options.prefix);
-    fprintf(fp, "void %s_free()\n"
-                "{\n"
-                "    if (parser_initialized)\n"
-                "    {\n"
-                "         parser_free(&parser);\n"
-                "         parser_initialized = 0;\n"
-                "    }\n"
-                "}\n\n",
-                options.prefix);
-    if (options.lexer_opts & LEXER_OPT_TOKEN_POS)
-    {
-        fprintf(fp, "void* %s_allocate_buffers()\n"
-                    "{\n"
-                    "    return parser_allocate_buffers(%lu, %lu, %lu, %lu, "
-                    "sizeof(" CODEGEN_STRUCT "), offsetof(" CODEGEN_STRUCT ", position));\n"
-                    "}\n\n",
-                options.prefix,
-                options.max_lex_tokens,
-                options.max_token_len,
-                options.max_lex_state_depth,
-                options.parsing_stack_n);
-    }
-    else
-    {
-        fprintf(fp, "void* %s_allocate_buffers()\n"
-                    "{\n"
-                    "    return parser_allocate_buffers(%lu, %lu, %lu, %lu, "
-                    "sizeof(" CODEGEN_STRUCT "), sizeof(" CODEGEN_STRUCT "));\n"
-                    "}\n\n",
-                options.prefix,
-                options.max_lex_tokens,
-                options.max_token_len,
-                options.max_lex_state_depth,
-                options.parsing_stack_n);
-    }
+    CodeGen c(self, os, hs);
 
-    fprintf(fp, "void %s_free_buffers(void* self)\n"
-                "{\n"
-                "    parser_free_buffers((ParserBuffers*)self);\n"
-                "}\n\n",
-                options.prefix);
-
-    fprintf(fp, "static " CODEGEN_UNION " t;\n"
-                "typeof(t.%s) %s_parse(void* buffers, const char* input)\n"
-                "{\n"
-                "    parser_reset_buffers((ParserBuffers*)buffers);\n"
-                "    \n"
-                "    uint64_t input_len = strlen(input);\n"
-                "    int32_t output_idx = parser_parse_lr(&parser, GEN_parsing_table,\n"
-                "         (ParserBuffers*)buffers, input, input_len);\n"
-                "    \n"
-                "    if (output_idx < 0) return (typeof(t.%s))0;\n"
-                "    return ((" CODEGEN_UNION "*)((ParserBuffers*)buffers)->value_table)[output_idx].%s;\n"
-                "}\n"
-                "typeof(t.%s) %s_parse_len(void* buffers, const char* input, uint64_t input_len)\n"
-                "{\n"
-                "    parser_reset_buffers((ParserBuffers*)buffers);\n"
-                "    \n"
-                "    int32_t output_idx = parser_parse_lr(&parser, GEN_parsing_table,\n"
-                "         (ParserBuffers*)buffers, input, input_len);\n"
-                "    \n"
-                "    if (output_idx < 0) return (typeof(t.%s))0;\n"
-                "    return ((" CODEGEN_UNION "*)((ParserBuffers*)buffers)->value_table)[output_idx].%s;\n"
-                "}\n"
-                "\n"
-                "#endif\n",
-            _start->key, options.prefix,
-            _start->key, _start->key,
-            _start->key, options.prefix,
-            _start->key, _start->key);
-
-    if (_bottom)
-    {
-        fputs(_bottom->value, fp);
-        fputc('\n', fp);
-    }
-
-    EXIT_IF_ERRORS;
-    DESTROY_ALL;
-    return error;
+    os.close();
+    hs.close();
+    return has_errors();
 }

@@ -4,6 +4,7 @@
 #include <string>
 #include <sstream>
 #include <codegen/codegen.h>
+#include <ext/stdio_filebuf.h>
 #include <memory>
 
 struct Options {
@@ -17,7 +18,8 @@ struct Options {
     std::string lexer_file;
     parser_t parser_type = LALR_1; // LALR(1) or CLR(1)
 
-    unsigned long parsing_stack_n = 1024;
+    int parsing_stack_n = 1024;
+    int max_tokens = 1024;
     lexer_option_t lexer_opts = LEXER_OPT_NONE;
 
     void handle(const KeyVal* option);

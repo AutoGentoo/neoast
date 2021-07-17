@@ -15,7 +15,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <parser.h>
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -41,8 +40,13 @@ static void put_position(const TokenPosition* self, const char* type)
 {
     assert(file_lines);
     assert(type);
-    assert(self);
     assert(path);
+
+    if (!self)
+    {
+        fprintf(stderr, "%s: ", type);
+        return;
+    }
 
     assert(self->line < line_n);
     for (int i = (int)self->line - ERROR_CONTEXT_LINE_N; i < self->line; i++)
@@ -178,9 +182,9 @@ void parsing_error_cb(const char* const* token_names,
 
 int main(int argc, const char* argv[])
 {
-    if (argc != 3)
+    if (argc != 4)
     {
-        fprintf(stderr, "usage: %s [INPUT_FILE] [OUTPUT_FILE]\n", argv[0]);
+        fprintf(stderr, "usage: %s [INPUT_FILE] [OUTPUT_FILE].cc? [OUTPUT_FILE].h\n", argv[0]);
         return 1;
     }
 
@@ -213,20 +217,10 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    fp = fopen(argv[2], "w+");
-    if (!fp)
-    {
-        fprintf(stderr, "Failed to open '%s': %s\n", argv[1], strerror(errno));
-        free(file_lines);
-        free(input);
-        file_free(f);
-        return 1;
-    }
-
     static char full_path[PATH_MAX];
     const char* full_file_path = realpath(argv[1], full_path);
 
-    int error = codegen_write(full_file_path, f, fp);
+    int error = codegen_write(full_file_path, f, argv[2], argv[3]);
     fclose(fp);
     free(file_lines);
     free(input);

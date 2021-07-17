@@ -16,13 +16,13 @@
  */
 
 
-#include <builtin_lexer/lexer.h>
-#include <cmocka.h>
 #include <stdlib.h>
 #include <parsergen/canonical_collection.h>
 #include <math.h>
 #include <util/util.h>
 #include <string.h>
+#include <codegen/builtin_lexer/builtin_lexer.h>
+#include <cmocka.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -132,9 +132,9 @@ static GrammarParser p;
 void initialize_parser()
 {
     static LexerRule l_rules_s0[] = {
-            {.regex_raw = "[ ]+"},
-            {.expr = (lexer_expr) ll_tok_num, .regex_raw = "[0-9]+"},
-            {.expr = (lexer_expr) ll_tok_operator, .regex_raw = "[\\(\\)\\+\\-\\*\\/\\^]"}
+            {.regex = "[ ]+"},
+            {.expr = (lexer_expr) ll_tok_num, .regex = "[0-9]+"},
+            {.expr = (lexer_expr) ll_tok_operator, .regex = "[\\(\\)\\+\\-\\*\\/\\^]"}
     };
 
     /*
@@ -186,9 +186,6 @@ void initialize_parser()
 
     p.grammar_n = 10;
     p.grammar_rules = g_rules;
-    p.lex_state_n = 1;
-    p.lex_n = &lex_n;
-    p.lexer_rules = l_rules;
     p.action_token_n = 9;
     p.token_n = TOK_AUGMENT;
     p.token_names = token_error_names;
@@ -234,7 +231,7 @@ CTEST(test_lalr_1_calculator)
     const char* lexer_input = "1 + (5 * 9) + 2";
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CalculatorUnion), sizeof(CalculatorUnion));
+    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorUnion), sizeof(CalculatorUnion));
 
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);
@@ -262,7 +259,7 @@ CTEST(test_lalr_1_order_of_ops)
     const char* lexer_input = "1 + 5 * 9 + 4";
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(32, 32, 4, 1024, sizeof(CalculatorUnion), sizeof(CalculatorUnion));
+    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorUnion), sizeof(CalculatorUnion));
 
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);

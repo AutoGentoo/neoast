@@ -26,6 +26,7 @@
 struct BuiltinLexerState
 {
     std::vector<const LexerRule*> rules;
+    std::string regex_str;
     reflex::Pattern pattern;
 
     BuiltinLexerState(const LexerRule* rules_,
@@ -41,18 +42,21 @@ struct BuiltinLexerState
         // Build the pattern using the given rules using the following
         // construction rules:
         // (?mx)((?:<rule1>))|((?:<rule2>))
-        std::ostringstream os;
+        std::stringstream os;
         os << "(?mx)";
         std::string sep;
         for (const auto* rule : rules)
         {
+            assert(rule->regex);
             os << sep << "((?:"
                << rule->regex
                << "))";
             sep = "|";
         }
 
-        pattern = reflex::Pattern(os.str());
+        regex_str = os.str();
+        std::cout << regex_str << std::endl;
+        pattern = reflex::Pattern(regex_str);
     }
 };
 
@@ -81,21 +85,22 @@ struct BuiltinLexer
 class BuiltinLexerSession : public reflex::AbstractLexer<reflex::Matcher>
 {
     const BuiltinLexer* parent;
-    std::vector<reflex::Matcher> matchers;
+    const reflex::Input &input;
     ParsingStack* lexer_states;
 
 public:
     BuiltinLexerSession(const reflex::Input &input, const BuiltinLexer *parent,
                         std::ostream &os = std::cout) :
-            AbstractLexer(input, os), parent(parent)
+            AbstractLexer(input, os), parent(parent), input(input)
     {
-        matchers.reserve(parent->states.size());
-        for (const auto& s : parent->states)
-        {
-            matchers.emplace_back(s.pattern, input);
-        }
 
         lexer_states = parser_allocate_stack(32);
+        NEOAST_STACK_PUSH(lexer_states, 0);
+
+        if (!has_matcher())
+        {
+            matcher(new Matcher(parent->states[0].pattern, stdinit(), this));
+        }
     }
 
     int next(void* ll_val)
@@ -104,11 +109,11 @@ public:
         while (tok < 0)
         {
             int current_state = NEOAST_STACK_PEEK(lexer_states);
-            reflex::Matcher& matcher = matchers[current_state];
+            matcher().pattern(parent->states[current_state].pattern);
             const BuiltinLexerState& state = parent->states[current_state];
 
-            unsigned long rule_out = matcher.scan();
-            if (rule_out == 0 && matcher.at_end())
+            auto rule_out = matcher().scan();
+            if (rule_out == 0 && matcher().at_end() )
             {
                 // EOF
                 return 0;
@@ -121,7 +126,17 @@ public:
                 TokenPosition p {
                         .line = static_cast<uint32_t>(lineno()),
                         .col_start=static_cast<uint32_t>(columno())};
-                parent->error_cb(in().cstring(), &p);
+
+                if (parent->error_cb)
+                {
+                    parent->error_cb(input.cstring(), &p);
+                }
+                else
+                {
+                    std::cerr << "Failed to match token near on line:col "
+                              << p.line << ":" << p.col_start << " (state " << current_state << ")\n";
+                }
+
                 return -1;
             }
             else

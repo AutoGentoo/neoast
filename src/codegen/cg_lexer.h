@@ -3,25 +3,21 @@
 
 #include <codegen/codegen.h>
 #include <codegen/codegen_priv.h>
+#include <reflex/pattern.h>
 
 
 struct CGLexerState;
 struct CGLexerRule
 {
-    CGLexerState* parent;
-    int index;
-    reflex::Pattern pattern;
-    std::string regex;
     Code code;
+    const CGLexerState* parent;
+    int index;
+    std::string regex;
 
-    explicit CGLexerRule(CGLexerState* parent,
+    explicit CGLexerRule(const CGLexerState* parent,
                          int index,
-                         MacroEngine& m_engine, LexerRuleProto* iter):
-            code(iter->function, &iter->position),
-            parent(parent), index(index), regex(m_engine.expand(iter->regex))
-    {
-        pattern = reflex::Pattern(regex);
-    }
+                         MacroEngine& m_engine,
+                         LexerRuleProto* iter);
 
     std::string get_name() const;
 

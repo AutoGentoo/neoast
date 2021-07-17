@@ -43,8 +43,8 @@ public:
         size_t last_col = 0;
         for (auto& match : m.find)
         {
-            ss << regex.substr(last_col, match.columno());
-            last_col = match.columno_end();
+            ss << regex.substr(last_col, match.first() - last_col);
+            last_col = match.last();
 
             std::string macro_name(match.text() + 1);
             macro_name.pop_back(); // remove '}'
@@ -56,17 +56,21 @@ public:
             else
             {
                 // Don't try to expand this
-                continue;
+                std::cerr << "Invalid macro name " << macro_name << "\n";
             }
         }
 
-        ss << regex.substr(last_col);
+        // Place any remaining characters
+        if (last_col < regex.size())
+        {
+            ss << regex.substr(last_col);
+        }
         return ss.str();
     }
 
     void add(const std::string& name, const std::string& value)
     {
-        map[name] = value;
+        map[name] = expand(value);
     }
 };
 
