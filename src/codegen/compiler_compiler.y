@@ -8,9 +8,7 @@
 #include <stdint.h>
 #include <assert.h>
 
-void lexing_error_cb(const char* input,
-                     const TokenPosition* position,
-                     uint32_t offset);
+void lexing_error_cb(const char* input, const TokenPosition* position);
 
 void parsing_error_cb(const char* const* token_names,
                       const TokenPosition* position,

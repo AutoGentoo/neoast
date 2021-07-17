@@ -42,7 +42,7 @@ typedef struct
 } LexerRule;
 
 void* builtin_lexer_new(
-        const LexerRule* const rules[],
+        const LexerRule* rules[],
         const uint32_t rules_n[],
         uint32_t state_n,
         ll_error_cb error_cb);
