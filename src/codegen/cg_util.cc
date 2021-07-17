@@ -24,34 +24,23 @@ mark_redzones(const std::string& code)
     return out;
 }
 
-int get_named_token(const char* token_name, const char* const* tokens, uint32_t token_n)
-{
-    for (int i = 0; i < token_n; i++)
-    {
-        if (strcmp(tokens[i], token_name) == 0)
-            return i;
-    }
-
-    return -1;
-}
-
-int codegen_parse_bool(const KeyVal* self)
+bool codegen_parse_bool(const KeyVal* self)
 {
     if (strcmp(self->value, "TRUE") == 0
         || strcmp(self->value, "true") == 0
         || strcmp(self->value, "True") == 0
         || strcmp(self->value, "1") == 0)
-        return 1;
+        return true;
     else if (strcmp(self->value, "FALSE") == 0
              || strcmp(self->value, "false") == 0
              || strcmp(self->value, "False") == 0
              || strcmp(self->value, "0") == 0)
-        return 0;
+        return false;
 
     emit_warning(&self->position,
                  "Unable to parse boolean value '%s', assuming FALSE",
                  self->value);
-    return 0;
+    return false;
 }
 
 
@@ -81,7 +70,7 @@ void Options::handle(const KeyVal* option)
         lexer_opts =
                 static_cast<lexer_option_t>(
                         lexer_opts |
-                        codegen_parse_bool(option) ? static_cast<int>(LEXER_OPT_TOKEN_POS) : 0);
+                        (codegen_parse_bool(option) ? static_cast<int>(LEXER_OPT_TOKEN_POS) : 0));
     }
     else if (strcmp(option->key, "track_position_type") == 0)
     {
@@ -112,14 +101,19 @@ void Options::handle(const KeyVal* option)
         lexer_opts =
                 static_cast<lexer_option_t>(
                         lexer_opts |
-                        codegen_parse_bool(option) ? static_cast<int>(LEXER_OPT_LONGEST_MATCH) : 0);
+                        (codegen_parse_bool(option) ? static_cast<int>(LEXER_OPT_LONGEST_MATCH) : 0));
     }
     else if (strcmp(option->key, "input_types") == 0)
     {
+        // TODO(tumbar) What is this?
     }
     else if (strcmp(option->key, "lexer_file") == 0)
     {
         lexer_file = option->value;
+    }
+    else if (strcmp(option->key, "no_warn_builtin") == 0)
+    {
+        no_warn_builtin = codegen_parse_bool(option);
     }
     else
     {

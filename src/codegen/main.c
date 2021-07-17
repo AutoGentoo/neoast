@@ -20,8 +20,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdarg.h>
-#include <linux/limits.h>
 #include "codegen/codegen.h"
+
+#define PATH_MAX 4096
 
 #define ERROR_CONTEXT_LINE_N 3
 

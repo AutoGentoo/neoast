@@ -1,9 +1,8 @@
 #define _GNU_SOURCE
 
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <malloc.h>
-#include <stdlib.h>
 #include "codegen.h"
 
 KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value)

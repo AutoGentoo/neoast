@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 #include <reflex.h>
 #include <reflex/matcher.h>
@@ -24,6 +25,9 @@ struct CGGrammarToken;
 struct CGTyped;
 struct CGAction;
 struct CodeGen;
+
+
+extern const TokenPosition NO_POSITION;
 
 
 extern std::string grammar_filename;
@@ -60,7 +64,7 @@ struct Code : public TokenPosition
                << line
                << " \"" << file.c_str() << "\"\n";
         }
-        ss << code << "\n";
+        ss << code;
     }
 
     void put(std::ostream& os,
@@ -68,7 +72,7 @@ struct Code : public TokenPosition
              const std::vector<std::string>& argument_replace,
              const std::string& zero_arg,
              const std::string& non_zero_arg,
-             const std::string& position_field = "position") const
+             bool is_union = false) const
     {
         if (line && !file.empty())
         {
@@ -97,16 +101,29 @@ struct Code : public TokenPosition
                 continue;
             }
 
+            TokenPosition match_pos = {line, static_cast<uint32_t>(col_start + match.first())};
             if (match.text()[1] == '$')
             {
-                os << zero_arg << "->" << argument_replace[0];
+                if (is_union)
+                {
+                    os << zero_arg << "->" << argument_replace[0];
+                }
+                else
+                {
+                    os << zero_arg << "->value." << argument_replace[0];
+                }
             }
             else if (match.text()[1] == 'p')
             {
+                if (is_union)
+                {
+                    emit_error(&match_pos, "Illegal yyval position $p in lexer rule");
+                    continue;
+                }
+
                 size_t idx;
                 idx = std::stol(match.text() + 2, nullptr, 10);
 
-                TokenPosition match_pos = {line, static_cast<uint32_t>(col_start + match.first())};
                 if (!(options.lexer_opts & LEXER_OPT_TOKEN_POS))
                 {
                     emit_error(&match_pos, "Attempting to get token position without track_position=\"TRUE\"");
@@ -126,8 +143,10 @@ struct Code : public TokenPosition
 
                 if (!options.track_position_type.empty())
                 {
-                    os << variadic_string("((const %s*)&args[%d].position)",
-                                          options.track_position_type.c_str(), idx - 1);
+                    os << variadic_string("((const %s*)&%s[%d].position)",
+                                          options.track_position_type.c_str(),
+                                          non_zero_arg.c_str(),
+                                          idx - 1);
                 }
                 else
                 {
@@ -136,10 +155,23 @@ struct Code : public TokenPosition
             }
             else
             {
-                size_t idx;
-                idx = std::stol(match.text() + 2, nullptr, 10);
+                if (is_union)
+                {
+                    emit_error(&match_pos, "Illegal non destination $N in lexer rule");
+                    continue;
+                }
 
-                TokenPosition match_pos = {line, static_cast<uint32_t>(col_start + match.first())};
+                size_t idx;
+                try
+                {
+                    idx = std::stol(match.text() + 1, nullptr, 10);
+                }
+                catch (const std::exception& e)
+                {
+                    emit_error(&match_pos, "Invalid argument, excepted integer: %s", e.what());
+                    continue;
+                }
+
                 if (idx >= argument_replace.size())
                 {
                     emit_error(&match_pos, "Argument index out of range, function only has '%d' arguments",
@@ -157,7 +189,7 @@ struct Code : public TokenPosition
                     continue;
                 }
 
-                os << non_zero_arg << "[" << idx - 1 << "]." << argument_replace[idx];
+                os << non_zero_arg << "[" << idx - 1 << "].value." << argument_replace[idx];
             }
         }
 
@@ -193,10 +225,11 @@ struct CGToken : public TokenPosition
     CGToken(const TokenPosition* position,
             std::string name,
             int id)
-            : TokenPosition(*position), name(std::move(name)), id(id) {}
+            : TokenPosition(position ? *position : NO_POSITION),
+            name(std::move(name)), id(id) {}
 
-    virtual bool is_action() const { return false; };
-    virtual bool is_typed() const { return false; };
+    // Make all children virtual so that we have access to dynamic casting
+    virtual ~CGToken() = default;
 };
 
 struct CGTyped : public CGToken
@@ -205,8 +238,6 @@ struct CGTyped : public CGToken
 
     CGTyped(const KeyVal* self, int id)
             : CGToken(&self->position, self->value, id), type(self->key) {}
-
-    bool is_typed() const override { return true; }
 };
 
 struct CGGrammarToken : public CGTyped
@@ -221,9 +252,9 @@ struct CGAction : public CGToken
     CGAction(const KeyVal* self, int id, bool is_ascii = false)
             : CGToken(&self->position, self->value, id), is_ascii(is_ascii) {}
 
-    // Make this a virtual class so we that we have access
-    // to dynamic casting
-    bool is_action() const override { return true; }
+    CGAction(const TokenPosition* position, std::string name,
+             int id, bool is_ascii = false)
+            : CGToken(position, std::move(name), id), is_ascii(is_ascii) {}
 };
 
 struct CGTypedAction : public CGTyped, public CGAction
@@ -256,11 +287,13 @@ struct CGGrammar
 
         os << "static void\n"
            << variadic_string("gg_rule_r%02d(%s* dest, %s* args)\n{\n",
-                              i, CODEGEN_UNION, CODEGEN_UNION)
-           << "(void) dest;"
-           << "(void) args;";
+                              i, CODEGEN_STRUCT, CODEGEN_STRUCT)
+           << "    (void) dest;\n"
+           << "    (void) args;\n";
 
         action.put(os, options, argument_types, "dest", "args");
+
+        os << "}\n\n";
     }
 
     void put_grammar_entry(std::ostream& os) const

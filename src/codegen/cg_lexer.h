@@ -43,6 +43,6 @@ public:
     size_t get_rule_n() const { return rules.size(); }
 };
 
-void put_lexer_states(std::ostream &os, const std::vector<CGLexerState> &states);
+void put_lexer_states(std::ostream &os, const std::vector<up<CGLexerState>> &states);
 
 #endif //NEOAST_CG_LEXER_H

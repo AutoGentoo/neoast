@@ -67,6 +67,7 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 %option debug_table="FALSE"
 %option lexing_error_cb="lexing_error_cb"
 %option parsing_error_cb="parsing_error_cb"
+%option no_warn_builtin="TRUE"
 
 %union {
     char* identifier;

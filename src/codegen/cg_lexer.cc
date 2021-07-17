@@ -9,10 +9,13 @@ void put_lexer_rule_regex(std::ostream& os, const char* regex)
     }
 
     // Null terminator
-    os << "0x00";
+    os << "0x00,";
+
+    // String comment
+    os << " // " << regex << "\n";
 }
 
-void put_lexer_rule_count(std::ostream &os, const std::vector<CGLexerState>& states)
+void put_lexer_rule_count(std::ostream &os, const std::vector<up<CGLexerState>>& states)
 {
     os << "static const uint32_t lexer_rule_n[] = {";
 
@@ -21,26 +24,26 @@ void put_lexer_rule_count(std::ostream &os, const std::vector<CGLexerState>& sta
     {
         if (is_first)
         {
-            os << i.get_rule_n();
+            os << i->get_rule_n();
             is_first = false;
         }
         else
         {
-            os << ", " << i.get_rule_n();
+            os << ", " << i->get_rule_n();
         }
     }
 
     os << "};\n";
 }
 
-void put_lexer_states(std::ostream &os, const std::vector<CGLexerState> &states)
+void put_lexer_states(std::ostream &os, const std::vector<up<CGLexerState>> &states)
 {
     put_lexer_rule_count(os, states);
 
     os << "static LexerRule* __neoast_lexer_rules[] = {\n";
     for (const auto& i : states)
     {
-        os << variadic_string("        ll_rules_state_%s,\n", i.get_name().c_str());
+        os << variadic_string("        ll_rules_state_%s,\n", i->get_name().c_str());
     }
 
     os << "};\n\n";

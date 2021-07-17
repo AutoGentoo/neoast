@@ -31,6 +31,7 @@
 
 
 std::string grammar_filename;
+const TokenPosition NO_POSITION = {0, 0};
 
 
 class CodeGen
@@ -44,7 +45,7 @@ class CodeGen
     up<Code> union_;
 
     std::string start_type;
-    up<Code> start;
+    std::string start_token;
 
     up<Code> lexer_input;
 
@@ -61,7 +62,7 @@ class CodeGen
 
     std::map<std::string, up<Code>> destructors;
 
-    std::vector<CGLexerState> ll_states;
+    std::vector<up<CGLexerState>> ll_states;
     std::map<std::string, std::vector<CGGrammar>> gg_rules_cg;
     std::vector<GrammarRule> gg_rules;
     std::vector<int32_t> grammar_table;
@@ -83,7 +84,6 @@ class CodeGen
                 {KEY_VAL_TOP,    {"top",    &top}},
                 {KEY_VAL_BOTTOM, {"bottom", &bottom}},
                 {KEY_VAL_UNION,  {"union",  &union_}},
-                {KEY_VAL_START,  {"start",  &start}},
                 {KEY_VAL_LEXER,  {"lexer",  &lexer_input}},
         };
 
@@ -94,7 +94,6 @@ class CodeGen
                 case KEY_VAL_TOP:
                 case KEY_VAL_BOTTOM:
                 case KEY_VAL_UNION:
-                case KEY_VAL_START:
                 case KEY_VAL_LEXER:
                 {
                     auto &ptr = single_appearance_map[iter->type];
@@ -132,7 +131,7 @@ class CodeGen
                     {
                         emit_error(&iter->position, "Undefined token");
                     }
-                    else if (!t->is_action())
+                    else if (!dynamic_cast<CGAction*>(t.get()))
                     {
                         emit_error(&iter->position, "Cannot use %%type token in precedence");
                     }
@@ -153,6 +152,15 @@ class CodeGen
                     break;
                 case KEY_VAL_MACRO:
                     m_engine.add(iter->key, iter->value);
+                    break;
+                case KEY_VAL_START:
+                    if (!start_type.empty() || !start_token.empty())
+                    {
+                        emit_warning(&iter->position, "Using %%start multiple times will override previous uses");
+                    }
+
+                    start_type = iter->key;
+                    start_token = iter->value;
                     break;
                 case KEY_VAL_DESTRUCTOR:
                 {
@@ -181,7 +189,7 @@ class CodeGen
         KeyVal v{.key = const_cast<char*>(start_type.c_str()), .value=const_cast<char*>(ta)};
         register_grammar(std::make_shared<CGGrammarToken>(&v, static_cast<int>(action_id() + grammar_i++)));
 
-        tokens.emplace_back("TOK_EOF");
+        action_tokens.emplace_back(new CGAction(nullptr, "TOK_EOF", 0));
         for (const auto &i : action_tokens)
         { tokens.push_back(i->name); }
         for (const auto &i : grammar_tokens)
@@ -209,6 +217,13 @@ class CodeGen
             }
 
             // Using the builtin lexer
+            if (!options.no_warn_builtin)
+            {
+                emit_warning(&self->lexer_rules->position,
+                             "BUILTIN lexer should only be used for "
+                             "bootstrap compiler-compiler");
+            }
+
             parse_builtin_lexer(self);
             lexer_type = LEXER_BUILTIN;
         }
@@ -235,7 +250,7 @@ class CodeGen
     void parse_builtin_lexer(const File* self)
     {
         int state_n = 0;
-        ll_states.emplace_back(state_n++, "LEX_STATE_DEFAULT");
+        ll_states.emplace_back(new CGLexerState(state_n++, "LEX_STATE_DEFAULT"));
 
         for (struct LexerRuleProto* iter = self->lexer_rules; iter; iter = iter->next)
         {
@@ -245,7 +260,7 @@ class CodeGen
                 bool duplicate_state = false;
                 for (const auto &iter_state : ll_states)
                 {
-                    if (iter_state.get_name() == iter->lexer_state)
+                    if (iter_state->get_name() == iter->lexer_state)
                     {
                         emit_error(&iter->position,
                                    "Multiple definition of lexer state '%s'",
@@ -260,7 +275,7 @@ class CodeGen
                     continue;
                 }
 
-                ll_states.emplace_back(state_n++, iter->lexer_state);
+                ll_states.emplace_back(new CGLexerState(state_n++, iter->lexer_state));
                 auto &ls = ll_states[ll_states.size() - 1];
 
                 for (struct LexerRuleProto* iter_s = iter->state_rules; iter_s; iter_s = iter_s->next)
@@ -270,43 +285,53 @@ class CodeGen
                     assert(!iter_s->lexer_state);
                     assert(!iter_s->state_rules);
 
-                    ls.add_rule(m_engine, iter_s);
+                    ls->add_rule(m_engine, iter_s);
                 }
             }
             else
             {
                 // Add to the default lexing state
-                ll_states[0].add_rule(m_engine, iter);
+                ll_states[0]->add_rule(m_engine, iter);
             }
         }
     }
 
     void parse_grammar(const File* self)
     {
-        // Add the augment rule
-        static struct Token augment_rule_tok = {
-                .name = const_cast<char*>(start_type.c_str()),
-                .next = nullptr,
-        };
-
-        struct GrammarRuleSingleProto augment_rule_single_tok = {
-                .tokens = &augment_rule_tok,
-                .next = nullptr,
-        };
-
-        // Add the augment rule
-        std::vector<CGGrammar> augment_grammar;
-        grammar_n = 0;
-        auto tok_augment_return = std::static_pointer_cast<CGGrammarToken>(get_token("TOK_AUGMENT"));
-        if (!tok_augment_return)
+        if (start_type.empty() || start_token.empty())
         {
-            emit_error(nullptr, "Expected augment rule to be a grammar token");
+            emit_error(nullptr, "Undeclared %%start type");
             return;
         }
 
-        augment_grammar.emplace_back(this, tok_augment_return, &augment_rule_single_tok);
+        // Add the augment rule
+        static struct Token augment_rule_tok = {
+                .position = NO_POSITION,
+                .name = const_cast<char*>(start_token.c_str()),
+                .next = nullptr,
+        };
 
-        gg_rules_cg.emplace("TOK_AUGMENT", std::move(augment_grammar));
+        static struct GrammarRuleSingleProto augment_rule_single_tok = {
+                .position = NO_POSITION,
+                .tokens = &augment_rule_tok,
+                .function = nullptr,
+                .next = nullptr,
+        };
+
+        // Add the augment rule
+        grammar_n = 0;
+        {
+            std::vector<CGGrammar> augment_grammar;
+            auto tok_augment_return = std::static_pointer_cast<CGGrammarToken>(get_token("TOK_AUGMENT"));
+            if (!tok_augment_return)
+            {
+                emit_error(nullptr, "Expected augment rule to be a grammar token");
+                return;
+            }
+
+            augment_grammar.emplace_back(this, tok_augment_return, &augment_rule_single_tok);
+            gg_rules_cg.emplace("TOK_AUGMENT", std::move(augment_grammar));
+        }
 
         for (struct GrammarRuleProto* rule_iter = self->grammar_rules;
              rule_iter;
@@ -318,7 +343,7 @@ class CodeGen
                 emit_error(&rule_iter->position, "Could not find token for rule '%s'\n", rule_iter->name);
                 continue;
             }
-            else if (tok->is_action())
+            else if (dynamic_cast<CGAction*>(tok.get()))
             {
                 emit_error(&rule_iter->position, "Only %%type can be grammar rules");
                 continue;
@@ -341,13 +366,13 @@ class CodeGen
                 grammar_n++;
             }
 
-            gg_rules_cg.emplace(rule_iter->name, std::move(grammars));
+            gg_rules_cg.emplace(rule_iter->name, grammars);
         }
 
         gg_rules.reserve(grammar_n);
         for (const auto &rules : gg_rules_cg)
         {
-            for (const auto &rule : rules.second)
+            for (const auto& rule : rules.second)
             {
                 gg_rules.emplace_back(rule.initialize_grammar(this));
             }
@@ -366,27 +391,48 @@ class CodeGen
            << "#endif\n\n";
 
         os << "#ifdef __NEOAST_GET_TOKENS__\n";
-
         put_enum(NEOAST_ASCII_MAX + 1, tokens, os);
+        os << "#endif // __NEOAST_GET_TOKENS__\n\n";
 
-        os << "}\n#endif\n";
+        os << "#ifdef __NEOAST_GET_STATES__\n";
+        std::vector<std::string> state_names;
+        for (const auto& i : ll_states) state_names.push_back(i->get_name());
+        put_enum(0, state_names, os);
+        os << "#endif // __NEOAST_GET_STATES__\n\n";
 
         // TODO Declare parsing/lexing functions
 
         os << "#ifdef __cplusplus\n"
            << "};\n"
-           << "#endif\n\n"
-           << "#endif\n";
+           << "#endif // __cplusplus\n"
+           << "#endif // __NEOAST_" << prefix_upper << "_H__\n";
     }
 
     void write_parser(std::ostream &os) const
     {
         os << "#define NEOAST_PARSER_CODEGEN___C\n"
            << "#define __NEOAST_GET_TOKENS__\n"
+           << "#define __NEOAST_GET_STATES__\n"
            << "#include <neoast.h>\n"
            << "#include <string.h>\n";
 
         top->put(os);
+
+        // Include necessary headers for chosen lexer
+        switch (lexer_type)
+        {
+            case LEXER_BUILTIN:
+                os << "#include <codegen/builtin_lexer/builtin_lexer.h>\n";
+                break;
+            case LEXER_REFLEX_RAW:
+                os << "// TODO INCLUDE reflex lexer requirements\n";
+                break;
+            case LEXER_REFLEX_FILE:
+                break;
+        }
+
+        // Act as a preprocessor and put the external header
+        write_header(os);
 
         // Put the union definition
         os << "typedef union {";
@@ -409,7 +455,7 @@ class CodeGen
         {
             os << "static void\n"
                << iter.first << "_destructor(" CODEGEN_UNION << "* self)\n{\n    ";
-            iter.second->put(os, options, {iter.first}, "self", "");
+            iter.second->put(os, options, {iter.first}, "self", "", true);
             os << "\n}\n\n";
         }
 
@@ -420,14 +466,20 @@ class CodeGen
         {
             auto tok = get_token(token_name);
 
-            if (!tok->is_typed() || destructors.find(std::static_pointer_cast<CGTyped>(tok)->type) == destructors.end())
+            if (!tok)
             {
-                os << variadic_string("        NULL, // %s", token_name.c_str());
+                throw Exception("Failed to find token " + token_name);
+            }
+            else if (!dynamic_cast<CGTyped*>(tok.get()) ||
+                     destructors.find(dynamic_cast<CGTyped*>(tok.get())->type)
+                        == destructors.end())
+            {
+                os << variadic_string("        NULL, // %s\n", token_name.c_str());
             }
             else
             {
-                os << variadic_string("        (parser_destructor) %s_destructor, // %s",
-                                      std::static_pointer_cast<CGTyped>(tok)->type.c_str(),
+                os << variadic_string("        (parser_destructor) %s_destructor, // %s\n",
+                                      dynamic_cast<CGTyped*>(tok.get())->type.c_str(),
                                       token_name.c_str());
             }
         }
@@ -450,7 +502,7 @@ class CodeGen
         os << "static const\n"
            << "char* __neoast_token_names[] = {\n";
         for (const auto &name : tokens)
-        { os << "        " << name << ",\n"; }
+        { os << "        \"" << name << "\",\n"; }
         os << "};";
 
         put_ascii_mappings(os);
@@ -469,7 +521,7 @@ class CodeGen
             {
                 for (const auto &ll_state : ll_states)
                 {
-                    ll_state.put(os);
+                    ll_state->put(os);
                 }
 
                 put_lexer_states(os, ll_states);
@@ -537,7 +589,7 @@ class CodeGen
         os << "static const\n"
               "GrammarRule __neoast_grammar_rules[] = {\n";
 
-        gg_i = 0;
+        gg_i = 1;
         for (const auto &rule : gg_rules)
         {
             if (rule.expr)
@@ -577,8 +629,10 @@ class CodeGen
                 "        .action_token_n = %d,\n"
                 "        .lexer_opts = (lexer_option_t)%d,\n};\n\n",
                 grammar_n,
+                !options.lexing_error_cb.empty() ? options.lexing_error_cb.c_str() : "NULL",
                 !options.syntax_error_cb.empty() ? options.syntax_error_cb.c_str() : "NULL",
-                action_tokens.size(), options.lexer_opts
+                action_tokens.size(),
+                options.lexer_opts
         );
     }
 
@@ -773,9 +827,7 @@ class CodeGen
                 "    \n"
                 "    if (output_idx < 0) return (typeof(t.%s))0;\n"
                 "    return ((" CODEGEN_UNION "*)((ParserBuffers*)buffers)->value_table)[output_idx].%s;\n"
-                "}\n"
-                "\n"
-                "#endif\n",
+                "}\n\n",
                 start_type.c_str(), options.prefix.c_str(),
                 start_type.c_str(), start_type.c_str(),
                 start_type.c_str(), options.prefix.c_str(),
@@ -837,7 +889,7 @@ public:
     CodeGen(const File* self,
             std::ostream &cc_os,
             std::ostream &hh_os)
-            : top(nullptr), bottom(nullptr), union_(nullptr), start(nullptr),
+            : top(nullptr), bottom(nullptr), union_(nullptr),
               lexer_input(nullptr),
               options(), grammar_i(0), grammar_n(0),
               m_engine(), lexer_type(LEXER_BUILTIN)
@@ -880,9 +932,10 @@ CGGrammar::CGGrammar(CodeGen* cg, sp<CGGrammarToken> return_type_, const Grammar
         cg->grammar_table.push_back(t->id + NEOAST_ASCII_MAX);
         token_n++;
 
-        if (t->is_typed())
+        const auto* t_casted = dynamic_cast<CGTyped*>(t.get());
+        if (t_casted)
         {
-            argument_types.push_back(std::static_pointer_cast<CGTyped>(t)->type);
+            argument_types.push_back(t_casted->type);
         }
         else
         {
@@ -915,7 +968,22 @@ int codegen_write(const char* grammar_file_path,
     std::ofstream os(output_file_cc);
     std::ofstream hs(output_file_hh);
 
-    CodeGen c(self, os, hs);
+    try
+    {
+        CodeGen c(self, os, hs);
+    }
+    catch (const ASTException& e)
+    {
+        emit_error(e.position(), e.what());
+    }
+    catch (const Exception& e)
+    {
+        emit_error(nullptr, e.what());
+    }
+    catch (const std::exception& e)
+    {
+        emit_error(nullptr, "System exception: %s", e.what());
+    }
 
     os.close();
     hs.close();

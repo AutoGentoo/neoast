@@ -23,10 +23,11 @@ set(compiler_compiler
 add_custom_command(OUTPUT ${compiler_compiler}
         COMMAND $<TARGET_FILE:neoast-bootstrap>
         ARGS compiler_compiler.y ${compiler_compiler}
-        DEPENDS compiler_compiler.y neoast-bootstrap neoast-codegen
+        DEPENDS neoast-bootstrap neoast-codegen compiler_compiler.y
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(neoast-exec ${compiler_compiler} main.c)
+add_dependencies(neoast-exec neoast-bootstrap)
 
 include_directories(neoast-codegen PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../

@@ -759,7 +759,7 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
     *lexer_ptr = builtin_lexer_new(ll_rules,
                                    ll_rules_n,
                                    NEOAST_ARR_LEN(ll_rules_n),
-                                   NULL);
+                                   ll_error);
 
     precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
 

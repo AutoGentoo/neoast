@@ -55,7 +55,6 @@ struct BuiltinLexerState
         }
 
         regex_str = os.str();
-        std::cout << regex_str << std::endl;
         pattern = reflex::Pattern(regex_str);
     }
 };

@@ -4,12 +4,12 @@
 #include <string>
 #include <sstream>
 #include <codegen/codegen.h>
-#include <ext/stdio_filebuf.h>
 #include <memory>
 
 struct Options {
     // Should we dump the table
-    int debug_table = 0;
+    bool debug_table = false;
+    bool no_warn_builtin = false;
     std::string track_position_type;
     std::string debug_ids;
     std::string prefix = "neoast";
@@ -32,6 +32,16 @@ class Exception : std::exception
 public:
     explicit Exception(std::string what) : what_(std::move(what)) {}
     const char * what() const noexcept override { return what_.c_str(); }
+};
+
+class ASTException : public Exception
+{
+    TokenPosition position_;
+
+public:
+    explicit ASTException(TokenPosition position, std::string what)
+    : position_(position), Exception(std::move(what)) {}
+    const TokenPosition* position() const noexcept { return &position_; }
 };
 
 template<typename T_,
