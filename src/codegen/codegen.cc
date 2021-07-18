@@ -193,7 +193,7 @@ void CodeGenImpl::parse_lexer(const File* self)
                          "bootstrap compiler-compiler");
         }
 
-        lexer = std::shared_ptr<CGBuiltinLexer>(new CGBuiltinLexer(self, m_engine, options));
+        lexer = std::make_shared<CGBuiltinLexer>(self, m_engine, options);
     }
     else if (lexer_input)
     {
@@ -222,7 +222,7 @@ void CodeGenImpl::parse_grammar(const File* self)
         return;
     }
 
-    grammar = std::shared_ptr<CGGrammars>(new CGGrammars(parent, self));
+    grammar = std::make_shared<CGGrammars>(parent, self);
 }
 
 void CodeGenImpl::put_ascii_mappings(std::ostream &os) const
@@ -338,20 +338,7 @@ void CodeGenImpl::put_table_debug(std::ostream &os,
 
     os << "\n";
 
-    // Dump_table is built to work with C FILE* because
-    // it was written before CodeGen was implemented and
-    // is meant to work with the unit tests.
-    // We can open a memory stream and dump to our output stream
-
-    char* ptr = nullptr;
-    size_t size = 0;
-    FILE* fp = open_memstream(&ptr, &size);
-
-    dump_table(table, cc, debug_ids, 0, fp, "//  ");
-    fflush(fp);
-    os.write(ptr, static_cast<ssize_t>(size));
-    os.flush();
-    fclose(fp);
+    dump_table_cxx(table, cc, debug_ids, 0, os, "//  ");
 }
 
 sp<CGToken> CodeGenImpl::get_token(const std::string &name) const

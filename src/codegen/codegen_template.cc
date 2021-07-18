@@ -88,9 +88,9 @@ void CodeGenImpl::write_source(std::ostream &os) const
 
     /* Header defined */
     source_data["include_header"] = os_header_preprocessor.str();
-    source_data["top"] = top ? top->get_simple() : "";
-    source_data["bottom"] = bottom ? bottom->get_simple() : "";
-    source_data["union"] = union_->get_simple();
+    source_data["top"] = top ? top->get_simple(options) : "";
+    source_data["bottom"] = bottom ? bottom->get_simple(options) : "";
+    source_data["union"] = union_->get_simple(options);
     source_data["union_name"] = CODEGEN_UNION;
     source_data["struct_name"] = CODEGEN_STRUCT;
     source_data["start_type"] = start_type;

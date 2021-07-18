@@ -77,7 +77,7 @@ struct CGGrammar
                               i, CODEGEN_STRUCT, CODEGEN_STRUCT)
            << "    (void) dest;\n"
            << "    (void) args;\n"
-           << action.get_complex(options, argument_types, "dest", "args")
+           << action.get_complex(options, argument_types, "dest", "args", false)
            << "}\n\n";
     }
 

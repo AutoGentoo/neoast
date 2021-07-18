@@ -90,13 +90,13 @@ struct BuiltinLexer
 class BuiltinLexerSession : public reflex::AbstractLexer<reflex::Matcher>
 {
     const BuiltinLexer* parent;
-    const reflex::Input &input;
+    const reflex::Input input;
     ParsingStack* lexer_states;
 
 public:
-    BuiltinLexerSession(const reflex::Input &input, const BuiltinLexer *parent,
+    BuiltinLexerSession(const char* input, uint32_t length, const BuiltinLexer *parent,
                         std::ostream &os = std::cout) :
-            AbstractLexer(input, os), parent(parent), input(input)
+            AbstractLexer(input, os), parent(parent), input(input, length)
     {
         lexer_states = parser_allocate_stack(32);
         NEOAST_STACK_PUSH(lexer_states, 0);
@@ -220,8 +220,7 @@ void builtin_lexer_free(void* lexer)
 
 void* builtin_lexer_instance_new(const void* lexer_parent, const char* input, size_t length)
 {
-    return new BuiltinLexerSession(reflex::Input(input, length),
-                                   reinterpret_cast<const BuiltinLexer*>(lexer_parent));
+    return new BuiltinLexerSession(input, length, reinterpret_cast<const BuiltinLexer*>(lexer_parent));
 }
 
 void builtin_lexer_instance_free(void* lexer_inst)

@@ -4,16 +4,15 @@
 #include "cg_util.h"
 #include "codegen_priv.h"
 
-reflex::Pattern redzone_pattern(
-        "(?mx)"
-        "(\\/\\/[^\n]*\n)|"                 // Line comments
-        "(\\/\\*(?:\\*(?!\\/)|[^*])*\\*\\/)|" // Block comments
-        "(\"(?:[^\"\\\\]|\\\\[\\s\\S])*\")");   // String literals
-
 std::vector<std::pair<int, int>>
 mark_redzones(const std::string& code)
 {
     // Find all the regions where comments and string exist
+    reflex::Pattern redzone_pattern(
+            "(?mx)"
+            "(\\/\\/[^\n]*\n)|"                 // Line comments
+            "(\\/\\*(?:\\*(?!\\/)|[^*])*\\*\\/)|" // Block comments
+            "(\"(?:[^\"\\\\]|\\\\[\\s\\S])*\")");   // String literals
     reflex::Matcher m(redzone_pattern, code);
     std::vector<std::pair<int, int>> out;
 
@@ -109,10 +108,10 @@ void Options::handle(const KeyVal* option)
 }
 
 
-std::string Code::get_simple() const
+std::string Code::get_simple(const Options &options) const
 {
     std::ostringstream ss;
-    if (line && !file.empty())
+    if (line && !file.empty() && options.annotate_line)
     {
         ss << "\n#line "
            << line
@@ -122,15 +121,12 @@ std::string Code::get_simple() const
     return ss.str();
 }
 
-std::string Code::get_complex(
-        const Options& options,
-        const std::vector<std::string>& argument_replace,
-        const std::string& zero_arg,
-        const std::string& non_zero_arg,
-        bool is_union) const
+std::string
+Code::get_complex(const Options &options, const std::vector<std::string> &argument_replace, const std::string &zero_arg,
+                  const std::string &non_zero_arg, bool is_union) const
 {
     std::ostringstream os;
-    if (line && !file.empty())
+    if (line && !file.empty() && options.annotate_line)
     {
         os << "\n#line "
            << line
@@ -246,4 +242,23 @@ std::string Code::get_complex(
 
     os << code.substr(last_position) << "\n";
     return os.str();
+}
+
+bool Code::in_redzone(const std::vector<std::pair<int, int>> &redzones, const reflex::AbstractMatcher &m)
+{
+    for (const auto& iter : redzones)
+    {
+        if (iter.first > m.first() && iter.second < m.last())
+        {
+            return true;
+        }
+
+        // Future redzones are always outside the bounds of this match
+        if (iter.first > m.last())
+        {
+            return false;
+        }
+    }
+
+    return false;
 }

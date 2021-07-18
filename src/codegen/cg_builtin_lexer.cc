@@ -22,12 +22,14 @@ struct CGBuiltinLexerRule
 
 class CGBuiltinLexerState
 {
+    CGBuiltinLexer* parent;
     int id;
     std::string name;
     std::vector<CGBuiltinLexerRule> rules;
 
 public:
-    CGBuiltinLexerState(int id_, std::string name) : id(id_), name(std::move(name)) {}
+    CGBuiltinLexerState(CGBuiltinLexer* parent, int id_, std::string name)
+    : parent(parent), id(id_), name(std::move(name)) {}
     void put(std::ostream& os) const;
     void add_rule(MacroEngine& m_engine, LexerRuleProto* iter)
     {
@@ -35,6 +37,7 @@ public:
     }
 
     const std::string& get_name() const { return name; }
+    const CGBuiltinLexer* get_parent() const { return parent; }
     size_t get_rule_n() const { return rules.size(); }
 };
 
@@ -87,7 +90,7 @@ void CGBuiltinLexerRule::put_action(std::ostream &os) const
           "    (void) lex_state;\n"
           "    (void) position;\n"
           "    {"
-       << code.get_simple()
+       << code.get_simple(parent->get_parent()->get_options())
        << "}\n    return -1;\n}\n\n";
 }
 
@@ -155,7 +158,7 @@ CGBuiltinLexer::CGBuiltinLexer(const File* self, MacroEngine &m_engine_, const O
 : impl_(new CGBuiltinLexerImpl(options))
 {
     int state_n = 0;
-    impl_->states.emplace_back(new CGBuiltinLexerState(state_n++, "LEX_STATE_DEFAULT"));
+    impl_->states.emplace_back(new CGBuiltinLexerState(this, state_n++, "LEX_STATE_DEFAULT"));
 
     for (struct LexerRuleProto* iter = self->lexer_rules; iter; iter = iter->next)
     {
@@ -180,7 +183,7 @@ CGBuiltinLexer::CGBuiltinLexer(const File* self, MacroEngine &m_engine_, const O
                 continue;
             }
 
-            impl_->states.emplace_back(new CGBuiltinLexerState(state_n++, iter->lexer_state));
+            impl_->states.emplace_back(new CGBuiltinLexerState(this, state_n++, iter->lexer_state));
             auto &ls = impl_->states[impl_->states.size() - 1];
 
             for (struct LexerRuleProto* iter_s = iter->state_rules; iter_s; iter_s = iter_s->next)
@@ -254,11 +257,16 @@ std::string CGBuiltinLexer::get_new_inst(const std::string &name) const
 
 std::string CGBuiltinLexer::get_del_inst(const std::string &name) const
 {
-    return "builtin_lexer_instance_free(" + name + ");";
+    return "builtin_lexer_instance_free(" + name + ")";
 }
 
 std::string CGBuiltinLexer::get_ll_next(const std::string &name) const
 {
     (void) name;
     return "builtin_lexer_next";
+}
+
+const Options &CGBuiltinLexer::get_options() const
+{
+    return impl_->options;
 }

@@ -1,5 +1,5 @@
 add_library(neoast-util STATIC
-        table_dump.c
+        table_dump.cc
         util.h)
 
 target_include_directories(neoast-util PRIVATE

@@ -66,33 +66,13 @@ struct Code : public TokenPosition
     }
 
     bool empty() const { return code.empty(); }
-    std::string get_simple() const;
-    std::string get_complex(
-            const Options& options,
-            const std::vector<std::string>& argument_replace,
-            const std::string& zero_arg,
-            const std::string& non_zero_arg,
-            bool is_union = false) const;
+    std::string get_simple(const Options &options) const;
+    std::string
+    get_complex(const Options &options, const std::vector<std::string> &argument_replace, const std::string &zero_arg,
+                const std::string &non_zero_arg, bool is_union) const;
 
 private:
-    static bool in_redzone(const std::vector<std::pair<int, int>>& redzones, const reflex::AbstractMatcher& m)
-    {
-        for (const auto& iter : redzones)
-        {
-            if (iter.first > m.first() && iter.second < m.last())
-            {
-                return true;
-            }
-
-            // Future redzones are always outside the bounds of this match
-            if (iter.first > m.last())
-            {
-                return false;
-            }
-        }
-
-        return false;
-    }
+    static bool in_redzone(const std::vector<std::pair<int, int>>& redzones, const reflex::AbstractMatcher& m);
 };
 
 struct CGToken : public TokenPosition

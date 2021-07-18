@@ -260,6 +260,7 @@ CTEST(test_lalr_1_calculator)
     parser_free_buffers(buf);
     canonical_collection_free(cc);
     free(table);
+    builtin_lexer_free(lexer_parent);
 }
 
 CTEST(test_lalr_1_order_of_ops)

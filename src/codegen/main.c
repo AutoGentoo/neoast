@@ -222,7 +222,6 @@ int main(int argc, const char* argv[])
     const char* full_file_path = realpath(argv[1], full_path);
 
     int error = codegen_write(full_file_path, f, argv[2], argv[3]);
-    fclose(fp);
     free(file_lines);
     free(input);
     file_free(f);

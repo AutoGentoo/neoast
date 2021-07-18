@@ -26,13 +26,49 @@ extern "C" {
 #include <neoast.h>
 #include <parsergen/canonical_collection.h>
 
-void dump_item(const LR_1* lr1, uint32_t tok_n, const char* tok_names, FILE* fp);
-void dump_state(const GrammarState* state, uint32_t tok_n, uint32_t lookahead_n, const char* tok_names, uint8_t line_wrap, FILE* fp);
-void dump_table(const uint32_t* table, const CanonicalCollection* cc, const char* tok_names, uint8_t state_wrap, FILE* fp,
+void dump_table(const uint32_t* table, const CanonicalCollection* cc,
+                const char* tok_names, uint8_t state_wrap, FILE* fp,
                 const char* indent_str);
 
 #ifdef __cplusplus
 };
+
+#include <ostream>
+#include <memory>
+
+class Exception : std::exception
+{
+    std::string what_;
+
+public:
+    explicit Exception(std::string what) : what_(std::move(what)) {}
+    const char * what() const noexcept override { return what_.c_str(); }
+};
+
+template<typename T_,
+        typename... Args>
+std::string variadic_string(const char* format,
+                            T_ arg1,
+                            Args... args)
+{
+    int size = std::snprintf(nullptr, 0, format, arg1, args...);
+    if(size <= 0)
+    {
+        throw Exception( "Error during formatting: " + std::string(format));
+    }
+    size += 1;
+
+    auto buf = std::unique_ptr<char[]>(new char[size]);
+    std::snprintf(buf.get(), size, format, arg1, args...);
+
+    return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
+}
+
+void dump_table_cxx(
+        const uint32_t* table, const CanonicalCollection* cc,
+        const char* tok_names, uint8_t state_wrap,
+        std::ostream& os, const char* indent_str);
+
 #endif
 
 #endif //NEOAST_UTIL_H
