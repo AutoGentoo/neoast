@@ -2,7 +2,7 @@
 
 #include <string.h>
 #include <assert.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <stdlib.h>
 #include "codegen.h"
 
