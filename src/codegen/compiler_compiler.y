@@ -10,7 +10,7 @@
 
 void lexing_error_cb(const char* input,
                      const TokenPosition* position,
-                     uint32_t offset);
+                     uint32_t lexer_state);
 
 void parsing_error_cb(const char* const* token_names,
                       const TokenPosition* position,
@@ -63,16 +63,16 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 
 %option parser_type="LALR(1)"
 %option prefix="cc"
-%option track_position="TRUE"
-%option debug_table="FALSE"
+%option debug_table="TRUE"
 %option lexing_error_cb="lexing_error_cb"
 %option parsing_error_cb="parsing_error_cb"
+%option no_warn_builtin="TRUE"
 
 %union {
     char* identifier;
     char ascii;
     key_val_t key_val_type;
-    struct KeyVal* key_val;
+    KeyVal* key_val;
     struct LexerRuleProto* l_rule;
     struct Token* token;
     struct GrammarRuleSingleProto* g_single_rule;
@@ -121,14 +121,14 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 %type <file> program
 %start <file> program
 
-%destructor<identifier> { free($$); }
-%destructor<action> { free($$.string); }
-%destructor<l_rule> { lexer_rule_free($$); }
-%destructor<g_single_rule> { grammar_rule_single_free($$); }
-%destructor<g_rule> { grammar_rule_multi_free($$); }
-%destructor<key_val> { key_val_free($$); }
-%destructor<token> { tokens_free($$); }
-%destructor<file> { file_free($$); }
+%destructor<identifier>     { free($$); }
+%destructor<action>         { free($$.string); }
+%destructor<l_rule>         { lexer_rule_free($$); }
+%destructor<g_single_rule>  { grammar_rule_single_free($$); }
+%destructor<g_rule>         { grammar_rule_multi_free($$); }
+%destructor<key_val>        { key_val_free($$); }
+%destructor<token>          { tokens_free($$); }
+%destructor<file>           { file_free($$); }
 
 +literal        \"(\\.|[^\"\\])*\"
 +identifier     [A-Za-z_][\w]*
@@ -240,10 +240,10 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 "\"(\\.|[^\"\\])*\"" { ll_add_to_brace(yytext, len); }
 
 // Everything else
-"([^}{\"\'\n]+)"      { ll_add_to_brace(yytext, len); }
+"([^}{\"\'\n]+)"    { ll_add_to_brace(yytext, len); }
 
-"{"                 { brace_buffer.counter++; brace_buffer.buffer[brace_buffer.n++] = '{'; }
-"}"                 {
+"\{"                { brace_buffer.counter++; brace_buffer.buffer[brace_buffer.n++] = '{'; }
+"\}"                {
                         brace_buffer.counter--;
                         if (brace_buffer.counter <= 0)
                         {

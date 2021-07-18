@@ -16,12 +16,11 @@
  */
 
 
-#include <parser.h>
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <assert.h>
-#include "lexer.h"
+#include <codegen/builtin_lexer/builtin_lexer.h>
+#include <stddef.h>
 #include "codegen/codegen.h"
 #include "grammar.h"
 
@@ -29,9 +28,9 @@ extern uint32_t* GEN_parsing_table;
 
 int main(int argc, const char* argv[])
 {
-    if (argc != 3)
+    if (argc != 4)
     {
-        fprintf(stderr, "usage: %s [INPUT_FILE] [OUTPUT_FILE]\n", argv[0]);
+        fprintf(stderr, "usage: %s [INPUT_FILE] [OUTPUT_FILE].cc? [OUTPUT_FILE].h\n", argv[0]);
         return 1;
     }
 
@@ -55,42 +54,37 @@ int main(int argc, const char* argv[])
     fclose(fp);
 
     GrammarParser parser;
-    if (gen_parser_init(&parser))
+    void* lexer = NULL;
+    if (gen_parser_init(&parser, &lexer))
     {
         free(input);
         return 1;
     }
 
-    ParserBuffers* buf = parser_allocate_buffers(1024, 1024, 16, 1024, sizeof(CodegenUnion));
+    ParserBuffers* buf = parser_allocate_buffers(
+            256, 256,
+            sizeof(CodegenStruct), offsetof(CodegenStruct, position));
+    void* lexer_instance = builtin_lexer_instance_new(lexer, input, file_size);
 
-    int32_t result_idx = parser_parse_lr(&parser, GEN_parsing_table, buf, input, file_size);
+    int32_t result_idx = parser_parse_lr(&parser, GEN_parsing_table, buf,
+                                         lexer_instance, builtin_lexer_next);
+
+    builtin_lexer_instance_free(lexer_instance);
+    builtin_lexer_free(lexer);
 
     if (result_idx == -1)
     {
         fprintf(stderr, "Failed to parse file '%s'\n", argv[1]);
         parser_free_buffers(buf);
-        parser_free(&parser);
         free(input);
         return 1;
     }
 
     struct File* f = ((CodegenUnion*)buf->value_table)[result_idx].file;
-    fp = fopen(argv[2], "w+");
-    if (!fp)
-    {
-        fprintf(stderr, "Failed to open '%s': %s\n", argv[1], strerror(errno));
-        parser_free_buffers(buf);
-        parser_free(&parser);
-        free(input);
-        file_free(f);
-        return 1;
-    }
 
-    int error = codegen_write(NULL, f, fp);
-    fclose(fp);
+    int error = codegen_write(NULL, f, argv[2], argv[3]);
 
     parser_free_buffers(buf);
-    parser_free(&parser);
     free(input);
     file_free(f);
 

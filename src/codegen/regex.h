@@ -18,30 +18,60 @@
 
 #ifndef NEOAST_REGEX_H
 #define NEOAST_REGEX_H
-#include <cre2.h>
 
-typedef struct MacroEngine_prv MacroEngine;
-typedef struct Macro_prv Macro;
+#include <reflex/pattern.h>
+#include <string>
+#include <unordered_map>
+#include <reflex/matcher.h>
+#include <sstream>
 
-struct Macro_prv
+class MacroEngine
 {
-    char* name;
-    char* expanded_regex;
+    std::unordered_map<std::string, std::string> map;
+    reflex::Pattern macro_pattern;
 
-    Macro* next;
+public:
+    MacroEngine() : macro_pattern("\\{[A-Za-z_][A-Za-z0-9_]*\\}")
+    {
+    }
+
+    std::string expand(const std::string& regex) const
+    {
+        reflex::Matcher m(macro_pattern, regex);
+        std::ostringstream ss;
+
+        size_t last_col = 0;
+        for (auto& match : m.find)
+        {
+            ss << regex.substr(last_col, match.first() - last_col);
+            last_col = match.last();
+
+            std::string macro_name(match.text() + 1);
+            macro_name.pop_back(); // remove '}'
+
+            if (map.find(macro_name) != map.end())
+            {
+                ss << map.at(macro_name);
+            }
+            else
+            {
+                // Don't try to expand this
+                std::cerr << "Invalid macro name " << macro_name << "\n";
+            }
+        }
+
+        // Place any remaining characters
+        if (last_col < regex.size())
+        {
+            ss << regex.substr(last_col);
+        }
+        return ss.str();
+    }
+
+    void add(const std::string& name, const std::string& value)
+    {
+        map[name] = expand(value);
+    }
 };
-
-struct MacroEngine_prv
-{
-    Macro* head;
-    cre2_regexp_t* macro_pattern;
-    cre2_options_t* opts;
-};
-
-MacroEngine* macro_engine_init();
-void macro_engine_free(MacroEngine* self);
-void macro_engine_register(MacroEngine* self, const char* name, const char* regex);
-char* regex_expand(MacroEngine* self, const char* regex);
-int regex_verify(MacroEngine* self, const char* regex);
 
 #endif //NEOAST_REGEX_H

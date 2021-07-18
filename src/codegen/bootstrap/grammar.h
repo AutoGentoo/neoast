@@ -58,7 +58,7 @@ enum
 };
 
 typedef union {
-    struct KeyVal* key_val;
+    KeyVal* key_val;
     struct LexerRuleProto* l_rule;
     struct Token* token;
     struct GrammarRuleSingleProto* g_single_rule;
@@ -66,5 +66,10 @@ typedef union {
     struct File* file;
     char* string;
 } CodegenUnion;
+
+typedef union {
+    CodegenUnion value;
+    TokenPosition position;
+} CodegenStruct;
 
 #endif //NEOAST_GRAMMAR_H

@@ -1,14 +1,13 @@
 #define _GNU_SOURCE
 
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <stdlib.h>
-#include <stdlib.h>
 #include "codegen.h"
 
-struct KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value)
+KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value)
 {
-    struct KeyVal* self = malloc(sizeof(struct KeyVal));
+    KeyVal* self = malloc(sizeof(KeyVal));
     if (p)
     {
         self->position = *p;
@@ -97,9 +96,9 @@ void tokens_free(struct Token* self)
     }
 }
 
-void key_val_free(struct KeyVal* self)
+void key_val_free(KeyVal* self)
 {
-    struct KeyVal* next;
+    KeyVal* next;
     if (self->back)
     {
         self = self->back;

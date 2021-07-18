@@ -19,7 +19,12 @@
 #ifndef NEOAST_CODEGEN_H
 #define NEOAST_CODEGEN_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <neoast.h>
+#include <parsergen/canonical_collection.h>
 
 typedef enum
 {
@@ -36,17 +41,20 @@ typedef enum
     KEY_VAL_START,
     KEY_VAL_UNION,
     KEY_VAL_DESTRUCTOR,
+    KEY_VAL_LEXER,
 } key_val_t;
 
-struct KeyVal
+typedef struct KeyVal_ KeyVal;
+
+struct KeyVal_
 {
     TokenPosition position;
     key_val_t type;
     char* key;
     char* value;
 
-    struct KeyVal* back;
-    struct KeyVal* next;
+    KeyVal* back;
+    KeyVal* next;
 };
 
 struct LexerRuleProto
@@ -85,31 +93,38 @@ struct GrammarRuleProto
 
 struct File
 {
-    struct KeyVal* header;
+    KeyVal* header;
     struct LexerRuleProto* lexer_rules;
     struct GrammarRuleProto* grammar_rules;
 };
 
-int gen_parser_init(GrammarParser* self);
-int codegen_write(const char* grammar_file_path, const struct File* self, FILE* fp);
+int gen_parser_init(GrammarParser* self, void** lexer_ptr);
+int codegen_write(const char* grammar_file_path,
+                  const struct File* self,
+                  const char* output_file_cc,
+                  const char* output_file_hh);
 
 void emit_warning(const TokenPosition* position, const char* message, ...);
 void emit_error(const TokenPosition* position, const char* message, ...);
 int has_errors();
 
-struct KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value);
+KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value);
 struct Token* build_token(const TokenPosition* position, char* name);
 struct Token* build_token_ascii(const TokenPosition* position, char value);
 char* get_ascii_token_name(char value);
 char get_ascii_from_name(const char* name);
 
 void tokens_free(struct Token* self);
-void key_val_free(struct KeyVal* self);
+void key_val_free(KeyVal* self);
 void lexer_rule_free(struct LexerRuleProto* self);
 void grammar_rule_single_free(struct GrammarRuleSingleProto* self);
 void grammar_rule_multi_free(struct GrammarRuleProto* self);
 void file_free(struct File* self);
 
 extern const char* tok_names_errors[];
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif //NEOAST_CODEGEN_H

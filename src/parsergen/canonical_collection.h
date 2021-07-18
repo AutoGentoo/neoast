@@ -19,6 +19,10 @@
 #ifndef NEOAST_CANONICAL_COLLECTION_H
 #define NEOAST_CANONICAL_COLLECTION_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "neoast.h"
 
 typedef enum {
@@ -58,5 +62,9 @@ void canonical_collection_resolve(CanonicalCollection* self, parser_t p_type);
 uint32_t* canonical_collection_generate(const CanonicalCollection* self, const uint8_t* precedence_table, uint8_t* error);
 
 void canonical_collection_free(CanonicalCollection* self);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif //NEOAST_CANONICAL_COLLECTION_H

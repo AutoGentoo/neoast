@@ -1,9 +1,9 @@
 [submodule "third_party/cmocka"]
 	path = third_party/cmocka
 	url = https://github.com/AutoGentoo/cmocka.git
-[submodule "third_party/re2"]
-	path = third_party/re2
-	url = https://github.com/AutoGentoo/re2.git
-[submodule "third_party/cre2"]
-	path = third_party/cre2
-	url = https://github.com/AutoGentoo/cre2.git
+[submodule "third_party/reflex"]
+	path = third_party/reflex
+	url = https://github.com/AutoGentoo/RE-flex.git
+[submodule "third_party/inja"]
+	path = third_party/inja
+	url = https://github.com/pantor/inja.git

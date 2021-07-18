@@ -41,6 +41,7 @@
 *.su
 *.idb
 *.pdb
+*.profraw
 
 # Kernel Module Compile Results
 *.mod*
@@ -60,4 +61,5 @@ build/*
 
 # Misc
 tmp/*
+.DS_Store
 

@@ -16,11 +16,12 @@
  */
 
 
-#include <parser.h>
+#include <neoast.h>
 #include <alloca.h>
 #include <string.h>
 #include <assert.h>
-#include "lexer.h"
+
+#define OFFSET_VOID_PTR(ptr, s, i) (void*)(((char*)(ptr)) + ((s) * (i)))
 
 static inline
 const void* g_table_from_matrix(const void* table,
@@ -81,19 +82,16 @@ uint32_t g_lr_reduce(
                dest,
                val_s);
 
-        if (parser->lexer_opts & LEXER_OPT_TOKEN_POS)
+        assert(val_s - union_s >= sizeof(TokenPosition));
+        if (arg_count > 0)
         {
-            assert(val_s - union_s >= sizeof(TokenPosition));
-            if (arg_count > 0)
-            {
-                // Copy the positional data of the first argument back to the destination
-                memcpy(dest + union_s, args + union_s, sizeof(TokenPosition));
-            }
-            else
-            {
-                // No argument (empty rule), no positional data available
-                memset(dest + union_s, 0, sizeof(TokenPosition));
-            }
+            // Copy the positional data of the first argument back to the destination
+            memcpy(dest + union_s, args + union_s, sizeof(TokenPosition));
+        }
+        else
+        {
+            // No argument (empty rule), no positional data available
+            memset(dest + union_s, 0, sizeof(TokenPosition));
         }
     }
 
@@ -164,45 +162,14 @@ void lr_parse_error(const GrammarParser* self,
 
 }
 
-void lr_lex_error(
-        const GrammarParser* parser,
-        const ParserBuffers* buf,
-        const char* input,
-        uint32_t offset)
-{
-    if (parser->lexer_error)
-    {
-        if (parser->lexer_opts & LEXER_OPT_TOKEN_POS)
-        {
-            TokenPosition p = {
-                    .line = buf->position->line,
-                    .col_start = offset - buf->position->line_start_offset
-            };
-
-            parser->lexer_error(input, &p, offset);
-        }
-        else
-        {
-            parser->lexer_error(input, NULL, offset);
-        }
-    }
-    else
-    {
-        fprintf(stderr, "Unmatched token near '%.*s' (state '%d')\n",
-                (uint32_t)(strchr(&input[offset - 1], '\n') - &input[offset - 1]),
-                &input[offset - 1],
-                NEOAST_STACK_PEEK(buf->lexing_state_stack));
-    }
-}
-
 static void run_destructor(const GrammarParser* parser,
                            const ParserBuffers* buffers,
                            uint32_t index)
 {
     uint32_t current_token = buffers->token_table[index];
 
-    assert(current_token < parser->token_n);
-    if (parser->destructors[current_token])
+    if (current_token < parser->token_n         // Don't free invalid tokens
+        && parser->destructors[current_token])  // Only free tokens that have a destructor
     {
         void* self_ptr = OFFSET_VOID_PTR(buffers->value_table,
                                          buffers->val_s, index);
@@ -244,13 +211,11 @@ static void parser_run_destructors(
 int32_t parser_parse_lr(const GrammarParser* parser,
                         const uint32_t* parsing_table,
                         const ParserBuffers* buffers,
-                        const char* input,
-                        size_t length)
+                        void* lexer,
+                        int ll_next(void*, void*))
 {
     // Lexer states
-    uint32_t offset = 0;
     char* lex_val = buffers->value_table;
-    NEOAST_STACK_PUSH(buffers->lexing_state_stack, 0);
 
     // Push the initial state to the stack
     uint32_t current_state = 0;
@@ -258,7 +223,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
 
     uint32_t i = 0;
     uint32_t prev_tok = 0;
-    int32_t tok = lex_next(input, parser, buffers, lex_val, length, &offset);
+    int32_t tok = ll_next(lexer, lex_val);
     buffers->token_table[0] = tok;
 
     uint32_t dest_idx = 0; // index of the last reduction
@@ -267,7 +232,6 @@ int32_t parser_parse_lr(const GrammarParser* parser,
         // Check for lexing error
         if (tok < 0)
         {
-            lr_lex_error(parser, buffers, input, offset);
             parser_run_destructors(parser, buffers, -1);
             return -1;
         }
@@ -280,11 +244,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
 
         if (table_value == TOK_SYNTAX_ERROR)
         {
-            const TokenPosition* p = NULL;
-            if (parser->lexer_opts & LEXER_OPT_TOKEN_POS)
-            {
-                p = (const TokenPosition*)(lex_val + buffers->union_s);
-            }
+            const TokenPosition* p = (const TokenPosition*)(lex_val + buffers->union_s);
 
             lr_parse_error(parser,
                            parsing_table,
@@ -304,7 +264,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
             prev_tok = tok;
 
             lex_val += buffers->val_s;
-            tok = lex_next(input, parser, buffers, lex_val, length, &offset);
+            tok = ll_next(lexer, lex_val);
             buffers->token_table[++i] = tok;
         }
         else if (table_value & TOK_REDUCE_MASK)

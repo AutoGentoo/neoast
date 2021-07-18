@@ -15,13 +15,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <parser.h>
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdarg.h>
 #include "codegen/codegen.h"
+
+#define PATH_MAX 4096
 
 #define ERROR_CONTEXT_LINE_N 3
 
@@ -40,11 +41,16 @@ static void put_position(const TokenPosition* self, const char* type)
 {
     assert(file_lines);
     assert(type);
-    assert(self);
     assert(path);
 
+    if (!self)
+    {
+        fprintf(stderr, "%s: ", type);
+        return;
+    }
+
     assert(self->line < line_n);
-    for (int i = (int)self->line - ERROR_CONTEXT_LINE_N; i < self->line; i++)
+    for (int i = (int)self->line - ERROR_CONTEXT_LINE_N; i < (int)self->line; i++)
     {
         if (i < 0)
         {
@@ -55,19 +61,19 @@ static void put_position(const TokenPosition* self, const char* type)
         if (newline_pos)
         {
             fprintf(stderr,
-                    "%03d | %.*s\n", i + 1,
+                    "% 3d | %.*s\n", i + 1,
                     (int)(newline_pos - file_lines[i]),
                     file_lines[i]);
         }
         else
         {
-            fprintf(stderr, "%03d | %s\n", i + 1, file_lines[i]);
+            fprintf(stderr, "% 3d | %s\n", i + 1, file_lines[i]);
         }
     }
 
     if (self->line > 0)
     {
-        for (int j = 0; j < self->col_start + 5; j++)
+        for (int j = 0; j < self->col_start + 6; j++)
         {
             fputc(' ', stderr);
         }
@@ -141,12 +147,12 @@ void emit_error(const TokenPosition* p, const char* format, ...)
 
 void lexing_error_cb(const char* input,
                      const TokenPosition* position,
-                     uint32_t offset)
+                     uint32_t lexer_state)
 {
+    (void) lexing_error_cb;
     (void) input;
-    (void) offset;
 
-    emit_error(position, "Unmatched token near:");
+    emit_error(position, "[state %d] Unmatched token near", lexer_state);
 }
 
 void parsing_error_cb(const char* const* token_names,
@@ -156,12 +162,10 @@ void parsing_error_cb(const char* const* token_names,
                       const uint32_t expected_tokens[],
                       uint32_t expected_tokens_n)
 {
-    (void) last_token;
-
     static char error_string[1024];
     error_string[0] = 0;
 
-    strcat(error_string, "Unexpected token %s, Expected one of: ");
+    strcat(error_string, "Unexpected token %s after %s\nExpected one of: ");
     for (int i = 0; i < expected_tokens_n; i++)
     {
         if (i > 0)
@@ -172,14 +176,16 @@ void parsing_error_cb(const char* const* token_names,
         strcat(error_string, token_names[expected_tokens[i]]);
     }
 
-    emit_error(position, error_string, token_names[current_token]);
+    emit_error(position, error_string,
+               token_names[current_token],
+               token_names[last_token]);
 }
 
 int main(int argc, const char* argv[])
 {
-    if (argc != 3)
+    if (argc != 4)
     {
-        fprintf(stderr, "usage: %s [INPUT_FILE] [OUTPUT_FILE]\n", argv[0]);
+        fprintf(stderr, "usage: %s [INPUT_FILE] [OUTPUT_FILE].cc? [OUTPUT_FILE].h\n", argv[0]);
         return 1;
     }
 
@@ -212,21 +218,10 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    fp = fopen(argv[2], "w+");
-    if (!fp)
-    {
-        fprintf(stderr, "Failed to open '%s': %s\n", argv[1], strerror(errno));
-        free(file_lines);
-        free(input);
-        file_free(f);
-        return 1;
-    }
-
-    static char full_path[4096];
+    static char full_path[PATH_MAX];
     const char* full_file_path = realpath(argv[1], full_path);
 
-    int error = codegen_write(full_file_path, f, fp);
-    fclose(fp);
+    int error = codegen_write(full_file_path, f, argv[2], argv[3]);
     free(file_lines);
     free(input);
     file_free(f);
