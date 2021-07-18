@@ -25,6 +25,7 @@ function(add_mocked_test name)
             ENVIRONMENT ${ADD_MOCKED_TEST_ENVIRONMENT}
             )
 
-    # allow using includes from autogentoo/ directory
-    target_include_directories(${name} PRIVATE ${ADD_MOCKED_TEST_INCLUDE_DIRECTORIES})
+    target_include_directories(${name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src ${INCLUDE_DIRECTORIES}
+            ${ADD_MOCKED_TEST_INCLUDE_DIRECTORIES})
 endfunction(add_mocked_test)
