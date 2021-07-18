@@ -276,6 +276,7 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
     os << "};";
 
     canonical_collection_free(cc);
+    free(parsing_table);
 }
 
 void CodeGenImpl::put_table_debug(std::ostream &os,
