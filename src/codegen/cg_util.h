@@ -56,7 +56,7 @@ std::string variadic_string(const char* format,
     }
     size += 1;
 
-    auto buf = std::make_unique<char[]>(size);
+    auto buf = std::unique_ptr<char[]>(new char[size]);
     std::snprintf(buf.get(), size, format, arg1, args...);
 
     return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside

@@ -63,7 +63,7 @@ void CodeGenImpl::parse_header(const File* self)
                     break;
                 }
 
-                *ptr.second = std::make_unique<Code>(iter);
+                *ptr.second = std::unique_ptr<Code>(new Code(iter));
             }
                 break;
             case KEY_VAL_TOKEN:
@@ -138,7 +138,7 @@ void CodeGenImpl::parse_header(const File* self)
                                iter->key);
                 }
 
-                destructors[iter->key] = std::make_unique<Code>(iter);
+                destructors[iter->key] = std::unique_ptr<Code>(new Code(iter));
             }
                 break;
             default:

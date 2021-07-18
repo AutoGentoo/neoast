@@ -49,12 +49,6 @@ typedef struct GrammarState_prv GrammarState;
 typedef struct CanonicalCollection_prv CanonicalCollection;
 
 typedef void (*parser_expr) (void* dest, void** values);
-typedef int32_t (*lexer_expr) (
-        const char* lex_text,
-        void* lex_val,
-        uint32_t len,
-        ParsingStack* ll_state,
-        TokenPosition* position);
 typedef void (*parser_destructor) (void* self);
 
 
