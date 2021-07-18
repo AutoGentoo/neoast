@@ -41,6 +41,7 @@
 *.su
 *.idb
 *.pdb
+*.profraw
 
 # Kernel Module Compile Results
 *.mod*
