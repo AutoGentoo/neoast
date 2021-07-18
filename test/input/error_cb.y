@@ -18,6 +18,7 @@ void parser_error_cb(const char* const* token_names,
 %option prefix="error"
 %option parsing_error_cb="parser_error_cb"
 %option lexing_error_cb="lexer_error_cb"
+%option annotate_line="FALSE"
 
 %union {
     int out;

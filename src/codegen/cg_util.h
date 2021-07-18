@@ -11,7 +11,7 @@ struct Options {
     // Should we dump the table
     bool debug_table = false;
     bool no_warn_builtin = false;
-    bool annotate_line = false;
+    bool annotate_line = true;
     std::string track_position_type;
     std::string debug_ids;
     std::string prefix = "neoast";

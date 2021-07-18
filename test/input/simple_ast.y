@@ -39,6 +39,7 @@ void required_use_stmt_free(RequiredUse* self)
 %option parser_type="LALR(1)"
 //%option disable_locks="TRUE"
 %option debug_table="TRUE"
+%option annotate_line="FALSE"
 %option prefix="required_use"
 %option debug_ids="$ids!?()ESDRP"
 

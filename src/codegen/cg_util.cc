@@ -69,6 +69,10 @@ void Options::handle(const KeyVal* option)
     {
         track_position_type = option->value;
     }
+    else if (strcmp(option->key, "annotate_line") == 0)
+    {
+        annotate_line = codegen_parse_bool(option);
+    }
     else if (strcmp(option->key, "debug_ids") == 0)
     {
         debug_ids = option->value;
