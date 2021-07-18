@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdarg.h>
-#include <linux/limits.h>
 #include "codegen/codegen.h"
 
 #define ERROR_CONTEXT_LINE_N 3
@@ -223,7 +222,7 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    static char full_path[PATH_MAX];
+    static char full_path[4096];
     const char* full_file_path = realpath(argv[1], full_path);
 
     int error = codegen_write(full_file_path, f, fp);
