@@ -114,7 +114,7 @@ std::string Code::get_simple() const
     std::ostringstream ss;
     if (line && !file.empty())
     {
-        ss << "#line "
+        ss << "\n#line "
            << line
            << " \"" << file.c_str() << "\"\n";
     }
@@ -132,7 +132,7 @@ std::string Code::get_complex(
     std::ostringstream os;
     if (line && !file.empty())
     {
-        os << "#line "
+        os << "\n#line "
            << line
            << " \"" << file.c_str() << "\"\n";
     }

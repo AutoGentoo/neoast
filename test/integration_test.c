@@ -124,12 +124,12 @@ static volatile int parser_error_called = 0;
 
 void lexer_error_cb(const char* input,
                     const TokenPosition* position,
-                    uint32_t offset)
+                    int lexer_state)
 {
+    (void) input;
     assert_int_equal(position->line, 2);
-    assert_int_equal(position->col_start, 5);
-    assert_int_equal(offset, 6);
-    assert_int_equal(input[offset - 1], ';');
+    assert_int_equal(position->col_start, 4);
+    assert_int_equal(lexer_state, 0);
     lexer_error_called = 1;
 }
 
@@ -159,7 +159,7 @@ void parser_error_cb(const char* const* token_names,
     assert_string_equal(token_names[expected_tokens[4]], "+");
 
     assert_int_equal(position->line, 1);
-    assert_int_equal(position->col_start, 14);
+    assert_int_equal(position->col_start, 13);
 
     parser_error_called = 1;
 }

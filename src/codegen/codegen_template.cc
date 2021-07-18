@@ -9,7 +9,7 @@ void CodeGenImpl::write_header(std::ostream &os) const
 {
     std::ostringstream os_tokens;
     std::ostringstream os_lexer;
-    put_enum(NEOAST_ASCII_MAX, tokens, os_tokens);
+    put_enum(NEOAST_ASCII_MAX, tokens, os_tokens, 1);
     lexer->put_header(os_lexer);
 
     inja::json header_data;
@@ -61,13 +61,13 @@ void CodeGenImpl::write_source(std::ostream &os) const
     grammar->put_rules(os_grammar);
 
     // Convert the destructors to JSON
-    inja::json destructors_json;
+    inja::json destructors_json = inja::json::object();
     for (const auto &iter : destructors)
     {
         destructors_json[iter.first] = iter.second->get_complex(options, {iter.first}, "self", "", true);
     }
 
-    inja::json destructor_table_json;
+    inja::json destructor_table_json = inja::json::array();
     for (const auto &token_name : tokens)
     {
         auto tok = get_token(token_name);
@@ -88,8 +88,8 @@ void CodeGenImpl::write_source(std::ostream &os) const
 
     /* Header defined */
     source_data["include_header"] = os_header_preprocessor.str();
-    source_data["top"] = top->get_simple();
-    source_data["bottom"] = bottom->get_simple();
+    source_data["top"] = top ? top->get_simple() : "";
+    source_data["bottom"] = bottom ? bottom->get_simple() : "";
     source_data["union"] = union_->get_simple();
     source_data["union_name"] = CODEGEN_UNION;
     source_data["struct_name"] = CODEGEN_STRUCT;
@@ -119,7 +119,24 @@ void CodeGenImpl::write_source(std::ostream &os) const
     source_data["parsing_stack_n"] = options.parsing_stack_n;
 
     /* Generated */
-    source_data["tokens"] = tokens;
+    std::vector<std::string> token_names;
+    for (const auto& tok : action_tokens)
+    {
+        if (tok->is_ascii)
+        {
+            token_names.emplace_back(1, get_ascii_from_name(tok->name.c_str()));
+        }
+        else
+        {
+            token_names.push_back(tok->name);
+        }
+    }
+    for (const auto& tok : grammar_tokens)
+    {
+        token_names.push_back(tok->name);
+    }
+
+    source_data["tokens"] = token_names;
     source_data["ascii_mappings"] = os_ascii_mappings.str();
     source_data["parsing_table"] = os_parsing_table.str();
 
@@ -235,7 +252,7 @@ typeof(t.{{ start_type }}) {{ prefix }}_parse(void* buffers_, const char* input)
     {{ lexer_new_inst }};
 
     int32_t output_idx = parser_parse_lr(
-            &parser, GEN_parsing_table,
+            &parser, {{ prefix }}_parsing_table,
             buffers, ll_inst, {{ lexer_next }});
 
     {{ lexer_del_inst }};
@@ -243,7 +260,7 @@ typeof(t.{{ start_type }}) {{ prefix }}_parse(void* buffers_, const char* input)
     if (output_idx < 0)
         return (typeof(t.{{start_type}}))0;
 
-    return (({{ union_name }}*)buffers->value_table)[output_idx].{{ start_type }};
+    return (({{ struct_name }}*)buffers->value_table)[output_idx].value.{{ start_type }};
 }
 
 typeof(t.{{ start_type }}) {{ prefix }}_parse_len(void* buffers_, const char* input, uint32_t input_len)
@@ -254,7 +271,7 @@ typeof(t.{{ start_type }}) {{ prefix }}_parse_len(void* buffers_, const char* in
     {{ lexer_new_inst }};
 
     int32_t output_idx = parser_parse_lr(
-            &parser, GEN_parsing_table,
+            &parser, {{ prefix }}_parsing_table,
             buffers, ll_inst, {{ lexer_next }});
 
     {{ lexer_del_inst }};
@@ -262,7 +279,7 @@ typeof(t.{{ start_type }}) {{ prefix }}_parse_len(void* buffers_, const char* in
     if (output_idx < 0)
         return (typeof(t.{{start_type}}))0;
 
-    return (({{ union_name }}*)buffers->value_table)[output_idx].{{ start_type }};
+    return (({{ struct_name }}*)buffers->value_table)[output_idx].value.{{ start_type }};
 }
 
 /************************************ BOTTOM *************************************/

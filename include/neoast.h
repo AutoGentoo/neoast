@@ -63,7 +63,7 @@ typedef void (*parser_destructor) (void* self);
 // Called when no matching token could be found
 typedef void (*ll_error_cb)(
         const char* input,               //!< Input passed in with parse()
-        const TokenPosition* position,   //!< Position of unmatched token (or NULL if track_position != TRUE)
+        const TokenPosition* position,   //!< Position of unmatched token
         uint32_t lexer_state);
 
 typedef void (*yy_error_cb)(

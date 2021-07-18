@@ -111,26 +111,26 @@ int32_t ll_tok_num(const char* yytext, CalculatorUnion* yyval)
     return TOK_NUM;
 }
 
-void binary_op(CalculatorUnion* dest, CalculatorUnion* args)
+void binary_op(CalculatorStruct* dest, CalculatorStruct* args)
 {
-    switch (args[1].operator)
+    switch (args[1].value.operator)
     {
-        case '+': dest->number = args[0].number + args[2].number; return;
-        case '-': dest->number = args[0].number - args[2].number; return;
-        case '*': dest->number = args[0].number * args[2].number; return;
-        case '/': dest->number = args[0].number / args[2].number; return;
-        case '^': dest->number = pow(args[0].number, args[2].number); return;
+        case '+': dest->value.number = args[0].value.number + args[2].value.number; return;
+        case '-': dest->value.number = args[0].value.number - args[2].value.number; return;
+        case '*': dest->value.number = args[0].value.number * args[2].value.number; return;
+        case '/': dest->value.number = args[0].value.number / args[2].value.number; return;
+        case '^': dest->value.number = pow(args[0].value.number, args[2].value.number); return;
     }
 }
 
-void group_op(CalculatorUnion* dest, CalculatorUnion* args)
+void group_op(CalculatorStruct* dest, CalculatorStruct* args)
 {
-    dest->number = args[1].number;
+    dest->value.number = args[1].value.number;
 }
 
-void copy_op(CalculatorUnion* dest, CalculatorUnion* args)
+void copy_op(CalculatorStruct* dest, CalculatorStruct* args)
 {
-    dest->number = args[0].number;
+    dest->value.number = args[0].value.number;
 }
 
 static GrammarParser p;
@@ -238,7 +238,7 @@ CTEST(test_lalr_1_calculator)
     const char* lexer_input = "1 + (5 * 9) + 2";
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorUnion), sizeof(CalculatorUnion));
+    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct), offsetof(CalculatorStruct, position));
 
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);
@@ -254,8 +254,8 @@ CTEST(test_lalr_1_calculator)
     dump_table(table, cc, token_names, 0, stdout, NULL);
     assert_int_not_equal(res_idx, -1);
 
-    printf("%s = %lf\n", lexer_input, ((CalculatorUnion*)buf->value_table)[res_idx].number);
-    assert_double_equal(((CalculatorUnion*)buf->value_table)[res_idx].number, 1 + (5 * 9) + 2, 0.005);
+    printf("%s = %lf\n", lexer_input, ((CalculatorStruct*)buf->value_table)[res_idx].value.number);
+    assert_double_equal(((CalculatorStruct*)buf->value_table)[res_idx].value.number, 1 + (5 * 9) + 2, 0.005);
 
     parser_free_buffers(buf);
     canonical_collection_free(cc);
@@ -267,7 +267,7 @@ CTEST(test_lalr_1_order_of_ops)
     const char* lexer_input = "1 + 5 * 9 + 4";
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorUnion), sizeof(CalculatorUnion));
+    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct), offsetof(CalculatorStruct, position));
 
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);
@@ -281,7 +281,8 @@ CTEST(test_lalr_1_order_of_ops)
     builtin_lexer_instance_free(lexer_inst);
 
     // This parser has no order of ops
-    assert_double_equal(((CalculatorUnion*)buf->value_table)[res_idx].number, (((1 + 5) * 9) + 4), 0.005);
+    assert_int_not_equal(res_idx, -1);
+    assert_double_equal(((CalculatorStruct*)buf->value_table)[res_idx].value.number, (((1 + 5) * 9) + 4), 0.005);
 
     parser_free_buffers(buf);
     canonical_collection_free(cc);

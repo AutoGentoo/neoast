@@ -95,19 +95,22 @@ CTEST(test_lexer)
 
     const char* yyinput = lexer_input;
 
-    CodegenUnion llval;
+    struct {
+        CodegenUnion value;
+        TokenPosition position;
+    } llval;
 
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenUnion), sizeof(CodegenUnion));
     void* lex = builtin_lexer_instance_new(l, yyinput, strlen(lexer_input));
 
     assert_int_equal(builtin_lexer_next(lex, &llval), 1);
-    assert_int_equal(llval.integer, 10);
+    assert_int_equal(llval.value.integer, 10);
     assert_int_equal(builtin_lexer_next(lex, &llval), 1);
-    assert_int_equal(llval.integer, 20);
+    assert_int_equal(llval.value.integer, 20);
     assert_int_equal(builtin_lexer_next(lex, &llval), 1);
-    assert_int_equal(llval.integer, 30);
+    assert_int_equal(llval.value.integer, 30);
     assert_int_equal(builtin_lexer_next(lex, &llval), -1); // Unhandled 'a'
-    assert_int_equal(builtin_lexer_next(lex, &llval), 0);
+    assert_int_equal(builtin_lexer_next(lex, &llval), -1);
 
     builtin_lexer_instance_free(lex);
     parser_free_buffers(buf);

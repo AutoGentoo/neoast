@@ -40,7 +40,8 @@ add_mocked_test(integration_C
         ${calculator_ascii_parser_OUTPUT}
         ${simple_ast_parser_OUTPUT}
         ${error_parser_OUTPUT}
-        LINK_LIBRARIES neoast m
+        # TODO Link tests against reflex generated lexer
+        LINK_LIBRARIES neoast m neoast_builtin_lexer reflex
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
         ENVIRONMENT ${EXEC_ENV}

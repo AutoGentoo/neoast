@@ -33,7 +33,7 @@ void CodeGenImpl::parse_header(const File* self)
     int action_id = 0;  // ID = 0 reserved for TOK_EOF
     // Setup all tokens and grammar rules as well as
     // other header information
-    action_tokens.emplace_back(new CGAction(nullptr, "TOK_EOF", action_id++));
+    action_tokens.emplace_back(new CGAction(nullptr, "EOF", action_id++));
 
     std::map<key_val_t, std::pair<const char*, up<Code>*>>
             single_appearance_map{
@@ -43,6 +43,8 @@ void CodeGenImpl::parse_header(const File* self)
             {KEY_VAL_LEXER,  {"lexer",  &lexer_input}},
     };
 
+    // Run round 1 of iterations
+    // Lowest depends first
     for (KeyVal* iter = self->header; iter; iter = iter->next)
     {
         switch (iter->type)
@@ -66,9 +68,9 @@ void CodeGenImpl::parse_header(const File* self)
                 break;
             case KEY_VAL_TOKEN:
             case KEY_VAL_TOKEN_ASCII:
-                register_action(
-                        std::make_shared<CGAction>(iter, action_id++, iter->type == KEY_VAL_TOKEN_ASCII)
-                );
+                register_action(std::make_shared<CGAction>(
+                        iter, action_id++,
+                        iter->type == KEY_VAL_TOKEN_ASCII));
                 break;
             case KEY_VAL_TOKEN_TYPE:
                 register_action(std::make_shared<CGTypedAction>(iter, action_id++));
@@ -81,10 +83,21 @@ void CodeGenImpl::parse_header(const File* self)
             case KEY_VAL_OPTION:
                 options.handle(iter);
                 break;
+            default:
+                break;
+        }
+    }
+
+    // Run round 2 of iterations
+    // Depends on results from round 1
+    for (KeyVal* iter = self->header; iter; iter = iter->next)
+    {
+        switch (iter->type)
+        {
             case KEY_VAL_LEFT:
             case KEY_VAL_RIGHT:
             {
-                auto t = get_token(iter->key);
+                auto t = get_token(iter->value);
                 if (!t)
                 {
                     emit_error(&iter->position, "Undefined token");
@@ -127,6 +140,8 @@ void CodeGenImpl::parse_header(const File* self)
 
                 destructors[iter->key] = std::make_unique<Code>(iter);
             }
+                break;
+            default:
                 break;
         }
     }
@@ -264,7 +279,7 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
 
     // Actually put the LR parsing table
     i = 0;
-    os << "static const\nuint32_t GEN_parsing_table[] = {\n";
+    os << "static const\nuint32_t " << options.prefix << "_parsing_table[] = {\n";
     for (int state_i = 0; state_i < cc->state_n; state_i++)
     {
         os << "        ";
@@ -333,9 +348,9 @@ void CodeGenImpl::put_table_debug(std::ostream &os,
     FILE* fp = open_memstream(&ptr, &size);
 
     dump_table(table, cc, debug_ids, 0, fp, "//  ");
+    fflush(fp);
     os.write(ptr, static_cast<ssize_t>(size));
     os.flush();
-
     fclose(fp);
 }
 

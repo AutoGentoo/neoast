@@ -275,7 +275,8 @@ void CGGrammars::put_actions(std::ostream &os) const
 
 uint32_t CGGrammars::size() const
 {
-    return impl_->grammar_n;
+    // Add one for augment rule
+    return impl_->grammar_n + 1;
 }
 
 GrammarRule* CGGrammars::get() const

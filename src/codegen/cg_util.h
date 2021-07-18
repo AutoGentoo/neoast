@@ -64,13 +64,19 @@ std::string variadic_string(const char* format,
 
 
 template<typename T>
-void put_enum(int start, const T& iterable, std::ostream& os)
+void put_enum(int start, const T& iterable, std::ostream& os,
+              int skip_start = 0)
 {
     os << "enum\n{\n";
     bool is_first = true;
+    int _i = 0;
     for (const std::string& i : iterable)
     {
-        if (is_first)
+        if (_i < skip_start)
+        {
+            ;
+        }
+        else if (is_first)
         {
             is_first = false;
             os << variadic_string("    %s = %d,\n", i.c_str(), start);
@@ -87,6 +93,7 @@ void put_enum(int start, const T& iterable, std::ostream& os)
             os << "\n";
         }
 
+        _i++;
         start++;
     }
 

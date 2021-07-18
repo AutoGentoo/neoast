@@ -111,7 +111,8 @@ public:
     {
         int tok = next_impl(ll_val);
 
-        if (tok < 0) return tok;
+        // EOF and INVALID
+        if (tok <= 0) return tok;
 
         if (parent->ascii_mappings)
         {
@@ -121,9 +122,10 @@ public:
                 t_tok = static_cast<int32_t>(parent->ascii_mappings[tok]);
                 if (t_tok <= NEOAST_ASCII_MAX)
                 {
-                    fprintf(stderr, "Lexer returned '%c' which has not been "
+                    fprintf(stderr, "Lexer returned '%c' (%d) which has not been "
                                     "explicitly defined as a token",
-                                    tok);
+                                    tok, tok);
+                    fflush(stdout);
                     exit(1);
                 }
 

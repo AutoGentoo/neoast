@@ -236,7 +236,7 @@ std::string CGBuiltinLexer::get_init() const
     return "builtin_lexer_parent = builtin_lexer_new("
            "builtin_neoast_lexer_rules, lexer_rule_n, "
            "sizeof(lexer_rule_n) / sizeof(lexer_rule_n[0]), "
-           + (impl_->options.lexing_error_cb.empty() ? "nullptr"
+           + (impl_->options.lexing_error_cb.empty() ? "NULL"
               : impl_->options.lexing_error_cb) + ", offsetof(" + CODEGEN_STRUCT +
               ", position), __neoast_ascii_mappings);";
 }
