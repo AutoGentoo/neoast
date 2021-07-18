@@ -30,8 +30,10 @@ const TokenPosition NO_POSITION = {0, 0};
 
 void CodeGenImpl::parse_header(const File* self)
 {
+    int action_id = 0;  // ID = 0 reserved for TOK_EOF
     // Setup all tokens and grammar rules as well as
     // other header information
+    action_tokens.emplace_back(new CGAction(nullptr, "TOK_EOF", action_id++));
 
     std::map<key_val_t, std::pair<const char*, up<Code>*>>
             single_appearance_map{
@@ -65,13 +67,15 @@ void CodeGenImpl::parse_header(const File* self)
             case KEY_VAL_TOKEN:
             case KEY_VAL_TOKEN_ASCII:
                 register_action(
-                        std::make_shared<CGAction>(iter, action_id(), iter->type == KEY_VAL_TOKEN_ASCII)
+                        std::make_shared<CGAction>(iter, action_id++, iter->type == KEY_VAL_TOKEN_ASCII)
                 );
                 break;
             case KEY_VAL_TOKEN_TYPE:
-                register_action(std::make_shared<CGTypedAction>(iter, action_id()));
+                register_action(std::make_shared<CGTypedAction>(iter, action_id++));
                 break;
             case KEY_VAL_TYPE:
+                // We don't know how many action tokens there are yet
+                // Initialize the IDs later
                 register_grammar(std::make_shared<CGGrammarToken>(iter, 0));
                 break;
             case KEY_VAL_OPTION:
@@ -127,21 +131,19 @@ void CodeGenImpl::parse_header(const File* self)
         }
     }
 
+    // Add the augment token with the start type
+    register_grammar(std::make_shared<CGGrammarToken>(nullptr, start_type, "TOK_AUGMENT", 0));
+
     // All grammar tokens are initialized with their true ids
-    uint32_t grammar_i = 0;
+    // We need to do this here because only now do we know how many
+    // action tokens there are.
+    int grammar_i = 0;
     for (auto &grammar_tok : grammar_tokens)
     {
         assert(!grammar_tok->id);
-        grammar_tok->id = static_cast<int>(action_id() + grammar_i++);
+        grammar_tok->id = action_id + grammar_i++;
     }
 
-    // Add the augment token with the start type
-    // TODO Clean this up
-    const char ta[] = "TOK_AUGMENT";
-    KeyVal v{.key = const_cast<char*>(start_type.c_str()), .value=const_cast<char*>(ta)};
-    register_grammar(std::make_shared<CGGrammarToken>(&v, static_cast<int>(action_id() + grammar_i++)));
-
-    action_tokens.emplace_back(new CGAction(nullptr, "TOK_EOF", 0));
     for (const auto &i : action_tokens)
     { tokens.push_back(i->name); }
     for (const auto &i : grammar_tokens)
@@ -228,12 +230,12 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
     for (const auto &n : tokens)
     { token_names_ptr[i++] = n.c_str(); }
 
-    GrammarParser parser{
+    const GrammarParser parser{
             .ascii_mappings = ascii_mappings,
             .grammar_rules = grammar->get(),
             .token_names = token_names_ptr.get(),
             .grammar_n = grammar->size(),
-            .token_n = static_cast<uint32_t>(tokens.size()),
+            .token_n = static_cast<uint32_t>(tokens.size()) - 1,
             .action_token_n = static_cast<uint32_t>(action_tokens.size()),
     };
 
@@ -284,7 +286,7 @@ void CodeGenImpl::put_table_debug(std::ostream &os,
 
     std::string fallback;
     fallback.reserve(tokens.size() + 1);
-    for (int i = 0; i < tokens.size() - 1; i++)
+    for (int i = 0; i < tokens.size(); i++)
     {
         if (i == 0)
         {
@@ -304,24 +306,26 @@ void CodeGenImpl::put_table_debug(std::ostream &os,
     if (!options.debug_ids.empty())
     { debug_ids = options.debug_ids.c_str(); }
 
-    for (int i = 0; i < tokens.size() - 1; i++)
+    for (int i = 0; i < tokens.size(); i++)
     {
         if (tokens[i].substr(0, 13) == "ASCII_CHAR_0x")
         {
             os << variadic_string("//  %s => '%c' ('%c')\n",
-                                  tokens[i].c_str(), options.debug_ids[i],
+                                  tokens[i].c_str(), debug_ids[i],
                                   get_ascii_from_name(tokens[i].c_str()));
         }
         else
         {
-            os << variadic_string("//  %s => '%c'\n", tokens[i].c_str(), options.debug_ids[i]);
+            os << variadic_string("//  %s => '%c'\n", tokens[i].c_str(), debug_ids[i]);
         }
     }
 
     os << "\n";
 
-    // This is a bit dirty since dump table takes a FILE*
-    // and we are using an ostream not an ofstream.
+    // Dump_table is built to work with C FILE* because
+    // it was written before CodeGen was implemented and
+    // is meant to work with the unit tests.
+    // We can open a memory stream and dump to our output stream
 
     char* ptr = nullptr;
     size_t size = 0;
@@ -333,9 +337,6 @@ void CodeGenImpl::put_table_debug(std::ostream &os,
 
     fclose(fp);
 }
-
-int CodeGenImpl::action_id() const
-{ return static_cast<int>(action_tokens.size()); }
 
 sp<CGToken> CodeGenImpl::get_token(const std::string &name) const
 {
@@ -368,7 +369,7 @@ void CodeGenImpl::register_action(const sp<CGAction> &ptr)
 
     if (ptr->is_ascii)
     {
-        ascii_mappings[get_ascii_from_name(ptr->name.c_str())] = action_id() + NEOAST_ASCII_MAX;
+        ascii_mappings[get_ascii_from_name(ptr->name.c_str())] = ptr->id + NEOAST_ASCII_MAX;
     }
 
     action_tokens.push_back(ptr);

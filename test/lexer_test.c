@@ -85,11 +85,7 @@ void initialize_parser()
     p.grammar_rules = 0;
 
     static uint32_t lex_n = NEOAST_ARR_LEN(l_rules);
-
-    // Initialize the lexer regex rules
-    parser_init(&p);
-
-    l = builtin_lexer_new(ll_rules, &lex_n, 1, NULL);
+    l = builtin_lexer_new(ll_rules, &lex_n, 1, NULL, sizeof(CodegenUnion), NULL);
 }
 
 CTEST(test_lexer)
@@ -114,7 +110,6 @@ CTEST(test_lexer)
     assert_int_equal(builtin_lexer_next(lex, &llval), 0);
 
     builtin_lexer_instance_free(lex);
-    parser_free(&p);
     parser_free_buffers(buf);
     builtin_lexer_free(l);
 }

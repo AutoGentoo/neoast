@@ -8,7 +8,9 @@
 #include <stdint.h>
 #include <assert.h>
 
-void lexing_error_cb(const char* input, const TokenPosition* position);
+void lexing_error_cb(const char* input,
+                     const TokenPosition* position,
+                     uint32_t lexer_state);
 
 void parsing_error_cb(const char* const* token_names,
                       const TokenPosition* position,
@@ -61,8 +63,7 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 
 %option parser_type="LALR(1)"
 %option prefix="cc"
-%option track_position="TRUE"
-%option debug_table="FALSE"
+%option debug_table="TRUE"
 %option lexing_error_cb="lexing_error_cb"
 %option parsing_error_cb="parsing_error_cb"
 %option no_warn_builtin="TRUE"
@@ -239,10 +240,10 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 "\"(\\.|[^\"\\])*\"" { ll_add_to_brace(yytext, len); }
 
 // Everything else
-"([^}{\"\'\n]+)"      { ll_add_to_brace(yytext, len); }
+"([^}{\"\'\n]+)"    { ll_add_to_brace(yytext, len); }
 
-"{"                 { brace_buffer.counter++; brace_buffer.buffer[brace_buffer.n++] = '{'; }
-"}"                 {
+"\{"                { brace_buffer.counter++; brace_buffer.buffer[brace_buffer.n++] = '{'; }
+"\}"                {
                         brace_buffer.counter--;
                         if (brace_buffer.counter <= 0)
                         {

@@ -46,11 +46,8 @@ void put_lexer_rule_regex(std::ostream& os, const char* regex)
         os << variadic_string("0x%02x, ", *iter);
     }
 
-    // Null terminator
-    os << "0x00,";
-
-    // String comment
-    os << " // " << regex << "\n";
+    os << "0x00,"  // null terminator
+       << " // " << regex << "\n"; // string comment
 }
 
 void put_lexer_rule_count(std::ostream &os, const std::vector<up<CGBuiltinLexerState>>& states)
@@ -207,6 +204,7 @@ CGBuiltinLexer::CGBuiltinLexer(const File* self, MacroEngine &m_engine_, const O
 void CGBuiltinLexer::put_header(std::ostream &os) const
 {
     os << "#include <codegen/builtin_lexer/builtin_lexer.h>\n"
+       << "#include <stddef.h> // offsetof\n"
        << "#ifdef __NEOAST_GET_STATES__\n";
     std::vector<std::string> state_names;
     for (const auto& i : impl_->states) state_names.push_back(i->get_name());
@@ -239,7 +237,8 @@ std::string CGBuiltinLexer::get_init() const
            "builtin_neoast_lexer_rules, lexer_rule_n, "
            "sizeof(lexer_rule_n) / sizeof(lexer_rule_n[0]), "
            + (impl_->options.lexing_error_cb.empty() ? "nullptr"
-              : impl_->options.lexing_error_cb) + ");";
+              : impl_->options.lexing_error_cb) + ", offsetof(" + CODEGEN_STRUCT +
+              ", position), __neoast_ascii_mappings);";
 }
 
 std::string CGBuiltinLexer::get_delete() const

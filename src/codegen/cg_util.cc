@@ -4,16 +4,16 @@
 #include "cg_util.h"
 #include "codegen_priv.h"
 
+reflex::Pattern redzone_pattern(
+        "(?mx)"
+        "(\\/\\/[^\n]*\n)|"                 // Line comments
+        "(\\/\\*(?:\\*(?!\\/)|[^*])*\\*\\/)|" // Block comments
+        "(\"(?:[^\"\\\\]|\\\\[\\s\\S])*\")");   // String literals
+
 std::vector<std::pair<int, int>>
 mark_redzones(const std::string& code)
 {
     // Find all the regions where comments and string exist
-    reflex::Pattern redzone_pattern(
-            "(?mx)"
-            "(\\/\\/[^\n]*\n)|"                 // Line comments
-            "(\\/\\*(?:\\*(?!\\/)|[^*])*\\*\\/)|" // Block comments
-            "(\"(?:[^\"\\\\]|\\\\[\\s\\S])*\")");   // String literals
-
     reflex::Matcher m(redzone_pattern, code);
     std::vector<std::pair<int, int>> out;
 
@@ -66,13 +66,6 @@ void Options::handle(const KeyVal* option)
     {
         debug_table = codegen_parse_bool(option);
     }
-    else if (strcmp(option->key, "track_position") == 0)
-    {
-        lexer_opts =
-                static_cast<lexer_option_t>(
-                        lexer_opts |
-                        (codegen_parse_bool(option) ? static_cast<int>(LEXER_OPT_TOKEN_POS) : 0));
-    }
     else if (strcmp(option->key, "track_position_type") == 0)
     {
         track_position_type = option->value;
@@ -96,13 +89,6 @@ void Options::handle(const KeyVal* option)
     else if (strcmp(option->key, "lexing_error_cb") == 0)
     {
         lexing_error_cb = option->value;
-    }
-    else if (strcmp(option->key, "lex_match_longest") == 0)
-    {
-        lexer_opts =
-                static_cast<lexer_option_t>(
-                        lexer_opts |
-                        (codegen_parse_bool(option) ? static_cast<int>(LEXER_OPT_LONGEST_MATCH) : 0));
     }
     else if (strcmp(option->key, "input_types") == 0)
     {
@@ -194,12 +180,7 @@ std::string Code::get_complex(
             size_t idx;
             idx = std::stol(match.text() + 2, nullptr, 10);
 
-            if (!(options.lexer_opts & LEXER_OPT_TOKEN_POS))
-            {
-                emit_error(&match_pos, "Attempting to get token position without track_position=\"TRUE\"");
-                break;
-            }
-            else if (idx >= argument_replace.size())
+            if (idx >= argument_replace.size())
             {
                 emit_error(&match_pos, "Position index out of range, function only has '%d' arguments",
                            argument_replace.size());

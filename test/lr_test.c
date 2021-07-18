@@ -21,6 +21,7 @@
 #include <neoast.h>
 #include <codegen/builtin_lexer/builtin_lexer.h>
 #include <cmocka.h>
+#include <stddef.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -62,6 +63,11 @@ typedef union {
     }* expr;
 } CodegenUnion;
 
+typedef struct {
+    CodegenUnion value;
+    TokenPosition position;
+} CodegenStruct;
+
 int32_t ll_tok_num(const char* yytext, CodegenUnion* yyval)
 {
     yyval->integer = (int)strtol(yytext, NULL, 10);
@@ -69,6 +75,7 @@ int32_t ll_tok_num(const char* yytext, CodegenUnion* yyval)
 }
 
 static GrammarParser p;
+static void* lexer_parent;
 
 static const
 uint32_t lalr_table[] = {
@@ -125,7 +132,8 @@ void initialize_parser()
     p.token_names = token_error_names;
 
     // Initialize the lexer regex rules
-    parser_init(&p);
+    lexer_parent = builtin_lexer_new((const LexerRule**) rules, &lex_n, 1, NULL,
+                                     offsetof(CodegenStruct, position), NULL);
 }
 
 CTEST(test_parser)
@@ -139,10 +147,12 @@ CTEST(test_parser)
 
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenUnion), sizeof(CodegenUnion));
 
-    int32_t res_idx = parser_parse_lr(&p, lalr_table, buf, lexer_input, strlen(lexer_input));
+    void* lexer_inst = builtin_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
+    int32_t res_idx = parser_parse_lr(&p, lalr_table, buf, lexer_inst, builtin_lexer_next);
+    builtin_lexer_instance_free(lexer_inst);
 
     parser_free_buffers(buf);
-    parser_free(&p);
+    builtin_lexer_free(lexer_parent);
     assert_int_not_equal(res_idx, -1);
 }
 

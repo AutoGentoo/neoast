@@ -41,11 +41,9 @@ typedef struct
     int tok;
 } LexerRule;
 
-void* builtin_lexer_new(
-        const LexerRule* rules[],
-        const uint32_t rules_n[],
-        uint32_t state_n,
-        ll_error_cb error_cb);
+void* builtin_lexer_new(const LexerRule* rules[], const uint32_t rules_n[],
+                        uint32_t state_n, ll_error_cb error_cb,
+                        size_t position_offset, const uint32_t* ascii_mappings);
 void builtin_lexer_free(void* lexer);
 
 void* builtin_lexer_instance_new(const void* lexer_parent, const char* input, size_t length);

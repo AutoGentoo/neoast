@@ -50,7 +50,7 @@ static void put_position(const TokenPosition* self, const char* type)
     }
 
     assert(self->line < line_n);
-    for (int i = (int)self->line - ERROR_CONTEXT_LINE_N; i < self->line; i++)
+    for (int i = (int)self->line - ERROR_CONTEXT_LINE_N; i < (int)self->line; i++)
     {
         if (i < 0)
         {
@@ -61,19 +61,19 @@ static void put_position(const TokenPosition* self, const char* type)
         if (newline_pos)
         {
             fprintf(stderr,
-                    "%03d | %.*s\n", i + 1,
+                    "% 3d | %.*s\n", i + 1,
                     (int)(newline_pos - file_lines[i]),
                     file_lines[i]);
         }
         else
         {
-            fprintf(stderr, "%03d | %s\n", i + 1, file_lines[i]);
+            fprintf(stderr, "% 3d | %s\n", i + 1, file_lines[i]);
         }
     }
 
     if (self->line > 0)
     {
-        for (int j = 0; j < self->col_start + 5; j++)
+        for (int j = 0; j < self->col_start + 6; j++)
         {
             fputc(' ', stderr);
         }
@@ -147,12 +147,12 @@ void emit_error(const TokenPosition* p, const char* format, ...)
 
 void lexing_error_cb(const char* input,
                      const TokenPosition* position,
-                     uint32_t offset)
+                     uint32_t lexer_state)
 {
+    (void) lexing_error_cb;
     (void) input;
-    (void) offset;
 
-    emit_error(position, "Unmatched token near:");
+    emit_error(position, "[state %d] Unmatched token near", lexer_state);
 }
 
 void parsing_error_cb(const char* const* token_names,
@@ -162,12 +162,10 @@ void parsing_error_cb(const char* const* token_names,
                       const uint32_t expected_tokens[],
                       uint32_t expected_tokens_n)
 {
-    (void) last_token;
-
     static char error_string[1024];
     error_string[0] = 0;
 
-    strcat(error_string, "Unexpected token %s, Expected one of: ");
+    strcat(error_string, "Unexpected token %s after %s\nExpected one of: ");
     for (int i = 0; i < expected_tokens_n; i++)
     {
         if (i > 0)
@@ -178,7 +176,9 @@ void parsing_error_cb(const char* const* token_names,
         strcat(error_string, token_names[expected_tokens[i]]);
     }
 
-    emit_error(position, error_string, token_names[current_token]);
+    emit_error(position, error_string,
+               token_names[current_token],
+               token_names[last_token]);
 }
 
 int main(int argc, const char* argv[])

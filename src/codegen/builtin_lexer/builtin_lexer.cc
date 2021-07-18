@@ -64,11 +64,17 @@ struct BuiltinLexer
 {
     std::vector<BuiltinLexerState> states;
     ll_error_cb error_cb;
+    size_t position_offset;
+    const uint32_t* ascii_mappings;
 
     BuiltinLexer(const LexerRule* const* rules,
                  const uint32_t rules_n[],
                  uint32_t state_n,
-                 ll_error_cb error) : error_cb(error)
+                 ll_error_cb error,
+                 size_t position_offset,
+                 const uint32_t* ascii_mappings)
+    : error_cb(error), position_offset(position_offset),
+      ascii_mappings(ascii_mappings)
     {
         assert(state_n);
         states.reserve(state_n);
@@ -92,7 +98,6 @@ public:
                         std::ostream &os = std::cout) :
             AbstractLexer(input, os), parent(parent), input(input)
     {
-
         lexer_states = parser_allocate_stack(32);
         NEOAST_STACK_PUSH(lexer_states, 0);
 
@@ -103,6 +108,42 @@ public:
     }
 
     int next(void* ll_val)
+    {
+        int tok = next_impl(ll_val);
+
+        if (tok < 0) return tok;
+
+        if (parent->ascii_mappings)
+        {
+            int t_tok;
+            if (tok < NEOAST_ASCII_MAX)
+            {
+                t_tok = static_cast<int32_t>(parent->ascii_mappings[tok]);
+                if (t_tok <= NEOAST_ASCII_MAX)
+                {
+                    fprintf(stderr, "Lexer returned '%c' which has not been "
+                                    "explicitly defined as a token",
+                                    tok);
+                    exit(1);
+                }
+
+                return t_tok - NEOAST_ASCII_MAX;
+            }
+
+            return tok - NEOAST_ASCII_MAX;
+        }
+
+        return tok;
+    }
+
+    ~BuiltinLexerSession() override
+    {
+        parser_free_stack(lexer_states);
+        lexer_states = nullptr;
+    }
+
+private:
+    int next_impl(void* ll_val)
     {
         int tok = -1;
         while (tok < 0)
@@ -128,7 +169,7 @@ public:
 
                 if (parent->error_cb)
                 {
-                    parent->error_cb(input.cstring(), &p);
+                    parent->error_cb(input.cstring(), &p, current_state);
                 }
                 else
                 {
@@ -140,6 +181,12 @@ public:
             }
             else
             {
+                // Note where this token was found
+                auto* position = reinterpret_cast<TokenPosition*>(
+                        static_cast<char*>(ll_val) + parent->position_offset);
+                position->line = static_cast<uint32_t>(lineno());
+                position->col_start = static_cast<uint32_t>(columno());
+
                 // Run token action
                 if (state.rules[rule_idx]->tok)
                 {
@@ -147,33 +194,21 @@ public:
                 }
                 else if (state.rules[rule_idx]->expr)
                 {
-                    TokenPosition p {
-                        .line = static_cast<uint32_t>(lineno()),
-                        .col_start=static_cast<uint32_t>(columno())};
-
-                    tok = state.rules[rule_idx]->expr(text(), ll_val, size(), lexer_states, &p);
+                    tok = state.rules[rule_idx]->expr(text(), ll_val, size(),
+                                                      lexer_states, position);
                 }
             }
         }
 
         return tok;
     }
-
-    ~BuiltinLexerSession() override
-    {
-        parser_free_stack(lexer_states);
-        lexer_states = nullptr;
-    }
 };
 
 
-void* builtin_lexer_new(
-        const LexerRule* rules[],
-        const uint32_t rules_n[],
-        uint32_t state_n,
-        ll_error_cb error_cb)
+void* builtin_lexer_new(const LexerRule* rules[], const uint32_t rules_n[], uint32_t state_n, ll_error_cb error_cb,
+                        size_t position_offset, const uint32_t* ascii_mappings)
 {
-    return new BuiltinLexer(rules, rules_n, state_n, error_cb);
+    return new BuiltinLexer(rules, rules_n, state_n, error_cb, position_offset, ascii_mappings);
 }
 
 void builtin_lexer_free(void* lexer)

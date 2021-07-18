@@ -42,8 +42,8 @@ struct CodeGenImpl
 
     void write_header(std::ostream &os) const;
     void write_source(std::ostream &os) const;
-private:
 
+private:
     void parse_header(const File* self);
     void parse_lexer(const File* self);
     void parse_grammar(const File* self);
@@ -53,7 +53,6 @@ private:
     void put_table_debug(std::ostream& os,
                          const uint32_t* table,
                          const CanonicalCollection* cc) const;
-    int action_id() const;
     void register_action(const sp<CGAction>& ptr);
     void register_grammar(const sp<CGGrammarToken>& ptr);
 };

@@ -67,4 +67,9 @@ typedef union {
     char* string;
 } CodegenUnion;
 
+typedef union {
+    CodegenUnion value;
+    TokenPosition position;
+} CodegenStruct;
+
 #endif //NEOAST_GRAMMAR_H

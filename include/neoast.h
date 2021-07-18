@@ -63,7 +63,8 @@ typedef void (*parser_destructor) (void* self);
 // Called when no matching token could be found
 typedef void (*ll_error_cb)(
         const char* input,               //!< Input passed in with parse()
-        const TokenPosition* position);  //!< Position of unmatched token (or NULL if track_position != TRUE)
+        const TokenPosition* position,   //!< Position of unmatched token (or NULL if track_position != TRUE)
+        uint32_t lexer_state);
 
 typedef void (*yy_error_cb)(
         const char* const* token_names,
@@ -101,13 +102,6 @@ enum
     ),
 };
 
-typedef enum
-{
-    LEXER_OPT_NONE = 0,
-    LEXER_OPT_LONGEST_MATCH = 1 << 0,
-    LEXER_OPT_TOKEN_POS = 1 << 1,
-} lexer_option_t;
-
 enum
 {
     PRECEDENCE_NONE,
@@ -135,7 +129,6 @@ struct GrammarParser_prv
     uint32_t grammar_n;
     uint32_t token_n;
     uint32_t action_token_n;
-    lexer_option_t lexer_opts;
 };
 
 struct ParsingStack_prv

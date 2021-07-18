@@ -9,7 +9,7 @@ void CodeGenImpl::write_header(std::ostream &os) const
 {
     std::ostringstream os_tokens;
     std::ostringstream os_lexer;
-    put_enum(NEOAST_ASCII_MAX + 1, tokens, os_tokens);
+    put_enum(NEOAST_ASCII_MAX, tokens, os_tokens);
     lexer->put_header(os_lexer);
 
     inja::json header_data;
@@ -114,8 +114,6 @@ void CodeGenImpl::write_source(std::ostream &os) const
     source_data["parser_error"] = !options.syntax_error_cb.empty() ? options.syntax_error_cb.c_str() : "NULL";
 
     /* Options */
-    source_data["lexer_opts"] = options.lexer_opts;
-    source_data["track_position"] = options.lexer_opts & LEXER_OPT_TOKEN_POS;
     source_data["prefix"] = options.prefix;
     source_data["max_tokens"] = options.max_tokens;
     source_data["parsing_stack_n"] = options.parsing_stack_n;
@@ -139,16 +137,10 @@ void CodeGenImpl::write_source(std::ostream &os) const
 
 /************************ NEOAST Union/Struct definition ************************/
 typedef union { {{ union }} } {{ union_name }};
-{%- if track_position -%}
 typedef struct {
     {{ union_name }} value;
     TokenPosition position;
 } {{ struct_name }};
-{%- else -%}
-typedef struct {
-    {{ union_name }} value;
-} {{ struct_name }};
-{%- endif -%}
 
 /********************************* DESTRUCTORS **********************************/
 {% for key, code in destructors %}
@@ -159,8 +151,7 @@ static void
 // Destructor table
 static const
 parser_destructor __neoast_token_destructors[] = {
-{%- for entry in destructor_table %}
-    {{ entry.function }}, // {{ entry.token_name -}}
+{%- for entry in destructor_table %}    {{ entry.function }}, // {{ entry.token_name }}
 {% endfor %}
 };
 
@@ -191,8 +182,7 @@ static GrammarParser parser = {
         .destructors = __neoast_token_destructors,
         .parser_error = {{ parser_error }},
         .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,
-        .action_token_n = {{ action_n }},
-        .lexer_opts = (lexer_option_t) {{ lexer_opts }}
+        .action_token_n = {{ action_n }}
 };
 
 /********************************* PARSING TABLE *********************************/
@@ -226,9 +216,8 @@ void* {{ prefix }}_allocate_buffers()
             {{ max_tokens }},
             {{ parsing_stack_n }},
             sizeof({{ struct_name }}),
-{%- if track_position %}            offsetof({{ struct_name }}, position)
-{%- else %}            sizeof({{ struct_name }})
-{%- endif %}    );
+            offsetof({{ struct_name }}, position)
+    );
 }
 
 void {{ prefix }}_free_buffers(void* self)

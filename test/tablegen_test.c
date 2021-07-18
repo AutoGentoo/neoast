@@ -23,6 +23,7 @@
 #include <string.h>
 #include <codegen/builtin_lexer/builtin_lexer.h>
 #include <cmocka.h>
+#include <stddef.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -83,6 +84,11 @@ typedef union {
     char operator;
 } CalculatorUnion;
 
+typedef struct {
+    CalculatorUnion value;
+    TokenPosition position;
+} CalculatorStruct;
+
 int32_t ll_tok_operator(const char* yytext, CalculatorUnion* yyval)
 {
     yyval->operator = *yytext;
@@ -128,6 +134,7 @@ void copy_op(CalculatorUnion* dest, CalculatorUnion* args)
 }
 
 static GrammarParser p;
+static void* lexer_parent;
 
 void initialize_parser()
 {
@@ -190,8 +197,8 @@ void initialize_parser()
     p.token_n = TOK_AUGMENT;
     p.token_names = token_error_names;
 
-    // Initialize the lexer regex rules
-    parser_init(&p);
+    lexer_parent = builtin_lexer_new((const LexerRule**) l_rules, &lex_n, 1, NULL,
+                                     offsetof(CalculatorStruct, position), NULL);
 }
 
 CTEST(test_clr_1)
@@ -207,7 +214,7 @@ CTEST(test_clr_1)
     dump_table(table, cc, token_names, 0, stdout, NULL);
     canonical_collection_free(cc);
     free(table);
-    parser_free(&p);
+    builtin_lexer_free(lexer_parent);
 }
 
 CTEST(test_lalr_1)
@@ -223,7 +230,7 @@ CTEST(test_lalr_1)
     dump_table(table, cc, token_names, 0, stdout, NULL);
     canonical_collection_free(cc);
     free(table);
-    parser_free(&p);
+    builtin_lexer_free(lexer_parent);
 }
 
 CTEST(test_lalr_1_calculator)
@@ -240,7 +247,9 @@ CTEST(test_lalr_1_calculator)
     uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
     assert_int_equal(error, 0);
 
-    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_input, strlen(lexer_input));
+    void* lexer_inst = builtin_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
+    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_inst, builtin_lexer_next);
+    builtin_lexer_instance_free(lexer_inst);
 
     dump_table(table, cc, token_names, 0, stdout, NULL);
     assert_int_not_equal(res_idx, -1);
@@ -251,7 +260,6 @@ CTEST(test_lalr_1_calculator)
     parser_free_buffers(buf);
     canonical_collection_free(cc);
     free(table);
-    parser_free(&p);
 }
 
 CTEST(test_lalr_1_order_of_ops)
@@ -268,7 +276,9 @@ CTEST(test_lalr_1_order_of_ops)
     uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
     assert_int_equal(error, 0);
 
-    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_input, strlen(lexer_input));
+    void* lexer_inst = builtin_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
+    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_inst, builtin_lexer_next);
+    builtin_lexer_instance_free(lexer_inst);
 
     // This parser has no order of ops
     assert_double_equal(((CalculatorUnion*)buf->value_table)[res_idx].number, (((1 + 5) * 9) + 4), 0.005);
@@ -276,7 +286,7 @@ CTEST(test_lalr_1_order_of_ops)
     parser_free_buffers(buf);
     canonical_collection_free(cc);
     free(table);
-    parser_free(&p);
+    builtin_lexer_free(lexer_parent);
 }
 
 uint8_t lr_1_firstof(uint8_t dest[],
@@ -300,7 +310,7 @@ CTEST(test_first_of_expr)
     assert_false(first_of_items[TOK_STAR]);
     assert_false(first_of_items[TOK_SLASH]);
     assert_false(first_of_items[TOK_CARET]);
-    parser_free(&p);
+    builtin_lexer_free(lexer_parent);
 }
 
 const static struct CMUnitTest left_scan_tests[] = {

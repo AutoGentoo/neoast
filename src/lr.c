@@ -82,19 +82,16 @@ uint32_t g_lr_reduce(
                dest,
                val_s);
 
-        if (parser->lexer_opts & LEXER_OPT_TOKEN_POS)
+        assert(val_s - union_s >= sizeof(TokenPosition));
+        if (arg_count > 0)
         {
-            assert(val_s - union_s >= sizeof(TokenPosition));
-            if (arg_count > 0)
-            {
-                // Copy the positional data of the first argument back to the destination
-                memcpy(dest + union_s, args + union_s, sizeof(TokenPosition));
-            }
-            else
-            {
-                // No argument (empty rule), no positional data available
-                memset(dest + union_s, 0, sizeof(TokenPosition));
-            }
+            // Copy the positional data of the first argument back to the destination
+            memcpy(dest + union_s, args + union_s, sizeof(TokenPosition));
+        }
+        else
+        {
+            // No argument (empty rule), no positional data available
+            memset(dest + union_s, 0, sizeof(TokenPosition));
         }
     }
 
@@ -171,8 +168,8 @@ static void run_destructor(const GrammarParser* parser,
 {
     uint32_t current_token = buffers->token_table[index];
 
-    assert(current_token < parser->token_n);
-    if (parser->destructors[current_token])
+    if (current_token < parser->token_n         // Don't free invalid tokens
+        && parser->destructors[current_token])  // Only free tokens that have a destructor
     {
         void* self_ptr = OFFSET_VOID_PTR(buffers->value_table,
                                          buffers->val_s, index);
@@ -247,11 +244,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
 
         if (table_value == TOK_SYNTAX_ERROR)
         {
-            const TokenPosition* p = NULL;
-            if (parser->lexer_opts & LEXER_OPT_TOKEN_POS)
-            {
-                p = (const TokenPosition*)(lex_val + buffers->union_s);
-            }
+            const TokenPosition* p = (const TokenPosition*)(lex_val + buffers->union_s);
 
             lr_parse_error(parser,
                            parsing_table,

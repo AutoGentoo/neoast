@@ -116,11 +116,20 @@ struct CGTyped : public CGToken
 
     CGTyped(const KeyVal* self, int id)
             : CGToken(&self->position, self->value, id), type(self->key) {}
+
+    CGTyped(const TokenPosition* position,
+            const std::string &type,
+            const std::string &name,
+            int id) : CGToken(position, name, id), type(type) {}
 };
 
 struct CGGrammarToken : public CGTyped
 {
     CGGrammarToken(const KeyVal* self, int id) : CGTyped(self, id) {}
+    CGGrammarToken(const TokenPosition* position,
+                   const std::string &type,
+                   const std::string &name,
+                   int id) : CGTyped(position, type, name, id) {}
 };
 
 struct CGAction : public CGToken

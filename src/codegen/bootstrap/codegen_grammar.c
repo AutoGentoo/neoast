@@ -738,11 +738,11 @@ static const GrammarRule gg_rules[] = {
 
 uint8_t precedence_table[TOK_AUGMENT] = {0};
 
-static void ll_error(const char* input, const TokenPosition* position)
+static void ll_error(const char* input, const TokenPosition* position, uint32_t lexer_state)
 {
     (void) input;
 
-    emit_error(position, "Failed to match token");
+    emit_error(position, "[state %d] Failed to match token", lexer_state);
 }
 
 int gen_parser_init(GrammarParser* self, void** lexer_ptr)
@@ -754,12 +754,11 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
     self->token_names = tok_names_errors;
     self->destructors = NULL;
     self->ascii_mappings = NULL;
-    self->lexer_opts = 0;
 
     *lexer_ptr = builtin_lexer_new(ll_rules,
                                    ll_rules_n,
                                    NEOAST_ARR_LEN(ll_rules_n),
-                                   ll_error);
+                                   ll_error, sizeof(CodegenUnion), NULL);
 
     precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
 
@@ -783,9 +782,14 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
 
 void emit_warning(const TokenPosition* position, const char* message, ...)
 {
-    (void) position;
-
-    fprintf(stderr, "Warning: ");
+    if (position)
+    {
+        fprintf(stderr, "Warning on line %d:%d: ", position->line, position->col_start);
+    }
+    else
+    {
+        fprintf(stderr, "Warning: ");
+    }
 
     va_list args;
     va_start(args, message);
@@ -798,9 +802,14 @@ static int error_counter = 0;
 
 void emit_error(const TokenPosition* position, const char* message, ...)
 {
-    (void) position;
-
-    fprintf(stderr, "Error: ");
+    if (position)
+    {
+        fprintf(stderr, "Error on line %d:%d: ", position->line, position->col_start);
+    }
+    else
+    {
+        fprintf(stderr, "Error: ");
+    }
 
     va_list args;
     va_start(args, message);

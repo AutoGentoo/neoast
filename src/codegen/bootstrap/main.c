@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <codegen/builtin_lexer/builtin_lexer.h>
+#include <stddef.h>
 #include "codegen/codegen.h"
 #include "grammar.h"
 
@@ -60,7 +61,9 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenUnion), sizeof(CodegenUnion));
+    ParserBuffers* buf = parser_allocate_buffers(
+            256, 256,
+            sizeof(CodegenStruct), offsetof(CodegenStruct, position));
     void* lexer_instance = builtin_lexer_instance_new(lexer, input, file_size);
 
     int32_t result_idx = parser_parse_lr(&parser, GEN_parsing_table, buf,

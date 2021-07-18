@@ -20,7 +20,6 @@ struct Options {
 
     int parsing_stack_n = 1024;
     int max_tokens = 1024;
-    lexer_option_t lexer_opts = LEXER_OPT_NONE;
 
     void handle(const KeyVal* option);
 };
