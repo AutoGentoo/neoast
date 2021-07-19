@@ -16,21 +16,41 @@ void CodeGenImpl::write_header(std::ostream &os) const
     header_data["prefix"] = options.prefix;
     header_data["tokens"] = os_tokens.str();
     header_data["lexer"] = os_lexer.str();
+    header_data["union"] = union_->get_simple(options);
+    header_data["include"] = include_ ? include_->get_simple(options) : "";
+    header_data["union_name"] = CODEGEN_UNION;
+    header_data["struct_name"] = CODEGEN_STRUCT;
 
     // TODO Declare parsing functions
     os << inja::render(
             R"(#ifndef __NEOAST_{{ upper(prefix) }}_H__
 #define __NEOAST_{{ upper(prefix) }}_H__
 
+{{ include }}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#ifdef __NEOAST_GET_TOKENS__
+/*************************** NEOAST Token definition ****************************/
+#ifdef NEOAST_GET_TOKENS
 {{ tokens }}
-#endif // __NEOAST_GET_TOKENS__
+#endif // NEOAST_GET_TOKENS
 
+#ifdef NEOAST_GET_STRUCTURE
+/************************ NEOAST Union/Struct definition ************************/
+typedef union { {{ union }} } {{ union_name }};
+
+typedef struct {
+    {{ union_name }} value;
+    TokenPosition position;
+} {{ struct_name }};
+#endif // NEOAST_GET_STRUCTURE
+
+/*************************** NEOAST Lexer definition ****************************/
+#ifdef NEOAST_GET_LEXER
 {{ lexer }}
+#endif // NEOAST_GET_LEXER
 
 #ifdef __cplusplus
 }
@@ -141,8 +161,9 @@ void CodeGenImpl::write_source(std::ostream &os) const
     source_data["parsing_table"] = os_parsing_table.str();
 
     os << inja::render(
-            R"(#define __NEOAST_GET_TOKENS__
-#define __NEOAST_GET_STATES__
+            R"(#define NEOAST_GET_TOKENS
+#define NEOAST_GET_STRUCTURE
+#define NEOAST_GET_LEXER
 
 #include <neoast.h>
 #include <string.h>
@@ -151,13 +172,6 @@ void CodeGenImpl::write_source(std::ostream &os) const
 
 /************************************ TOP ***************************************/
 {{ top }}
-
-/************************ NEOAST Union/Struct definition ************************/
-typedef union { {{ union }} } {{ union_name }};
-typedef struct {
-    {{ union_name }} value;
-    TokenPosition position;
-} {{ struct_name }};
 
 /********************************* DESTRUCTORS **********************************/
 {% for key, code in destructors %}
@@ -192,12 +206,12 @@ char* __neoast_token_names[] = {
 };
 
 static GrammarParser parser = {
-        .grammar_n = {{ grammar_n }},
         .ascii_mappings = __neoast_ascii_mappings,
         .grammar_rules = __neoast_grammar_rules,
         .token_names = __neoast_token_names,
         .destructors = __neoast_token_destructors,
         .parser_error = {{ parser_error }},
+        .grammar_n = {{ grammar_n }},
         .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,
         .action_token_n = {{ action_n }}
 };

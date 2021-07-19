@@ -4,15 +4,16 @@
 #include "cg_util.h"
 #include "codegen_priv.h"
 
+reflex::Pattern redzone_pattern(
+        "(?mx)"
+        "(\\/\\/[^\n]*\n)|"                 // Line comments
+        "(\\/\\*(?:\\*(?!\\/)|[^*])*\\*\\/)|" // Block comments
+        "(\"(?:[^\"\\\\]|\\\\[\\s\\S])*\")");   // String literals
+
 std::vector<std::pair<int, int>>
 mark_redzones(const std::string& code)
 {
     // Find all the regions where comments and string exist
-    reflex::Pattern redzone_pattern(
-            "(?mx)"
-            "(\\/\\/[^\n]*\n)|"                 // Line comments
-            "(\\/\\*(?:\\*(?!\\/)|[^*])*\\*\\/)|" // Block comments
-            "(\"(?:[^\"\\\\]|\\\\[\\s\\S])*\")");   // String literals
     reflex::Matcher m(redzone_pattern, code);
     std::vector<std::pair<int, int>> out;
 

@@ -19,6 +19,7 @@ struct CodeGenImpl
     up <Code> top;
     up <Code> bottom;
     up <Code> union_;
+    up <Code> include_;
 
     std::string start_type;
     std::string start_token;

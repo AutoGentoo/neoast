@@ -42,6 +42,7 @@ typedef enum
     KEY_VAL_UNION,
     KEY_VAL_DESTRUCTOR,
     KEY_VAL_LEXER,
+    KEY_VAL_INCLUDE,
 } key_val_t;
 
 typedef struct KeyVal_ KeyVal;

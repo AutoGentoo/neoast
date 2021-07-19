@@ -18,6 +18,7 @@ target_include_directories(neoast_builtin_lexer
         PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/../include
         ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/reflex/include)
+target_link_libraries(neoast_builtin_lexer PUBLIC reflex)
 
 target_link_libraries(neoast pthread)
 target_compile_options(neoast PRIVATE -fPIC)

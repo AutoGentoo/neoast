@@ -19,6 +19,7 @@ kv* declare_right(struct Token* tokens);
 kv* declare_left(struct Token* tokens);
 kv* declare_bottom(const TokenPosition* p, char* action);
 kv* declare_top(const TokenPosition* p, char* action);
+kv* declare_include(const TokenPosition* p, char* action);
 kv* declare_union(const TokenPosition* p, char* action);
 
 lr_p* declare_lexer_rule(const TokenPosition* p, char* regex, char* action);

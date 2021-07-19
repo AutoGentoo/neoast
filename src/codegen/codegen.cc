@@ -37,10 +37,11 @@ void CodeGenImpl::parse_header(const File* self)
 
     std::map<key_val_t, std::pair<const char*, up<Code>*>>
             single_appearance_map{
-            {KEY_VAL_TOP,    {"top",    &top}},
-            {KEY_VAL_BOTTOM, {"bottom", &bottom}},
-            {KEY_VAL_UNION,  {"union",  &union_}},
-            {KEY_VAL_LEXER,  {"lexer",  &lexer_input}},
+            {KEY_VAL_TOP,     {"top",     &top}},
+            {KEY_VAL_BOTTOM,  {"bottom",  &bottom}},
+            {KEY_VAL_UNION,   {"union",   &union_}},
+            {KEY_VAL_LEXER,   {"lexer",   &lexer_input}},
+            {KEY_VAL_INCLUDE, {"include", &include_}},
     };
 
     // Run round 1 of iterations
@@ -52,6 +53,7 @@ void CodeGenImpl::parse_header(const File* self)
             case KEY_VAL_TOP:
             case KEY_VAL_BOTTOM:
             case KEY_VAL_UNION:
+            case KEY_VAL_INCLUDE:
             case KEY_VAL_LEXER:
             {
                 auto &ptr = single_appearance_map[iter->type];

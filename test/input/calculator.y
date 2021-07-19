@@ -1,8 +1,10 @@
-%top {
+%include {
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+}
 
+%top {
 // This is a calculator test program
 }
 
