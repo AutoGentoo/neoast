@@ -91,6 +91,7 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 %token LEFT
 %token RIGHT
 %token TOP
+%token INCLUDE
 %token END_STATE
 %token<key_val> MACRO
 %token BOTTOM
@@ -167,6 +168,7 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 "%left"             { return LEFT; }
 "%right"            { return RIGHT; }
 "%top"              { return TOP; }
+"%include"          { return INCLUDE; }
 "%bottom"           { return BOTTOM; }
 "%destructor"       { return DESTRUCTOR; }
 "{macro}"           {
@@ -292,6 +294,7 @@ pair: OPTION IDENTIFIER '=' LITERAL         { $$ = declare_option($p1, $2, $4); 
     | RIGHT tokens                          { $$ = declare_right($2); }
     | LEFT tokens                           { $$ = declare_left($2); }
     | TOP ACTION                            { $$ = declare_top(&$2.position, $2.string); }
+    | INCLUDE ACTION                        { $$ = declare_include(&$2.position, $2.string); }
     | BOTTOM ACTION                         { $$ = declare_bottom(&$2.position, $2.string); }
     | UNION ACTION                          { $$ = declare_union(&$2.position, $2.string); }
     | MACRO                                 { $$ = $1; }

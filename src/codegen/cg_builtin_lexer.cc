@@ -96,9 +96,10 @@ void CGBuiltinLexerRule::put_action(std::ostream &os) const
 
 uint32_t CGBuiltinLexerRule::put_rule(std::ostream& os, uint32_t regex_i) const
 {
-    os << "        {.expr = (lexer_expr) " << get_name() << ", "
-       << variadic_string(".regex = &ll_rules_state_%s_regex_table[%d]}, // %s\n",
-                          parent->get_name().c_str(), regex_i, regex.c_str());
+    os << variadic_string(
+            "        {.regex = &ll_rules_state_%s_regex_table[%d], .expr = (lexer_expr) %s}, // %s\n",
+            parent->get_name().c_str(), regex_i, get_name().c_str(),
+            regex.c_str());
 
     return regex.size() + 1;
 }
@@ -206,13 +207,46 @@ CGBuiltinLexer::CGBuiltinLexer(const File* self, MacroEngine &m_engine_, const O
 
 void CGBuiltinLexer::put_header(std::ostream &os) const
 {
-    os << "#include <codegen/builtin_lexer/builtin_lexer.h>\n"
-       << "#include <stddef.h> // offsetof\n"
-       << "#ifdef __NEOAST_GET_STATES__\n";
+    os << R"(
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stddef.h> // offsetof\n"
+#include <stdint.h>
+
+typedef int (*lexer_expr) (
+        const char* lex_text,
+        void* lex_val,
+        uint32_t len,
+        ParsingStack* ll_state,
+        TokenPosition* position);
+
+
+typedef struct
+{
+    const char* regex;
+    lexer_expr expr;
+    int tok;
+} LexerRule;
+
+void* builtin_lexer_new(const LexerRule* rules[], const uint32_t rules_n[],
+                        uint32_t state_n, ll_error_cb error_cb,
+                        size_t position_offset, const uint32_t* ascii_mappings);
+void builtin_lexer_free(void* lexer);
+
+void* builtin_lexer_instance_new(const void* lexer_parent, const char* input, size_t length);
+
+int builtin_lexer_next(void* lexer, void* ll_val);
+void builtin_lexer_instance_free(void* lexer_inst);
+
+#ifdef __cplusplus
+}
+#endif
+)";
     std::vector<std::string> state_names;
     for (const auto& i : impl_->states) state_names.push_back(i->get_name());
     put_enum(0, state_names, os);
-    os << "#endif // __NEOAST_GET_STATES__\n\n";
 }
 
 void CGBuiltinLexer::put_global(std::ostream &os) const

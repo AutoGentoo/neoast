@@ -111,6 +111,13 @@ kv* declare_top(const TokenPosition* p, char* action)
     return key_val_build(p, KEY_VAL_TOP, NULL, action);
 }
 
+kv* declare_include(const TokenPosition* p, char* action)
+{
+    (void) declare_include;
+
+    return key_val_build(p, KEY_VAL_INCLUDE, NULL, action);
+}
+
 kv* declare_bottom(const TokenPosition* p, char* action)
 {
     (void) declare_bottom;

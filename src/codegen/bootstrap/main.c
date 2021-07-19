@@ -22,6 +22,7 @@
 #include <codegen/builtin_lexer/builtin_lexer.h>
 #include <stddef.h>
 #include "codegen/codegen.h"
+#include "codegen/compiler.h"
 #include "grammar.h"
 
 extern uint32_t* GEN_parsing_table;
@@ -81,6 +82,13 @@ int main(int argc, const char* argv[])
     }
 
     struct File* f = ((CodegenUnion*)buf->value_table)[result_idx].file;
+
+    TokenPosition p = {0, 0};
+    KeyVal* builtin_includes = declare_include(&p,
+                                               strdup("#include <codegen/codegen.h>\n"
+                                                      "#include <codegen/compiler.h>"));
+    builtin_includes->next = f->header;
+    f->header = builtin_includes;
 
     int error = codegen_write(NULL, f, argv[2], argv[3]);
 
