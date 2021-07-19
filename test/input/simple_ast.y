@@ -1,4 +1,4 @@
-%top {
+%include {
 #include <stdlib.h>
 
 typedef enum {
@@ -14,8 +14,10 @@ typedef enum {
     ATOM_DEFAULT_ON, //!< use(+)
     ATOM_DEFAULT_OFF, //!< use(-)
 } atom_use_default_t;
-
 typedef struct RequiredUse_prv RequiredUse;
+}
+
+%top {
 struct RequiredUse_prv {
     char* target;
     use_operator_t operator;

@@ -1,7 +1,9 @@
-%top {
+%include {
 #include <stdlib.h>
 #include <stddef.h>
+}
 
+%top {
 void lexer_error_cb(const char* input,
                     const TokenPosition* position,
                     uint32_t offset);
