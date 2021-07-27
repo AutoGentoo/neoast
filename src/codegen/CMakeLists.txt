@@ -4,7 +4,10 @@ add_library(neoast-codegen STATIC
         regex.h
         compiler.c compiler.h common.c
         cg_util.cc cg_util.h
-        cg_builtin_lexer.cc cg_builtin_lexer.h codegen_priv.h cg_lexer.h cg_grammar.cc cg_grammar.h codegen_template.cc codegen_impl.h)
+        cg_builtin_lexer.cc cg_builtin_lexer.h
+        codegen_priv.h cg_lexer.h
+        cg_grammar.cc cg_grammar.h
+        codegen_template.cc codegen_impl.h)
 
 add_library(builtin-lexer STATIC
         builtin_lexer/builtin_lexer.cc
@@ -32,8 +35,7 @@ add_dependencies(neoast-exec neoast-bootstrap)
 include_directories(neoast-codegen PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../
         ${PROJECT_SOURCE_DIR}/third_party/reflex/src
-        ${PROJECT_SOURCE_DIR}/third_party/inja/single_include
-        ${PROJECT_SOURCE_DIR}/third_party/inja/third_party/include
+        ${INJA_INCLUDE_DIRECTORIES}
         )
 
 include_directories(builtin-lexer PRIVATE

@@ -4,6 +4,3 @@
 [submodule "third_party/reflex"]
 	path = third_party/reflex
 	url = https://github.com/AutoGentoo/RE-flex.git
-[submodule "third_party/inja"]
-	path = third_party/inja
-	url = https://github.com/pantor/inja.git

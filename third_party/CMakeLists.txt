@@ -3,4 +3,7 @@ if (ENABLE_NEOAST_TESTS)
 endif()
 
 add_subdirectory(reflex)
-add_subdirectory(inja)
+
+set(INJA_INCLUDE_DIRECTORIES
+        ${CMAKE_CURRENT_SOURCE_DIR}/inja/include
+        PARENT_SCOPE)
