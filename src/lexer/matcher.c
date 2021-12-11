@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <neoast.h>
 #include "lexer/matcher.h"
 #include "lexer/matcher_priv.h"
 
@@ -63,6 +64,7 @@ void matcher_init(NeoastMatcher* self)
 
     neoast_vector_init(&self->lap_, sizeof(int));
     neoast_vector_init(&self->tab_, sizeof(size_t));
+    self->lexing_state = parser_allocate_stack(32);
 }
 
 void matcher_destroy(NeoastMatcher* self)
@@ -74,6 +76,7 @@ void matcher_destroy(NeoastMatcher* self)
     }
     neoast_vector_free(&self->lap_);
     neoast_vector_free(&self->tab_);
+    parser_free_stack(self->lexing_state);
 }
 
 NeoastMatcher* matcher_new(NeoastInput* input)

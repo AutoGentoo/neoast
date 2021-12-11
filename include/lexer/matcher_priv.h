@@ -25,6 +25,7 @@
 #include "common.h"
 #include "container.h"
 #include "input.h"
+#include <neoast.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +49,7 @@ struct NeoastMatcher_prv
 {
     NeoastMatcherContext context_;
     NeoastInput* in;
+    ParsingStack* lexing_state;
 
     struct Option
     {
