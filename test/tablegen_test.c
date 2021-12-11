@@ -156,6 +156,26 @@ void copy_op(CalculatorStruct* dest, CalculatorStruct* args)
 static GrammarParser p;
 static void* lexer_parent;
 
+static void (* const reduce_table[])(CalculatorStruct*, CalculatorStruct*) = {
+        NULL, copy_op,
+        NULL, group_op,
+        copy_op, binary_op,
+        binary_op, binary_op,
+        binary_op, binary_op
+};
+
+void reduce_handler(uint32_t reduce_id, CalculatorStruct* dest, CalculatorStruct* args)
+{
+    if (reduce_table[reduce_id])
+    {
+        reduce_table[reduce_id](dest, args);
+    }
+    else
+    {
+        *dest = args[0];
+    }
+}
+
 void initialize_parser()
 {
     static LexerRule l_rules_s0[] = {
@@ -193,16 +213,16 @@ void initialize_parser()
     static uint32_t a_r[] = {TOK_S};
 
     static GrammarRule g_rules[] = {
-            {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r, .expr = NULL}, // Augmented rule
-            {.token = TOK_S, .tok_n = 1, .grammar = r8, .expr = (parser_expr) copy_op},
-            {.token = TOK_S, .tok_n = 0, .grammar = r9, .expr = NULL}, // Empty, no-op
-            {.token = TOK_E, .tok_n = 3, .grammar = r7, .expr = (parser_expr) group_op},
-            {.token = TOK_E, .tok_n = 1, .grammar = r1, .expr = (parser_expr) copy_op},
-            {.token = TOK_E, .tok_n = 3, .grammar = r6, .expr = (parser_expr) binary_op},
-            {.token = TOK_E, .tok_n = 3, .grammar = r5, .expr = (parser_expr) binary_op},
-            {.token = TOK_E, .tok_n = 3, .grammar = r4, .expr = (parser_expr) binary_op},
-            {.token = TOK_E, .tok_n = 3, .grammar = r3, .expr = (parser_expr) binary_op},
-            {.token = TOK_E, .tok_n = 3, .grammar = r2, .expr = (parser_expr) binary_op},
+            {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r}, // Augmented rule
+            {.token = TOK_S, .tok_n = 1, .grammar = r8},
+            {.token = TOK_S, .tok_n = 0, .grammar = r9}, // Empty, no-op
+            {.token = TOK_E, .tok_n = 3, .grammar = r7},
+            {.token = TOK_E, .tok_n = 1, .grammar = r1},
+            {.token = TOK_E, .tok_n = 3, .grammar = r6},
+            {.token = TOK_E, .tok_n = 3, .grammar = r5},
+            {.token = TOK_E, .tok_n = 3, .grammar = r4},
+            {.token = TOK_E, .tok_n = 3, .grammar = r3},
+            {.token = TOK_E, .tok_n = 3, .grammar = r2},
     };
 
     static LexerRule* l_rules[] = {
@@ -216,6 +236,7 @@ void initialize_parser()
     p.action_token_n = 9;
     p.token_n = TOK_AUGMENT;
     p.token_names = token_error_names;
+    p.parser_reduce = (parser_reduce) reduce_handler;
 
     lexer_parent = bootstrap_lexer_new((const LexerRule**) l_rules, &lex_n, 1, NULL,
                                        offsetof(CalculatorStruct, position), NULL);

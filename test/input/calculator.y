@@ -11,7 +11,7 @@
 // This is default, just want to test the parser
 %option parser_type="LALR(1)"
 %option debug_table="TRUE"
-%option annotate_line="FALSE"
+%option annotate_line="TRUE"
 %option debug_ids="$d+-/*^()ES"
 %option prefix="calc"
 
