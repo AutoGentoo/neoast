@@ -76,9 +76,3 @@ void neoast_vector_free(NeoastVector* self)
     if (self->ptr) free(self->ptr);
     self->ptr = NULL;
 }
-
-void neoast_stack_pop(NeoastStack* self, void* dest)
-{
-    assert(self->n > 0);
-    memcpy(dest, &self->ptr[--self->n], self->item_len);
-}

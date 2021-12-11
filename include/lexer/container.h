@@ -43,14 +43,6 @@ void neoast_vector_push_back_i(NeoastVector* self, int item);
 void neoast_vector_push_back_s(NeoastVector* self, size_t item);
 void neoast_vector_free(NeoastVector* self);
 
-// NeoastStack API
-#define neoast_stack_init neoast_vector_init
-#define neoast_stack_push neoast_vector_push_back
-#define neoast_stack_push_i neoast_vector_push_back_i
-#define neoast_stack_free neoast_vector_free
-void neoast_stack_pop(NeoastStack* self, void* dest);
-#define neoast_stack_peek(s, t) VECTOR_BACK(s, t)
-
 #ifdef __cplusplus
 };
 #endif

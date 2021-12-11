@@ -51,7 +51,6 @@ static inline void ll_add_to_brace(const char* lex_text, uint32_t len)
 
 static inline void ll_match_brace(const TokenPosition* start_position)
 {
-    yypush(S_MATCH_BRACE);
     brace_buffer.s = 1024;
     brace_buffer.buffer = malloc(brace_buffer.s);
     brace_buffer.n = 0;
@@ -185,7 +184,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
                         return MACRO;
                     }
 "{identifier}"      { yyval->identifier = strdup(yytext); return IDENTIFIER; }
-"\{"                { ll_match_brace(yyposition); }
+"\{"                { yypush(S_MATCH_BRACE); ll_match_brace(yyposition); }
 
 <S_LL_RULES> {
 "[\n]"              { /* skip */ }
@@ -202,7 +201,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
                         return LEX_STATE;
                     }
 "{literal}"         { yyval->identifier = strndup(yytext + 1, yylen - 2); return LITERAL; }
-"\{"                 { ll_match_brace(yyposition); }
+"\{"                 { yypush(S_MATCH_BRACE); ll_match_brace(yyposition); }
 }
 
 <S_LL_STATE> {
@@ -212,7 +211,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 
 "{literal}"         { yyval->identifier = strndup(yytext + 1, yylen - 2); return LITERAL; }
 
-"\{"                 { ll_match_brace(yyposition); }
+"\{"                 { yypush(S_MATCH_BRACE); ll_match_brace(yyposition); }
 "\}"                 { yypop(); return END_STATE; }
 
 }
@@ -227,7 +226,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 ":"                 { return ':'; }
 "\|"                { return '|'; }
 ";"                 { return ';'; }
-"\{"                 { ll_match_brace(yyposition); }
+"\{"                 { yypush(S_MATCH_BRACE); ll_match_brace(yyposition); }
 }
 
 <S_MATCH_BRACE> {

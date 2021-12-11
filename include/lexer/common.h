@@ -32,7 +32,6 @@ typedef struct NeoastMatcherFSM_prv NeoastMatcherFSM;
 
 // container.h
 typedef struct NeoastVector_prv NeoastVector;
-typedef NeoastVector NeoastStack;
 
 // input.h
 typedef struct NeoastInput_prv NeoastInput;

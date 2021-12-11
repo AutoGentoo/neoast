@@ -146,56 +146,48 @@ static inline bool_t FSM_META_BOB(NeoastMatcher* m)
 /// FSM code META EOL.
 static inline bool_t FSM_META_EOL(NeoastMatcher* m, int c1)
 {
-    m->anc_ = TRUE;
     return c1 == EOF || c1 == '\n' || (c1 == '\r' && matcher_peek(m) == '\n');
 }
 
 /// FSM code META BOL.
 static inline bool_t FSM_META_BOL(NeoastMatcher* m)
 {
-    m->anc_ = TRUE;
     return m->fsm_.bol;
 }
 
 /// FSM code META EWE.
 static inline bool_t FSM_META_EWE(NeoastMatcher* m, int c0, int c1)
 {
-    m->anc_ = TRUE;
     return (isword(c0) || m->opt_.W) && !isword(c1);
 }
 
 /// FSM code META BWE.
 static inline bool_t FSM_META_BWE(NeoastMatcher* m, int c0, int c1)
 {
-    m->anc_ = TRUE;
     return !isword(c0) && isword(c1);
 }
 
 /// FSM code META EWB.
 static inline bool_t FSM_META_EWB(NeoastMatcher* m)
 {
-    m->anc_ = TRUE;
     return isword(m->got_) && !isword((unsigned char) (m->txt_[m->len_]));
 }
 
 /// FSM code META BWB.
 static inline bool_t FSM_META_BWB(NeoastMatcher* m)
 {
-    m->anc_ = TRUE;
     return !isword(m->got_) && (m->opt_.W || isword((unsigned char) (m->txt_[m->len_])));
 }
 
 /// FSM code META NWE.
 static inline bool_t FSM_META_NWE(NeoastMatcher* m, int c0, int c1)
 {
-    m->anc_ = TRUE;
     return isword(c0) == isword(c1);
 }
 
 /// FSM code META NWB.
 static inline bool_t FSM_META_NWB(NeoastMatcher* m)
 {
-    m->anc_ = TRUE;
     return isword(m->got_) == isword((unsigned char) (m->txt_[m->len_]));
 }
 

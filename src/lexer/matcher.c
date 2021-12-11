@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <neoast.h>
 #include "lexer/matcher.h"
 #include "lexer/matcher_priv.h"
 
@@ -63,6 +64,7 @@ void matcher_init(NeoastMatcher* self)
 
     neoast_vector_init(&self->lap_, sizeof(int));
     neoast_vector_init(&self->tab_, sizeof(size_t));
+    self->lexing_state = parser_allocate_stack(32);
 }
 
 void matcher_destroy(NeoastMatcher* self)
@@ -74,6 +76,7 @@ void matcher_destroy(NeoastMatcher* self)
     }
     neoast_vector_free(&self->lap_);
     neoast_vector_free(&self->tab_);
+    parser_free_stack(self->lexing_state);
 }
 
 NeoastMatcher* matcher_new(NeoastInput* input)
@@ -122,13 +125,10 @@ void matcher_reset(NeoastMatcher* self)
     self->cno_ = 0;
 #endif
     self->num_ = 0;
-    self->own_ = TRUE;
     self->eof_ = FALSE;
-    self->mat_ = FALSE;
 
     self->ded_ = 0;
     self->tab_.n = 0;
-    self->bmd_ = 0;
 }
 
 size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM fsm)
@@ -136,7 +136,6 @@ size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM fsm)
 {
     matcher_reset_text(self);
     self->len_ = 0;     // split text length starts with 0
-    self->anc_ = FALSE; // no word boundary anchor found and applied
     scan:
     self->txt_ = self->buf_ + self->cur_;
 #if !defined(WITH_NO_INDENT)

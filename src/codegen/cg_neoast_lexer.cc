@@ -175,14 +175,6 @@ void CGNeoastLexer::put_top(std::ostream &os) const
         os << "    " << state.name << ",\n";
     }
     os << "};\n";
-    os << "static ParsingStack* lexing_stack = NULL;\n"
-          "\n// Lexing macros\n"
-          "#define yyval (&(destination->value))\n"
-          "#define yystate (lexing_stack)\n"
-          "#define yypush(state) NEOAST_STACK_PUSH(yystate, (state))\n"
-          "#define yypop() NEOAST_STACK_POP(yystate)\n"
-          "#define yyposition (&(destination->position))\n"
-          "#define yylen (self->len_)";
 }
 
 void CGNeoastLexer::put_global(std::ostream &os) const
@@ -199,9 +191,16 @@ void CGNeoastLexer::put_global(std::ostream &os) const
     // Put the lexing function
     os << "static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination)\n"
           "{\n"
+          ""// Lexing macros\n"
+          "#define yyval (&(destination->value))\n"
+          "#define yystate (self->lexing_state)\n"
+          "#define yypush(state) NEOAST_STACK_PUSH(yystate, (state))\n"
+          "#define yypop() NEOAST_STACK_POP(yystate)\n"
+          "#define yyposition (&(destination->position))\n"
+          "#define yylen (self->len_)\n\n"
           "    while (!matcher_at_end(self))\n"
           "    {\n"
-          "        switch (NEOAST_STACK_PEEK(lexing_stack))\n"
+          "        switch (NEOAST_STACK_PEEK(yystate))\n"
           "        {\n";
 
     for (const auto &state: impl_->states)
@@ -251,6 +250,12 @@ void CGNeoastLexer::put_global(std::ostream &os) const
        "\n"
        "    // EOF\n"
        "    return 0;\n"
+       "#undef yyval\n"
+       "#undef yystate\n"
+       "#undef yypush\n"
+       "#undef yypop\n"
+       "#undef yyposition\n"
+       "#undef yylen\n"
        "}\n";
 
 }
@@ -285,12 +290,12 @@ const Options &CGNeoastLexer::get_options() const
 
 std::string CGNeoastLexer::get_init() const
 {
-    return "lexing_stack = parser_allocate_stack(32);";
+    return "";
 }
 
 std::string CGNeoastLexer::get_delete() const
 {
-    return "parser_free_stack(lexing_stack); lexing_stack = NULL;";
+    return "";
 }
 
 CGNeoastLexer::~CGNeoastLexer()
@@ -302,8 +307,7 @@ std::string CGNeoastLexer::get_new_inst(const std::string &name) const
 {
     return "NeoastInput* buf_input = input_new_from_buffer(input, input_len);\n"
            "    NeoastMatcher* ll_inst = matcher_new(buf_input);\n\n"
-           "    lexing_stack->pos = 0;\n"
-           "    NEOAST_STACK_PUSH(lexing_stack, LEX_STATE_DEFAULT);";
+           "    NEOAST_STACK_PUSH(ll_inst->lexing_state, LEX_STATE_DEFAULT);";
 }
 
 std::string CGNeoastLexer::get_del_inst(const std::string &name) const
