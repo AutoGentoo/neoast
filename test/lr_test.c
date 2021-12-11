@@ -91,6 +91,12 @@ uint32_t lalr_table[] = {
         LR_R(2), LR_R(2), LR_R(2), LR_E( ), LR_E( ), /* 6 */
 };
 
+static void reduce_generic(uint32_t id, CodegenStruct* dest, CodegenStruct* args)
+{
+    (void) id;
+    *dest = args[0];
+}
+
 void initialize_parser()
 {
     static LexerRule l_rules[] = {
@@ -133,6 +139,7 @@ void initialize_parser()
     p.token_n = TOK_AUGMENT;
     p.action_token_n = 3;
     p.token_names = token_error_names;
+    p.parser_reduce = (parser_reduce) reduce_generic;
 
     // Initialize the lexer regex rules
     lexer_parent = bootstrap_lexer_new((const LexerRule**) rules, &lex_n, 1, NULL,
@@ -148,7 +155,7 @@ CTEST(test_parser)
                               ";";  // b
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenUnion), sizeof(CodegenUnion));
+    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenStruct), sizeof(CodegenUnion));
 
     void* lexer_inst = bootstrap_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
     int32_t res_idx = parser_parse_lr(&p, lalr_table, buf, lexer_inst, bootstrap_lexer_next);

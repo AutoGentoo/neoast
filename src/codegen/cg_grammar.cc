@@ -58,27 +58,23 @@ struct CGGrammar
     GrammarRule initialize_grammar() const
     {
         GrammarRule gg;
-        gg.expr = action.empty() ? nullptr : reinterpret_cast<parser_expr>(0x2);
         gg.token = return_type->id + NEOAST_ASCII_MAX;
-        gg.grammar = reinterpret_cast<const uint32_t*>(&table[table_offset]);
+        gg.grammar = &table[table_offset];
         gg.tok_n = token_n;
         return gg;
     }
 
     void put_action(std::ostream& os, const Options& options, int i) const
     {
+        // Let it fall through to default
         if (action.empty())
         {
             return;
         }
 
-        os << "static void\n"
-           << variadic_string("gg_rule_r%02d(%s* dest, %s* args)\n{\n",
-                              i, CODEGEN_STRUCT, CODEGEN_STRUCT)
-           << "    (void) dest;\n"
-           << "    (void) args;\n"
+        os << "        case " << i << ":\n"
            << action.get_complex(options, argument_types, "dest", "args", false)
-           << "}\n\n";
+           << "            break;\n";
     }
 
     void put_grammar_entry(std::ostream& os) const
@@ -238,25 +234,12 @@ void CGGrammars::put_rules(std::ostream &os) const
     os << "static const\n"
           "GrammarRule __neoast_grammar_rules[] = {\n";
 
-    uint32_t gg_i = 1;
     for (const auto &rule : impl_->rules)
     {
-        if (rule.expr)
-        {
-            os << variadic_string(
-                    "        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d], .expr=(parser_expr) gg_rule_r%02d},\n",
-                    impl_->cg->get_tokens()[rule.token - NEOAST_ASCII_MAX].c_str(),
-                    rule.tok_n,
-                    grammar_offset_i,
-                    gg_i++);
-        }
-        else
-        {
-            os << variadic_string("        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d]},\n",
-                                  impl_->cg->get_tokens()[rule.token - NEOAST_ASCII_MAX].c_str(),
-                                  rule.tok_n,
-                                  grammar_offset_i);
-        }
+        os << variadic_string("        {.token=%s, .tok_n=%d, .grammar=&grammar_token_table[%d]},\n",
+                              impl_->cg->get_tokens()[rule.token - NEOAST_ASCII_MAX].c_str(),
+                              rule.tok_n,
+                              grammar_offset_i);
 
         grammar_offset_i += rule.tok_n;
     }
@@ -266,11 +249,19 @@ void CGGrammars::put_rules(std::ostream &os) const
 void CGGrammars::put_actions(std::ostream &os) const
 {
     int gg_i = 0;
+    os << variadic_string("static void __neoast_reduce_handler(uint32_t reduce_id, %s* dest, %s* args)\n{\n",
+                          CODEGEN_STRUCT, CODEGEN_STRUCT)
+       << "    switch(reduce_id)\n    {\n";
     for (const auto &rules : impl_->rules_cg)
     {
         for (const auto &rule : rules.second)
-        { rule.put_action(os, impl_->cg->get_options(), gg_i++); }
+        {
+            rule.put_action(os, impl_->cg->get_options(), gg_i++);
+        }
     }
+    os << "    default:\n"
+          "        *dest = args[0];\n"
+          "        break;\n    }\n}\n";
 }
 
 uint32_t CGGrammars::size() const

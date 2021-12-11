@@ -35,33 +35,30 @@ const void* g_table_from_matrix(const void* table,
 static inline
 uint32_t g_lr_reduce(
         const GrammarParser* parser,
-        ParsingStack* stack,
         const uint32_t* parsing_table,
-        const GrammarRule* reduce_rule,
-        int32_t* token_table,
-        void* val_table,
-        size_t val_s,
-        size_t union_s,
+        uint32_t reduce_token,
+        const ParserBuffers* buffers,
         uint32_t* dest_idx)
 {
     // Find how many tokens to pop
     // due to this rule
+    const GrammarRule* reduce_rule = &parser->grammar_rules[reduce_token & TOK_MASK];
     uint32_t arg_count = reduce_rule->tok_n;
 
-    char* dest = alloca(val_s);
-    char* args = alloca(val_s * arg_count);
+    char* dest = alloca(buffers->val_s);
+    char* args = alloca(buffers->val_s * arg_count);
 
     uint32_t idx = *dest_idx;
-    assert(stack->pos % 2 == 1 && stack->pos > (arg_count << 1));
+    assert(buffers->parsing_stack->pos % 2 == 1 && buffers->parsing_stack->pos > (arg_count << 1));
     for (uint32_t i = 0; i < arg_count; i++)
     {
-        NEOAST_STACK_POP(stack); // Pop the state
-        idx = NEOAST_STACK_POP(stack); // Pop the index of the token/value
+        NEOAST_STACK_POP(buffers->parsing_stack); // Pop the state
+        idx = NEOAST_STACK_POP(buffers->parsing_stack); // Pop the index of the token/value
 
         // Fill the argument
-        memcpy(OFFSET_VOID_PTR(args, val_s, arg_count - i - 1),
-               OFFSET_VOID_PTR(val_table, val_s, idx),
-               val_s);
+        memcpy(OFFSET_VOID_PTR(args, buffers->val_s, arg_count - i - 1),
+               OFFSET_VOID_PTR(buffers->value_table, buffers->val_s, idx),
+               buffers->val_s);
     }
 
     int32_t result_token = (int32_t)reduce_rule->token;
@@ -71,44 +68,40 @@ uint32_t g_lr_reduce(
         assert(result_token > 0);
     }
 
-    if (reduce_rule->expr)
+    // Run the reduction code
+    parser->parser_reduce(reduce_token & TOK_MASK, dest, (void**) args);
+
+    // Copy the result back into the table
+    memcpy(OFFSET_VOID_PTR(buffers->value_table, buffers->val_s, idx),
+           dest,
+           buffers->val_s);
+
+    assert(buffers->val_s - buffers->union_s >= sizeof(TokenPosition));
+    if (arg_count > 0)
     {
-        reduce_rule->expr(
-                dest,
-                (void**) args);
-
-        // Copy the result back into the table
-        memcpy(OFFSET_VOID_PTR(val_table, val_s, idx),
-               dest,
-               val_s);
-
-        assert(val_s - union_s >= sizeof(TokenPosition));
-        if (arg_count > 0)
-        {
-            // Copy the positional data of the first argument back to the destination
-            memcpy(dest + union_s, args + union_s, sizeof(TokenPosition));
-        }
-        else
-        {
-            // No argument (empty rule), no positional data available
-            memset(dest + union_s, 0, sizeof(TokenPosition));
-        }
+        // Copy the positional data of the first argument back to the destination
+        memcpy(dest + buffers->union_s, args + buffers->union_s, sizeof(TokenPosition));
+    }
+    else
+    {
+        // No argument (empty rule), no positional data available
+        memset(dest + buffers->union_s, 0, sizeof(TokenPosition));
     }
 
     // Fill the result
-    token_table[idx] = result_token;
+    buffers->token_table[idx] = result_token;
 
     // Check the goto
     uint32_t next_state = *(uint32_t*) g_table_from_matrix(
             parsing_table,
-            NEOAST_STACK_PEEK(stack), // Top of stack is current state
+            NEOAST_STACK_PEEK(buffers->parsing_stack), // Top of stack is current state
             result_token,
             parser->token_n);
 
     next_state &= TOK_MASK;
 
-    NEOAST_STACK_PUSH(stack, idx);
-    NEOAST_STACK_PUSH(stack, next_state);
+    NEOAST_STACK_PUSH(buffers->parsing_stack, idx);
+    NEOAST_STACK_PUSH(buffers->parsing_stack, next_state);
 
     *dest_idx = idx;
     return next_state;
@@ -200,7 +193,7 @@ static void parser_run_destructors(
 
     // Free the reduced tokens
     assert(buffers->parsing_stack->pos % 2 == 1);
-    while (buffers->parsing_stack->pos > 1) // last hold the initialize state '0'
+    while (buffers->parsing_stack->pos > 1) // lastly, hold the initialized state '0'
     {
         NEOAST_STACK_POP(buffers->parsing_stack); // state
         uint32_t index = NEOAST_STACK_POP(buffers->parsing_stack);
@@ -273,11 +266,8 @@ int32_t parser_parse_lr(const GrammarParser* parser,
             assert(tok < parser->action_token_n);
 
             // Reduce this rule
-            const GrammarRule* reduce_rule = &parser->grammar_rules[table_value & TOK_MASK];
-            current_state = g_lr_reduce(parser, buffers->parsing_stack, parsing_table,
-                                        reduce_rule,
-                                        buffers->token_table, buffers->value_table,
-                                        buffers->val_s, buffers->union_s,
+            current_state = g_lr_reduce(parser, parsing_table,
+                                        table_value, buffers,
                                         &dest_idx);
 
             // Don't move on empty rule

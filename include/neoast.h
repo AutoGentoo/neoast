@@ -48,7 +48,7 @@ typedef struct LR_1_prv LR_1;
 typedef struct GrammarState_prv GrammarState;
 typedef struct CanonicalCollection_prv CanonicalCollection;
 
-typedef void (*parser_expr) (void* dest, void** values);
+typedef void (*parser_reduce) (uint32_t reduce_rule, void* dest, void** values);
 typedef void (*parser_destructor) (void* self);
 
 
@@ -108,7 +108,6 @@ struct GrammarRule_prv
     uint32_t token;
     uint32_t tok_n;
     const uint32_t* grammar;
-    parser_expr expr;
 };
 
 struct GrammarParser_prv
@@ -118,6 +117,7 @@ struct GrammarParser_prv
     const char* const* token_names;
     parser_destructor const* destructors;
     yy_error_cb parser_error;
+    parser_reduce parser_reduce;
 
     // Also number of columns
     uint32_t grammar_n;

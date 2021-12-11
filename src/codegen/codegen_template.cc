@@ -220,6 +220,7 @@ static GrammarParser parser = {
         .token_names = __neoast_token_names,
         .destructors = __neoast_token_destructors,
         .parser_error = {{ parser_error }},
+        .parser_reduce = (parser_reduce) __neoast_reduce_handler,
         .grammar_n = {{ grammar_n }},
         .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,
         .action_token_n = {{ action_n }}
