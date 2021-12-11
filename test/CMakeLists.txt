@@ -31,7 +31,7 @@ add_mocked_test(macro_C
         LINK_LIBRARIES neoast neoast-codegen
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT ${EXEC_ENV}
-        INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
+        INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/reflex/include
         )
 
 add_mocked_test(tablegen_C
