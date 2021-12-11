@@ -10,7 +10,7 @@
 
 void lexing_error_cb(const char* input,
                      const TokenPosition* position,
-                     uint32_t lexer_state);
+                     const char* lexer_state);
 
 void parsing_error_cb(const char* const* token_names,
                       const TokenPosition* position,

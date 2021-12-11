@@ -147,12 +147,12 @@ void emit_error(const TokenPosition* p, const char* format, ...)
 
 void lexing_error_cb(const char* input,
                      const TokenPosition* position,
-                     uint32_t lexer_state)
+                     const char* lexer_state)
 {
     (void) lexing_error_cb;
     (void) input;
 
-    emit_error(position, "[state %d] Unmatched token near", lexer_state);
+    emit_error(position, "[state %s] Unmatched token near", lexer_state);
 }
 
 void parsing_error_cb(const char* const* token_names,

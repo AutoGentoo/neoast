@@ -177,11 +177,11 @@ void CGNeoastLexer::put_header(std::ostream &os) const
     os << "};\n";
     os << "static ParsingStack* lexing_stack = NULL;\n"
           "\n// Lexing macros\n"
-          "#define yyval (&destination->value)\n"
+          "#define yyval (&(destination->value))\n"
           "#define yystate (lexing_stack)\n"
           "#define yypush(state) NEOAST_STACK_PUSH(yystate, (state))\n"
           "#define yypop() NEOAST_STACK_POP(yystate)\n"
-          "#define yyposition (&destination->position)\n"
+          "#define yyposition (&(destination->position))\n"
           "#define yylen (self->len_)";
 }
 
@@ -215,9 +215,18 @@ void CGNeoastLexer::put_global(std::ostream &os) const
            "            yyposition->col_start = matcher_columno(self);\n\n"
            "            switch(neoast_tok___)\n"
            "            {\n"
-           "            case 0:\n"
-           "                if (!matcher_at_end(self)) { lexing_error_cb(yytext, yyposition, yypop()); return -1; }\n"
-           "                else return 0;\n";
+           "            case 0:\n";
+        if (get_options().lexing_error_cb.empty())
+        {
+            os << "                if (!matcher_at_end(self)) { fprintf(stderr, \"Failed to match token near "
+                  "line:col %d:%d (state " << state.name << ")\", yyposition->line, yyposition->col_start); return -1; }\n"
+                  "                else return 0;\n";
+        }
+        else
+        {
+            os << "                if (!matcher_at_end(self)) { " << get_options().lexing_error_cb << "(yytext, yyposition, \"" << state.name << "\"); return -1; }\n"
+                  "                else return 0;\n";
+        }
 
         int i = 0;
         for (const auto& rule : state.rules)

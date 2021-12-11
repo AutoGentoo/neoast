@@ -44,7 +44,7 @@
 
 ==
 // Test lex rule comment
-"[ ]+"        {return -1;}
+"[ ]+"        { }
 "[0-9]+"      {yyval->number = strtod(yytext, NULL); return TOK_N;}
 "\+"          {return '+';}
 "\-"          {return '-';}

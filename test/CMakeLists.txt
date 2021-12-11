@@ -1,7 +1,7 @@
 macro(CUnitTest name)
     add_mocked_test(${name}_C
             SOURCES ${name}_test.c
-            LINK_LIBRARIES neoast neoast-codegen
+            LINK_LIBRARIES neoast neoast-lexer
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             ENVIRONMENT ${EXEC_ENV}
             INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
@@ -55,7 +55,7 @@ add_mocked_test(integration_C
         ${simple_ast_parser_OUTPUT}
         ${error_parser_OUTPUT}
         # TODO Link tests against reflex generated lexer
-        LINK_LIBRARIES neoast m neoast_builtin_lexer reflex
+        LINK_LIBRARIES neoast m neoast-lexer
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
         ENVIRONMENT ${EXEC_ENV}

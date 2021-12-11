@@ -121,7 +121,7 @@ namespace reflex
                                     const Pattern::DFA::State* start,
                                     const std::string &func_name)
     {
-        os << variadic_string("void %s(NeoastMatcher* m)\n"
+        os << variadic_string("static void %s(NeoastMatcher* m)\n"
                               "{\n"
                               "  int c0, c1 = 0;\n"
                               "  FSM_INIT(m, &c1);\n",

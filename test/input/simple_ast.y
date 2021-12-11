@@ -81,8 +81,7 @@ void required_use_stmt_free(RequiredUse* self)
 
 ==
 
-"[\n]"                  {}
-"[ \t\r\\]+"            {/* skip */}
+"[ \t\r\\\n]+"          {/* skip */}
 "\?\?"                  {yyval->use_select.target = NULL; yyval->use_select.operator = USE_OP_MOST_ONE; return USESELECT;}
 "\|\|"                  {yyval->use_select.target = NULL; yyval->use_select.operator = USE_OP_LEAST_ONE; return USESELECT;}
 "\^\^"                  {yyval->use_select.target = NULL; yyval->use_select.operator = USE_OP_EXACT_ONE; return USESELECT;}
