@@ -35,21 +35,21 @@ struct NeoastVector_prv {
 };
 
 // NeoastVector API
-void vector_init(NeoastVector* self, size_t item_len);
-void vector_push_back(NeoastVector* self, void* item);
-void vector_resize(NeoastVector* self, size_t next_size, int fill);
-void vector_grow(NeoastVector* self, size_t next_size);
-void vector_push_back_i(NeoastVector* self, int item);
-void vector_push_back_s(NeoastVector* self, size_t item);
-void vector_free(NeoastVector* self);
+void neoast_vector_init(NeoastVector* self, size_t item_len);
+void neoast_vector_push_back(NeoastVector* self, void* item);
+void neoast_vector_resize(NeoastVector* self, size_t next_size, int fill);
+void neoast_vector_grow(NeoastVector* self, size_t next_size);
+void neoast_vector_push_back_i(NeoastVector* self, int item);
+void neoast_vector_push_back_s(NeoastVector* self, size_t item);
+void neoast_vector_free(NeoastVector* self);
 
 // NeoastStack API
-#define stack_init vector_init
-#define stack_push vector_push_back
-#define stack_push_i vector_push_back_i
-#define stack_free vector_free
-void stack_pop(NeoastStack* self, void* dest);
-#define stack_peek(s, t) VECTOR_BACK(s, t)
+#define neoast_stack_init neoast_vector_init
+#define neoast_stack_push neoast_vector_push_back
+#define neoast_stack_push_i neoast_vector_push_back_i
+#define neoast_stack_free neoast_vector_free
+void neoast_stack_pop(NeoastStack* self, void* dest);
+#define neoast_stack_peek(s, t) VECTOR_BACK(s, t)
 
 #ifdef __cplusplus
 };
