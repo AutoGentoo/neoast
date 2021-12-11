@@ -67,6 +67,11 @@ void matcher_init(NeoastMatcher* self)
 
 void matcher_destroy(NeoastMatcher* self)
 {
+    if (self->buf_)
+    {
+        free(self->buf_);
+        self->buf_ = NULL;
+    }
     vector_free(&self->lap_);
     vector_free(&self->tab_);
 }

@@ -73,7 +73,8 @@ void vector_push_back_s(NeoastVector* self, size_t item)
 
 void vector_free(NeoastVector* self)
 {
-    free(self->ptr);
+    if (self->ptr) free(self->ptr);
+    self->ptr = NULL;
 }
 
 void stack_pop(NeoastStack* self, void* dest)
