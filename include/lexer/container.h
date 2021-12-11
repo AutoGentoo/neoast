@@ -20,6 +20,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define VECTOR_AT(v, i, t) *((t*) ((char*)(v).ptr + ((i) * (v).item_len)))
 #define VECTOR_BACK(v, t) *((t*) ((char*)(v).ptr + (((v).n - 1) * (v).item_len)))
 
@@ -46,5 +50,9 @@ void vector_free(NeoastVector* self);
 #define stack_free vector_free
 void stack_pop(NeoastStack* self, void* dest);
 #define stack_peek(s, t) VECTOR_BACK(s, t)
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif //NEOAST_CONTAINER_H

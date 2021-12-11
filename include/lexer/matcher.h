@@ -20,6 +20,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Create a new lexer matching engine
  * @param input input to scan over
@@ -45,5 +49,9 @@ size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM pattern_fsm);
 size_t matcher_lineno(NeoastMatcher* self);
 size_t matcher_columno(NeoastMatcher* self);
 const char* matcher_text(NeoastMatcher* self);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif //NEOAST_MATCHER_H

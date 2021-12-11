@@ -18,6 +18,10 @@
 #ifndef NEOAST_MATCHER_FSM_H
 #define NEOAST_MATCHER_FSM_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "common.h"
 #include "matcher_priv.h"
 
@@ -69,7 +73,7 @@ static inline void FSM_HEAD(NeoastMatcher* m, NeoastPatternLookahead la)
 {
     if (m->lap_.n <= la)
         vector_resize(&m->lap_, la + 1, -1);
-    VECTOR_AT(m->lap_, la, int) = (int)(m->pos_ - (m->txt_ - m->buf_));
+    VECTOR_AT(m->lap_, la, int) = (int) (m->pos_ - (m->txt_ - m->buf_));
 }
 
 /// FSM code TAIL.
@@ -171,14 +175,14 @@ static inline bool_t FSM_META_BWE(NeoastMatcher* m, int c0, int c1)
 static inline bool_t FSM_META_EWB(NeoastMatcher* m)
 {
     m->anc_ = TRUE;
-    return isword(m->got_) && !isword((unsigned char)(m->txt_[m->len_]));
+    return isword(m->got_) && !isword((unsigned char) (m->txt_[m->len_]));
 }
 
 /// FSM code META BWB.
 static inline bool_t FSM_META_BWB(NeoastMatcher* m)
 {
     m->anc_ = TRUE;
-    return !isword(m->got_) && (m->opt_.W || isword((unsigned char)(m->txt_[m->len_])));
+    return !isword(m->got_) && (m->opt_.W || isword((unsigned char) (m->txt_[m->len_])));
 }
 
 /// FSM code META NWE.
@@ -192,8 +196,11 @@ static inline bool_t FSM_META_NWE(NeoastMatcher* m, int c0, int c1)
 static inline bool_t FSM_META_NWB(NeoastMatcher* m)
 {
     m->anc_ = TRUE;
-    return isword(m->got_) == isword((unsigned char)(m->txt_[m->len_]));
+    return isword(m->got_) == isword((unsigned char) (m->txt_[m->len_]));
 }
 
+#ifdef __cplusplus
+};
+#endif
 
 #endif //NEOAST_MATCHER_FSM_H

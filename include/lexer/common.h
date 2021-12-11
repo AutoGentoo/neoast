@@ -21,6 +21,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // matcher.h
 typedef struct NeoastMatcherContext_prv NeoastMatcherContext;
 typedef struct NeoastMatcher_prv NeoastMatcher;
@@ -65,5 +69,9 @@ typedef uint32_t NeosastPatternAccept; ///< group capture index
 typedef int bool_t;
 #define TRUE (1)
 #define FALSE (0)
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif //NEOAST_COMMON_H

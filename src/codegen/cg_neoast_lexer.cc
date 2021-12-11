@@ -208,28 +208,31 @@ void CGNeoastLexer::put_global(std::ostream &os) const
     {
         os <<
            "        case " << state.name << ":\n"
-           "        {\n"
-           "            size_t neoast_tok___ = matcher_scan(self, " << state.name << "_FSM);\n"
-           "            const char* yytext = matcher_text(self);\n"
-           "            yyposition->line = matcher_lineno(self);\n"
-           "            yyposition->col_start = matcher_columno(self);\n\n"
-           "            switch(neoast_tok___)\n"
-           "            {\n"
-           "            case 0:\n";
+                                            "        {\n"
+                                            "            size_t neoast_tok___ = matcher_scan(self, " << state.name
+           << "_FSM);\n"
+              "            const char* yytext = matcher_text(self);\n"
+              "            yyposition->line = matcher_lineno(self);\n"
+              "            yyposition->col_start = matcher_columno(self);\n\n"
+              "            switch(neoast_tok___)\n"
+              "            {\n"
+              "            case 0:\n";
         if (get_options().lexing_error_cb.empty())
         {
             os << "                if (!matcher_at_end(self)) { fprintf(stderr, \"Failed to match token near "
-                  "line:col %d:%d (state " << state.name << ")\", yyposition->line, yyposition->col_start); return -1; }\n"
+                  "line:col %d:%d (state " << state.name
+               << ")\", yyposition->line, yyposition->col_start); return -1; }\n"
                   "                else return 0;\n";
         }
         else
         {
-            os << "                if (!matcher_at_end(self)) { " << get_options().lexing_error_cb << "(yytext, yyposition, \"" << state.name << "\"); return -1; }\n"
-                  "                else return 0;\n";
+            os << "                if (!matcher_at_end(self)) { " << get_options().lexing_error_cb
+               << "(yytext, yyposition, \"" << state.name << "\"); return -1; }\n"
+                                                             "                else return 0;\n";
         }
 
         int i = 0;
-        for (const auto& rule : state.rules)
+        for (const auto &rule: state.rules)
         {
             os <<
                "            case " << ++i << ":\n {"
@@ -250,11 +253,13 @@ void CGNeoastLexer::put_global(std::ostream &os) const
        "    return 0;\n"
        "}\n";
 
+}
+void CGNeoastLexer::put_bottom(std::ostream& os) const
+{
     // Write the wrapper function
-    os << "static const uint32_t __neoast_ascii_mappings[NEOAST_ASCII_MAX];\n"
-          "static int neoast_lexer_next_wrapper(void* matcher, void* dest)\n"
+    os << "static int neoast_lexer_next_wrapper(void* matcher, void* dest)\n"
           "{\n"
-          "    int tok = neoast_lexer_next(matcher, dest);\n\n"
+          "    int tok = neoast_lexer_next((NeoastMatcher*)matcher, (NeoastValue*)dest);\n\n"
           "    // EOF and INVALID\n"
           "    if (tok <= 0) return tok;\n\n"
           "    if (tok < NEOAST_ASCII_MAX)\n"

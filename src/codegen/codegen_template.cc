@@ -66,6 +66,9 @@ void CodeGenImpl::write_source(std::ostream &os) const
     std::ostringstream os_lexer_top;
     lexer->put_top(os_lexer_top);
 
+    std::ostringstream os_lexer_bottom;
+    lexer->put_bottom(os_lexer_bottom);
+
     std::ostringstream os_lexer;
     lexer->put_global(os_lexer);
 
@@ -122,6 +125,7 @@ void CodeGenImpl::write_source(std::ostream &os) const
     /* Lexer parameters */
     source_data["lexer"] = os_lexer.str();
     source_data["lexer_top"] = os_lexer_top.str();
+    source_data["lexer_bottom"] = os_lexer_bottom.str();
     source_data["lexer_init"] = lexer->get_init();
     source_data["lexer_delete"] = lexer->get_delete();
     source_data["lexer_new_inst"] = lexer->get_new_inst("ll_inst");
@@ -207,6 +211,8 @@ char* __neoast_token_names[] = {
 {%- for name in tokens %}        "{{ name }}",
 {%- endfor -%}
 };
+
+{{ lexer_bottom }}
 
 static GrammarParser parser = {
         .ascii_mappings = __neoast_ascii_mappings,
