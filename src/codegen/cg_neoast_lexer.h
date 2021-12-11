@@ -32,7 +32,7 @@ public:
     explicit CGNeoastLexer(const File* self, const MacroEngine &m_engine_,
                            const Options &options);
 
-    void put_header(std::ostream &os) const override;
+    void put_top(std::ostream &os) const override;
     void put_global(std::ostream &os) const override;
     const Options& get_options() const;
     std::string get_init() const override;

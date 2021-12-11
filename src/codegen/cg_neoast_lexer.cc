@@ -161,7 +161,7 @@ CGNeoastLexer::CGNeoastLexer(const File* self,
     }
 }
 
-void CGNeoastLexer::put_header(std::ostream &os) const
+void CGNeoastLexer::put_top(std::ostream &os) const
 {
     // Lexer includes
     os << "#include <lexer/matcher_fsm.h>\n"
