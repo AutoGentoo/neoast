@@ -57,7 +57,7 @@ int clr_1_cmp_prv(const LR_1* a, const LR_1* b, uint32_t tok_n)
 
 int lalr_1_cmp(const GrammarState* a, const GrammarState* b, uint32_t tok_n)
 {
-    // Make sure all items in a exist in b
+    // Make sure all items in 'a' exist in 'b'
     int a_item_n = 0;
     int b_item_n = 0;
     for (const LR_1* iter = a->head_item; iter; a_item_n++, iter = iter->next);
@@ -91,7 +91,7 @@ int lalr_1_cmp(const GrammarState* a, const GrammarState* b, uint32_t tok_n)
 
 int clr_1_cmp(const GrammarState* a, const GrammarState* b, uint32_t tok_n)
 {
-    // Make sure all items in a exist in b
+    // Make sure all items in 'a' exist in 'b'
     int a_item_n = 0;
     int b_item_n = 0;
     for (const LR_1* iter = a->head_item; iter; a_item_n++, iter = iter->next);

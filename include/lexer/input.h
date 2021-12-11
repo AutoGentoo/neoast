@@ -28,14 +28,14 @@ extern "C" {
 #include <istream>
 #endif
 
+typedef size_t (*neoast_input_get)(NeoastInput* self, char* s, size_t n);
+
 typedef enum
 {
     NEOAST_INPUT_UNK,
     NEOAST_INPUT_BUFFER,
     NEOAST_INPUT_FILE,
-#if defined(__cplusplus) && defined NEOAST_WITH_CPLUSPLUS
-    NEOAST_INPUT_ISTREAM,
-#endif
+    NEOAST_INPUT_CUSTOM,
 } input_t;
 
 typedef enum
@@ -101,9 +101,13 @@ struct NeoastInput_prv
             unsigned short ulen_;    ///< length of data in utf8_[] or 0 if no data
             const unsigned short* page_;    ///< custom code page
         } file_;
-#if defined(__cplusplus) && defined NEOAST_WITH_CPLUSPLUS
-        std::istream* ios_;
-#endif
+        struct CustomHandle
+        {
+            // For general purpose storage
+            void* ptr;
+            // Main callback to implement reading from an input
+            neoast_input_get get;
+        } custom_;
     } impl_;
 };
 
@@ -138,6 +142,8 @@ NeoastInput* input_new_from_file_and_encoding(FILE* fp, file_encoding_type_t enc
  * @return input
  */
 NeoastInput* input_new_from_file(FILE* fp);
+
+NeoastInput* input_new_from_custom(void* ptr, neoast_input_get get);
 
 void input_free(NeoastInput* self);
 

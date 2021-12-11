@@ -20,7 +20,7 @@
 
 extern "C" {
     #include <cmocka.h>
-};
+}
 
 #define CTEST(name) static void name(void** state)
 

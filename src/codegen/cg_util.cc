@@ -84,7 +84,7 @@ void Options::handle(const KeyVal* option)
     }
     else if (strcmp(option->key, "parsing_stack_size") == 0)
     {
-        parsing_stack_n = strtoul(option->value, nullptr, 0);
+        parsing_stack_n = (int)strtol(option->value, nullptr, 0);
     }
     else if (strcmp(option->key, "parsing_error_cb") == 0)
     {
@@ -93,10 +93,6 @@ void Options::handle(const KeyVal* option)
     else if (strcmp(option->key, "lexing_error_cb") == 0)
     {
         lexing_error_cb = option->value;
-    }
-    else if (strcmp(option->key, "input_types") == 0)
-    {
-        // TODO(tumbar) What is this?
     }
     else if (strcmp(option->key, "lexer_file") == 0)
     {

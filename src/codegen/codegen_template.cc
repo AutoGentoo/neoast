@@ -19,8 +19,8 @@ void CodeGenImpl::write_header(std::ostream &os) const
     header_data["include"] = include_ ? include_->get_simple(options) : "";
     header_data["union_name"] = CODEGEN_UNION;
     header_data["struct_name"] = CODEGEN_STRUCT;
+    header_data["start_type"] = start_type;
 
-    // TODO Declare parsing functions
     os << inja::render(
             R"(#ifndef __NEOAST_{{ upper(prefix) }}_H__
 #define __NEOAST_{{ upper(prefix) }}_H__
@@ -36,6 +36,8 @@ extern "C" {
 {{ tokens }}
 #endif // NEOAST_GET_TOKENS
 
+#include <lexer/input.h>
+
 #ifdef NEOAST_GET_STRUCTURE
 /************************ NEOAST Union/Struct definition ************************/
 typedef union { {{ union }} } {{ union_name }};
@@ -48,6 +50,30 @@ typedef struct {
 
 /*************************** NEOAST Lexer definition ****************************/
 {{ lexer }}
+
+void* {{ prefix }}_allocate_buffers();
+
+void {{ prefix }}_free_buffers(void* self);
+
+extern {{ union_name }} __{{ prefix }}__t_;
+
+/**
+ * Basic entrypoint into the {{ prefix }} parser
+ * @param buffers_ Allocated pointer to buffers created with {{ prefix }}_allocate_buffers()
+ * @param input pointer to raw input
+ * @param input_len length of input in bytes
+ * @return top of the generated AST
+ */
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_len(void* buffers_, const char* input, uint32_t input_len);
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse(void* buffers_, const char* input);
+
+/**
+ * Advanced entrypoint into the {{ prefix }} parser
+ * @param buffers_ Allocated pointer to buffers created with {{ prefix }}_allocate_buffers()
+ * @param input initialized neoast input from <lexer/input.h>
+ * @return top of the generated AST
+ */
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_input(void* buffers_, NeoastInput* input);
 
 #ifdef __cplusplus
 }
@@ -266,42 +292,37 @@ void {{ prefix }}_free_buffers(void* self)
     parser_free_buffers((ParserBuffers*)self);
 }
 
-extern {{ union_name }} t;
-typeof(t.{{ start_type }}) {{ prefix }}_parse(void* buffers_, const char* input)
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_len(void* buffers_, const char* input, uint32_t input_len)
 {
-    ParserBuffers* buffers = (ParserBuffers*) buffers_;
-    parser_reset_buffers(buffers);
+    NeoastInput* lexer_input = input_new_from_buffer(input, input_len);
 
-    uint64_t input_len = strlen(input);
-    {{ lexer_new_inst }};
+    typeof(__{{ prefix }}__t_.{{ start_type }}) ret;
+    ret = {{ prefix }}_parse_input(buffers_, lexer_input);
 
-    int32_t output_idx = parser_parse_lr(
-            &parser, {{ prefix }}_parsing_table,
-            buffers, ll_inst, {{ lexer_next }});
-
-    {{ lexer_del_inst }};
-
-    if (output_idx < 0)
-        return (typeof(t.{{start_type}}))0;
-
-    return (({{ struct_name }}*)buffers->value_table)[output_idx].value.{{ start_type }};
+    input_free(lexer_input);
+    return ret;
 }
 
-typeof(t.{{ start_type }}) {{ prefix }}_parse_len(void* buffers_, const char* input, uint32_t input_len)
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse(void* buffers_, const char* input)
+{
+    return {{ prefix }}_parse_len(buffers_, input, strlen(input));
+}
+
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_input(void* buffers_, NeoastInput* input)
 {
     ParserBuffers* buffers = (ParserBuffers*) buffers_;
     parser_reset_buffers(buffers);
 
-    {{ lexer_new_inst }};
+    {{ lexer_new_inst }}
 
     int32_t output_idx = parser_parse_lr(
             &parser, {{ prefix }}_parsing_table,
             buffers, ll_inst, {{ lexer_next }});
 
-    {{ lexer_del_inst }};
+    {{ lexer_del_inst }}
 
     if (output_idx < 0)
-        return (typeof(t.{{start_type}}))0;
+        return (typeof(__{{ prefix }}__t_.{{ start_type }}))0;
 
     return (({{ struct_name }}*)buffers->value_table)[output_idx].value.{{ start_type }};
 }

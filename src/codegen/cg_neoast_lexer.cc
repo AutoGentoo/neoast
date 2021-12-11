@@ -305,15 +305,13 @@ CGNeoastLexer::~CGNeoastLexer()
 
 std::string CGNeoastLexer::get_new_inst(const std::string &name) const
 {
-    return "NeoastInput* buf_input = input_new_from_buffer(input, input_len);\n"
-           "    NeoastMatcher* ll_inst = matcher_new(buf_input);\n\n"
+    return "NeoastMatcher* ll_inst = matcher_new(input);\n"
            "    NEOAST_STACK_PUSH(ll_inst->lexing_state, LEX_STATE_DEFAULT);";
 }
 
 std::string CGNeoastLexer::get_del_inst(const std::string &name) const
 {
-    return "input_free(buf_input);\n"
-           "    matcher_free(ll_inst);\n";
+    return "matcher_free(ll_inst);";
 }
 
 std::string CGNeoastLexer::get_ll_next(const std::string &name) const

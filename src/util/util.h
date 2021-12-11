@@ -31,7 +31,7 @@ void dump_table(const uint32_t* table, const CanonicalCollection* cc,
                 const char* indent_str);
 
 #ifdef __cplusplus
-};
+}
 
 #include <ostream>
 #include <memory>
@@ -61,7 +61,7 @@ std::string variadic_string(const char* format,
     auto buf = std::unique_ptr<char[]>(new char[size]);
     std::snprintf(buf.get(), size, format, arg1, args...);
 
-    return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
+    return {buf.get(), buf.get() + size - 1}; // We don't want the '\0' inside
 }
 
 void dump_table_cxx(
