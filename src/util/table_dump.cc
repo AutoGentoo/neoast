@@ -125,7 +125,7 @@ void dump_table_cxx(
 
     for (uint32_t row = 0; row < cc->state_n; row++)
     {
-        os << indent_str << variadic_string("state %02d : ", indent_str, row);
+        os << indent_str << variadic_string("state %02d : ", row);
         for (uint32_t col = 0; col < cc->parser->token_n; col++, i++)
         {
             if (col == cc->parser->action_token_n)

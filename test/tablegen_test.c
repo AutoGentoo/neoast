@@ -21,7 +21,7 @@
 #include <math.h>
 #include <util/util.h>
 #include <string.h>
-#include <codegen/builtin_lexer/builtin_lexer.h>
+#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
 #include <cmocka.h>
 #include <stddef.h>
 
@@ -79,12 +79,14 @@ static const char* token_error_names[] = {
 static const char* token_names = "$N+-*/^()ES'";
 static uint8_t precedence_table[TOK_AUGMENT] = {PRECEDENCE_NONE};
 
-typedef union {
+typedef union
+{
     double number;
     char operator;
 } CalculatorUnion;
 
-typedef struct {
+typedef struct
+{
     CalculatorUnion value;
     TokenPosition position;
 } CalculatorStruct;
@@ -94,17 +96,25 @@ int32_t ll_tok_operator(const char* yytext, CalculatorUnion* yyval)
     yyval->operator = *yytext;
     switch (*yytext)
     {
-        case '+': return TOK_PLUS;
-        case '-': return TOK_MINUS;
-        case '*': return TOK_STAR;
-        case '/': return TOK_SLASH;
-        case '^': return TOK_CARET;
-        case '(': return TOK_OPEN_P;
-        case ')': return TOK_CLOSE_P;
+        case '+':
+            return TOK_PLUS;
+        case '-':
+            return TOK_MINUS;
+        case '*':
+            return TOK_STAR;
+        case '/':
+            return TOK_SLASH;
+        case '^':
+            return TOK_CARET;
+        case '(':
+            return TOK_OPEN_P;
+        case ')':
+            return TOK_CLOSE_P;
     }
 
     return -1;
 }
+
 int32_t ll_tok_num(const char* yytext, CalculatorUnion* yyval)
 {
     yyval->number = strtod(yytext, NULL);
@@ -115,11 +125,21 @@ void binary_op(CalculatorStruct* dest, CalculatorStruct* args)
 {
     switch (args[1].value.operator)
     {
-        case '+': dest->value.number = args[0].value.number + args[2].value.number; return;
-        case '-': dest->value.number = args[0].value.number - args[2].value.number; return;
-        case '*': dest->value.number = args[0].value.number * args[2].value.number; return;
-        case '/': dest->value.number = args[0].value.number / args[2].value.number; return;
-        case '^': dest->value.number = pow(args[0].value.number, args[2].value.number); return;
+        case '+':
+            dest->value.number = args[0].value.number + args[2].value.number;
+            return;
+        case '-':
+            dest->value.number = args[0].value.number - args[2].value.number;
+            return;
+        case '*':
+            dest->value.number = args[0].value.number * args[2].value.number;
+            return;
+        case '/':
+            dest->value.number = args[0].value.number / args[2].value.number;
+            return;
+        case '^':
+            dest->value.number = pow(args[0].value.number, args[2].value.number);
+            return;
     }
 }
 
@@ -197,8 +217,8 @@ void initialize_parser()
     p.token_n = TOK_AUGMENT;
     p.token_names = token_error_names;
 
-    lexer_parent = builtin_lexer_new((const LexerRule**) l_rules, &lex_n, 1, NULL,
-                                     offsetof(CalculatorStruct, position), NULL);
+    lexer_parent = bootstrap_lexer_new((const LexerRule**) l_rules, &lex_n, 1, NULL,
+                                       offsetof(CalculatorStruct, position), NULL);
 }
 
 CTEST(test_clr_1)
@@ -214,7 +234,7 @@ CTEST(test_clr_1)
     dump_table(table, cc, token_names, 0, stdout, NULL);
     canonical_collection_free(cc);
     free(table);
-    builtin_lexer_free(lexer_parent);
+    bootstrap_lexer_free(lexer_parent);
 }
 
 CTEST(test_lalr_1)
@@ -230,7 +250,7 @@ CTEST(test_lalr_1)
     dump_table(table, cc, token_names, 0, stdout, NULL);
     canonical_collection_free(cc);
     free(table);
-    builtin_lexer_free(lexer_parent);
+    bootstrap_lexer_free(lexer_parent);
 }
 
 CTEST(test_lalr_1_calculator)
@@ -238,7 +258,8 @@ CTEST(test_lalr_1_calculator)
     const char* lexer_input = "1 + (5 * 9) + 2";
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct), offsetof(CalculatorStruct, position));
+    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct),
+                                                 offsetof(CalculatorStruct, position));
 
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);
@@ -247,20 +268,20 @@ CTEST(test_lalr_1_calculator)
     uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
     assert_int_equal(error, 0);
 
-    void* lexer_inst = builtin_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
-    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_inst, builtin_lexer_next);
-    builtin_lexer_instance_free(lexer_inst);
+    void* lexer_inst = bootstrap_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
+    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_inst, bootstrap_lexer_next);
+    bootstrap_lexer_instance_free(lexer_inst);
 
     dump_table(table, cc, token_names, 0, stdout, NULL);
     assert_int_not_equal(res_idx, -1);
 
-    printf("%s = %lf\n", lexer_input, ((CalculatorStruct*)buf->value_table)[res_idx].value.number);
-    assert_double_equal(((CalculatorStruct*)buf->value_table)[res_idx].value.number, 1 + (5 * 9) + 2, 0.005);
+    printf("%s = %lf\n", lexer_input, ((CalculatorStruct*) buf->value_table)[res_idx].value.number);
+    assert_double_equal(((CalculatorStruct*) buf->value_table)[res_idx].value.number, 1 + (5 * 9) + 2, 0.005);
 
     parser_free_buffers(buf);
     canonical_collection_free(cc);
     free(table);
-    builtin_lexer_free(lexer_parent);
+    bootstrap_lexer_free(lexer_parent);
 }
 
 CTEST(test_lalr_1_order_of_ops)
@@ -268,7 +289,8 @@ CTEST(test_lalr_1_order_of_ops)
     const char* lexer_input = "1 + 5 * 9 + 4";
     initialize_parser();
 
-    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct), offsetof(CalculatorStruct, position));
+    ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct),
+                                                 offsetof(CalculatorStruct, position));
 
     CanonicalCollection* cc = canonical_collection_init(&p);
     canonical_collection_resolve(cc, LALR_1);
@@ -277,18 +299,18 @@ CTEST(test_lalr_1_order_of_ops)
     uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
     assert_int_equal(error, 0);
 
-    void* lexer_inst = builtin_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
-    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_inst, builtin_lexer_next);
-    builtin_lexer_instance_free(lexer_inst);
+    void* lexer_inst = bootstrap_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
+    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_inst, bootstrap_lexer_next);
+    bootstrap_lexer_instance_free(lexer_inst);
 
     // This parser has no order of ops
     assert_int_not_equal(res_idx, -1);
-    assert_double_equal(((CalculatorStruct*)buf->value_table)[res_idx].value.number, (((1 + 5) * 9) + 4), 0.005);
+    assert_double_equal(((CalculatorStruct*) buf->value_table)[res_idx].value.number, (((1 + 5) * 9) + 4), 0.005);
 
     parser_free_buffers(buf);
     canonical_collection_free(cc);
     free(table);
-    builtin_lexer_free(lexer_parent);
+    bootstrap_lexer_free(lexer_parent);
 }
 
 uint8_t lr_1_firstof(uint8_t dest[],
@@ -312,7 +334,7 @@ CTEST(test_first_of_expr)
     assert_false(first_of_items[TOK_STAR]);
     assert_false(first_of_items[TOK_SLASH]);
     assert_false(first_of_items[TOK_CARET]);
-    builtin_lexer_free(lexer_parent);
+    bootstrap_lexer_free(lexer_parent);
 }
 
 const static struct CMUnitTest left_scan_tests[] = {

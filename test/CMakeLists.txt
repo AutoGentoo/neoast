@@ -1,16 +1,31 @@
 macro(CUnitTest name)
     add_mocked_test(${name}_C
             SOURCES ${name}_test.c
-            LINK_LIBRARIES neoast neoast-codegen
+            LINK_LIBRARIES neoast neoast-lexer
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             ENVIRONMENT ${EXEC_ENV}
             INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
             )
 endmacro()
 
+add_mocked_test(bootstrap_lexer_C
+        SOURCES bootstrap_lexer_test.c
+        LINK_LIBRARIES neoast neoast-bootstrap-lexer
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT ${EXEC_ENV}
+        INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
+        )
 
-CUnitTest(lexer)
-CUnitTest(lr)
+CUnitTest(neoast_lexer)
+
+add_mocked_test(lr_C
+        SOURCES lr_test.c
+        LINK_LIBRARIES neoast neoast-bootstrap-lexer
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT ${EXEC_ENV}
+        INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
+        )
+
 add_mocked_test(macro_C
         SOURCES macro_test.cc
         LINK_LIBRARIES neoast neoast-codegen
@@ -21,7 +36,7 @@ add_mocked_test(macro_C
 
 add_mocked_test(tablegen_C
         SOURCES tablegen_test.c
-        LINK_LIBRARIES neoast neoast-codegen m neoast-util
+        LINK_LIBRARIES neoast neoast-codegen m neoast-util neoast-bootstrap-lexer
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT ${EXEC_ENV}
         INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
@@ -41,7 +56,7 @@ add_mocked_test(integration_C
         ${simple_ast_parser_OUTPUT}
         ${error_parser_OUTPUT}
         # TODO Link tests against reflex generated lexer
-        LINK_LIBRARIES neoast m neoast_builtin_lexer reflex
+        LINK_LIBRARIES neoast m neoast-lexer
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
         ENVIRONMENT ${EXEC_ENV}

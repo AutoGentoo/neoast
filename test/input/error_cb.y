@@ -6,7 +6,7 @@
 %top {
 void lexer_error_cb(const char* input,
                     const TokenPosition* position,
-                    uint32_t offset);
+                    const char* state_name);
 
 void parser_error_cb(const char* const* token_names,
                      const TokenPosition* position,
@@ -37,8 +37,7 @@ void parser_error_cb(const char* const* token_names,
 %start<out> out
 
 ==
-"\n"        { position->line++; }
-"[ ]+"      { }
+"[ \n\r]+"      { }
 "[0-9]+"    { yyval->out = strtol(yytext, NULL, 10); return A_TOKEN; }
 "\+"        { return '+'; }
 "-"         { return '-'; }

@@ -7,8 +7,8 @@
 
 #include <codegen/codegen.h>
 #include <codegen/codegen_priv.h>
-#include "cg_builtin_lexer.h"
 #include "cg_grammar.h"
+#include "cg_lexer.h"
 
 struct CodeGenImpl
 {

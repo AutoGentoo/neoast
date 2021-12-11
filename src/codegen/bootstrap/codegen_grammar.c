@@ -23,7 +23,7 @@
 #include <parsergen/canonical_collection.h>
 #include <stdarg.h>
 #include <assert.h>
-#include "codegen/builtin_lexer/builtin_lexer.h"
+#include "codegen/bootstrap/lexer/bootstrap_lexer.h"
 #include "grammar.h"
 
 #define WS_X "[\\s]+"
@@ -755,10 +755,10 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
     self->destructors = NULL;
     self->ascii_mappings = NULL;
 
-    *lexer_ptr = builtin_lexer_new(ll_rules,
-                                   ll_rules_n,
-                                   NEOAST_ARR_LEN(ll_rules_n),
-                                   ll_error, sizeof(CodegenUnion), NULL);
+    *lexer_ptr = bootstrap_lexer_new(ll_rules,
+                                     ll_rules_n,
+                                     NEOAST_ARR_LEN(ll_rules_n),
+                                     ll_error, sizeof(CodegenUnion), NULL);
 
     precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
 

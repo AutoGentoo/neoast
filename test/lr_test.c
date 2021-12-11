@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <neoast.h>
-#include <codegen/builtin_lexer/builtin_lexer.h>
+#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
 #include <cmocka.h>
 #include <stddef.h>
 
@@ -55,22 +55,25 @@ static const char* token_error_names[] = {
         "augment"
 };
 
-typedef union {
+typedef union
+{
     int integer;
-    struct expr_ {
+    struct expr_
+    {
         int val;
         struct expr_* next;
-    }* expr;
+    } * expr;
 } CodegenUnion;
 
-typedef struct {
+typedef struct
+{
     CodegenUnion value;
     TokenPosition position;
 } CodegenStruct;
 
 int32_t ll_tok_num(const char* yytext, CodegenUnion* yyval)
 {
-    yyval->integer = (int)strtol(yytext, NULL, 10);
+    yyval->integer = (int) strtol(yytext, NULL, 10);
     return TOK_a;
 }
 
@@ -132,8 +135,8 @@ void initialize_parser()
     p.token_names = token_error_names;
 
     // Initialize the lexer regex rules
-    lexer_parent = builtin_lexer_new((const LexerRule**) rules, &lex_n, 1, NULL,
-                                     offsetof(CodegenStruct, position), NULL);
+    lexer_parent = bootstrap_lexer_new((const LexerRule**) rules, &lex_n, 1, NULL,
+                                       offsetof(CodegenStruct, position), NULL);
 }
 
 CTEST(test_parser)
@@ -147,12 +150,12 @@ CTEST(test_parser)
 
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenUnion), sizeof(CodegenUnion));
 
-    void* lexer_inst = builtin_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
-    int32_t res_idx = parser_parse_lr(&p, lalr_table, buf, lexer_inst, builtin_lexer_next);
-    builtin_lexer_instance_free(lexer_inst);
+    void* lexer_inst = bootstrap_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
+    int32_t res_idx = parser_parse_lr(&p, lalr_table, buf, lexer_inst, bootstrap_lexer_next);
+    bootstrap_lexer_instance_free(lexer_inst);
 
     parser_free_buffers(buf);
-    builtin_lexer_free(lexer_parent);
+    bootstrap_lexer_free(lexer_parent);
     assert_int_not_equal(res_idx, -1);
 }
 

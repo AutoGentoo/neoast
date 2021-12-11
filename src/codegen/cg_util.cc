@@ -102,13 +102,9 @@ void Options::handle(const KeyVal* option)
     {
         lexer_file = option->value;
     }
-    else if (strcmp(option->key, "no_warn_builtin") == 0)
-    {
-        no_warn_builtin = codegen_parse_bool(option);
-    }
     else
     {
-        emit_error(&option->position, "Unsupported option, ignoring");
+        emit_warning(&option->position, "Unsupported option, ignoring");
     }
 }
 

@@ -4,19 +4,15 @@ add_library(neoast-codegen STATIC
         regex.h
         compiler.c compiler.h common.c
         cg_util.cc cg_util.h
-        cg_builtin_lexer.cc cg_builtin_lexer.h
+        cg_neoast_lexer.cc cg_neoast_lexer.h
         codegen_priv.h cg_lexer.h
+        cg_pattern.cc cg_pattern.h
         cg_grammar.cc cg_grammar.h
         codegen_template.cc codegen_impl.h)
 
-add_library(builtin-lexer STATIC
-        builtin_lexer/builtin_lexer.cc
-        builtin_lexer/builtin_lexer.h)
+target_compile_definitions(neoast-codegen PRIVATE NEOAST_CODEGEN_BACKDOOR)
 
-
-add_executable(neoast-bootstrap
-        bootstrap/codegen_grammar.c
-        bootstrap/main.c bootstrap/grammar.h)
+add_subdirectory(bootstrap)
 
 set(compiler_compiler
         ${CMAKE_CURRENT_BINARY_DIR}/neoast_compiler_compiler.c
@@ -32,19 +28,20 @@ add_custom_command(OUTPUT ${compiler_compiler}
 add_executable(neoast-exec ${compiler_compiler} main.c)
 add_dependencies(neoast-exec neoast-bootstrap)
 
-include_directories(neoast-codegen PRIVATE
+target_include_directories(neoast-codegen PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../
         ${PROJECT_SOURCE_DIR}/third_party/reflex/src
         ${INJA_INCLUDE_DIRECTORIES}
         )
+target_include_directories(neoast-exec PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../)
 
-include_directories(builtin-lexer PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/../
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../include
-        ${PROJECT_SOURCE_DIR}/third_party/reflex/include
+target_link_libraries(neoast-codegen
+        neoast
+        neoast-parsergen
+        neoast-util
+        neoast-lexer
+        reflex          # used to build regex DFAs
+        reflex-unicode
         )
-target_link_libraries(builtin-lexer reflex)
-
-target_link_libraries(neoast-codegen neoast neoast-parsergen neoast-util builtin-lexer)
 target_link_libraries(neoast-exec neoast-codegen)
-target_link_libraries(neoast-bootstrap neoast-codegen)

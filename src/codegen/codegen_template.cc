@@ -48,9 +48,7 @@ typedef struct {
 #endif // NEOAST_GET_STRUCTURE
 
 /*************************** NEOAST Lexer definition ****************************/
-#ifdef NEOAST_GET_LEXER
 {{ lexer }}
-#endif // NEOAST_GET_LEXER
 
 #ifdef __cplusplus
 }

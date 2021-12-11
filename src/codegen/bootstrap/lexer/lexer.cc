@@ -16,21 +16,21 @@
  */
 
 #include <vector>
-#include "builtin_lexer.h"
+#include "bootstrap_lexer.h"
 #include <reflex/pattern.h>
 #include <reflex/matcher.h>
 #include <reflex/abslexer.h>
 #include <sstream>
 
 
-struct BuiltinLexerState
+struct BootstrapLexerState
 {
     std::vector<const LexerRule*> rules;
     std::string regex_str;
     reflex::Pattern pattern;
 
-    BuiltinLexerState(const LexerRule* rules_,
-                      const uint32_t rules_n)
+    BootstrapLexerState(const LexerRule* rules_,
+                        const uint32_t rules_n)
     {
         rules.reserve(rules_n);
 
@@ -45,7 +45,7 @@ struct BuiltinLexerState
         std::stringstream os;
         os << "(?mx)";
         std::string sep;
-        for (const auto* rule : rules)
+        for (const auto* rule: rules)
         {
             assert(rule->regex);
             os << sep << "((?:"
@@ -60,21 +60,21 @@ struct BuiltinLexerState
 };
 
 
-struct BuiltinLexer
+struct BootstrapLexer
 {
-    std::vector<BuiltinLexerState> states;
+    std::vector<BootstrapLexerState> states;
     ll_error_cb error_cb;
     size_t position_offset;
     const uint32_t* ascii_mappings;
 
-    BuiltinLexer(const LexerRule* const* rules,
-                 const uint32_t rules_n[],
-                 uint32_t state_n,
-                 ll_error_cb error,
-                 size_t position_offset,
-                 const uint32_t* ascii_mappings)
-    : error_cb(error), position_offset(position_offset),
-      ascii_mappings(ascii_mappings)
+    BootstrapLexer(const LexerRule* const* rules,
+                   const uint32_t rules_n[],
+                   uint32_t state_n,
+                   ll_error_cb error,
+                   size_t position_offset,
+                   const uint32_t* ascii_mappings)
+            : error_cb(error), position_offset(position_offset),
+              ascii_mappings(ascii_mappings)
     {
         assert(state_n);
         states.reserve(state_n);
@@ -87,15 +87,15 @@ struct BuiltinLexer
 };
 
 
-class BuiltinLexerSession : public reflex::AbstractLexer<reflex::Matcher>
+class BootstrapLexerSession : public reflex::AbstractLexer<reflex::Matcher>
 {
-    const BuiltinLexer* parent;
+    const BootstrapLexer* parent;
     const reflex::Input input;
     ParsingStack* lexer_states;
 
 public:
-    BuiltinLexerSession(const char* input, uint32_t length, const BuiltinLexer *parent,
-                        std::ostream &os = std::cout) :
+    BootstrapLexerSession(const char* input, uint32_t length, const BootstrapLexer* parent,
+                          std::ostream &os = std::cout) :
             AbstractLexer(input, os), parent(parent), input(input, length)
     {
         lexer_states = parser_allocate_stack(32);
@@ -124,7 +124,7 @@ public:
                 {
                     fprintf(stderr, "Lexer returned '%c' (%d) which has not been "
                                     "explicitly defined as a token",
-                                    tok, tok);
+                            tok, tok);
                     fflush(stdout);
                     exit(1);
                 }
@@ -138,7 +138,7 @@ public:
         return tok;
     }
 
-    ~BuiltinLexerSession() override
+    ~BootstrapLexerSession() override
     {
         parser_free_stack(lexer_states);
         lexer_states = nullptr;
@@ -152,10 +152,10 @@ private:
         {
             int current_state = NEOAST_STACK_PEEK(lexer_states);
             matcher().pattern(parent->states[current_state].pattern);
-            const BuiltinLexerState& state = parent->states[current_state];
+            const BootstrapLexerState &state = parent->states[current_state];
 
             auto rule_out = matcher().scan();
-            if (rule_out == 0 && matcher().at_end() )
+            if (rule_out == 0 && matcher().at_end())
             {
                 // EOF
                 return 0;
@@ -165,7 +165,7 @@ private:
             if (rule_idx >= state.rules.size())
             {
                 // Invalid token
-                TokenPosition p {
+                TokenPosition p{
                         .line = static_cast<uint32_t>(lineno()),
                         .col_start=static_cast<uint32_t>(columno())};
 
@@ -207,29 +207,28 @@ private:
 };
 
 
-void* builtin_lexer_new(const LexerRule* rules[], const uint32_t rules_n[], uint32_t state_n, ll_error_cb error_cb,
-                        size_t position_offset, const uint32_t* ascii_mappings)
+void* bootstrap_lexer_new(const LexerRule* rules[], const uint32_t rules_n[], uint32_t state_n, ll_error_cb error_cb,
+                          size_t position_offset, const uint32_t* ascii_mappings)
 {
-    return new BuiltinLexer(rules, rules_n, state_n, error_cb, position_offset, ascii_mappings);
+    return new BootstrapLexer(rules, rules_n, state_n, error_cb, position_offset, ascii_mappings);
 }
 
-void builtin_lexer_free(void* lexer)
+void bootstrap_lexer_free(void* lexer)
 {
-    delete reinterpret_cast<BuiltinLexer*>(lexer);
+    delete reinterpret_cast<BootstrapLexer*>(lexer);
 }
 
-void* builtin_lexer_instance_new(const void* lexer_parent, const char* input, size_t length)
+void* bootstrap_lexer_instance_new(const void* lexer_parent, const char* input, size_t length)
 {
-    return new BuiltinLexerSession(input, length, reinterpret_cast<const BuiltinLexer*>(lexer_parent));
+    return new BootstrapLexerSession(input, length, reinterpret_cast<const BootstrapLexer*>(lexer_parent));
 }
 
-void builtin_lexer_instance_free(void* lexer_inst)
+void bootstrap_lexer_instance_free(void* lexer_inst)
 {
-    delete reinterpret_cast<BuiltinLexerSession*>(lexer_inst);
+    delete reinterpret_cast<BootstrapLexerSession*>(lexer_inst);
 }
 
-int builtin_lexer_next(void* lexer, void* ll_val)
+int bootstrap_lexer_next(void* lexer, void* ll_val)
 {
-    return reinterpret_cast<BuiltinLexerSession*>(lexer)->next(ll_val);
+    return reinterpret_cast<BootstrapLexerSession*>(lexer)->next(ll_val);
 }
-
