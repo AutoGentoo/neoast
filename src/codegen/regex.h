@@ -28,6 +28,7 @@
 class MacroEngine
 {
     std::unordered_map<std::string, std::string> map;
+    std::map<std::string, std::string> original_map;
     reflex::Pattern macro_pattern;
 
 public:
@@ -71,7 +72,10 @@ public:
     void add(const std::string& name, const std::string& value)
     {
         map[name] = expand(value);
+        original_map[name] = value;
     }
+
+    const std::map<std::string, std::string>& get_original() const { return original_map; }
 };
 
 #endif //NEOAST_REGEX_H

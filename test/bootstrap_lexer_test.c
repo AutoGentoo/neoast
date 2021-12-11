@@ -21,7 +21,7 @@
 #include <regex.h>
 #include <string.h>
 #include <stdlib.h>
-#include <codegen/builtin_lexer/builtin_lexer.h>
+#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -85,7 +85,7 @@ void initialize_parser()
     p.grammar_rules = 0;
 
     static uint32_t lex_n = NEOAST_ARR_LEN(l_rules);
-    l = builtin_lexer_new(ll_rules, &lex_n, 1, NULL, sizeof(CodegenUnion), NULL);
+    l = bootstrap_lexer_new(ll_rules, &lex_n, 1, NULL, sizeof(CodegenUnion), NULL);
 }
 
 CTEST(test_lexer)
@@ -101,20 +101,20 @@ CTEST(test_lexer)
     } llval;
 
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenUnion), sizeof(CodegenUnion));
-    void* lex = builtin_lexer_instance_new(l, yyinput, strlen(lexer_input));
+    void* lex = bootstrap_lexer_instance_new(l, yyinput, strlen(lexer_input));
 
-    assert_int_equal(builtin_lexer_next(lex, &llval), 1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval), 1);
     assert_int_equal(llval.value.integer, 10);
-    assert_int_equal(builtin_lexer_next(lex, &llval), 1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval), 1);
     assert_int_equal(llval.value.integer, 20);
-    assert_int_equal(builtin_lexer_next(lex, &llval), 1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval), 1);
     assert_int_equal(llval.value.integer, 30);
-    assert_int_equal(builtin_lexer_next(lex, &llval), -1); // Unhandled 'a'
-    assert_int_equal(builtin_lexer_next(lex, &llval), -1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval), -1); // Unhandled 'a'
+    assert_int_equal(bootstrap_lexer_next(lex, &llval), -1);
 
-    builtin_lexer_instance_free(lex);
+    bootstrap_lexer_instance_free(lex);
     parser_free_buffers(buf);
-    builtin_lexer_free(l);
+    bootstrap_lexer_free(l);
 }
 
 const static struct CMUnitTest lexer_tests[] = {

@@ -102,13 +102,9 @@ void Options::handle(const KeyVal* option)
     {
         lexer_file = option->value;
     }
-    else if (strcmp(option->key, "no_warn_builtin") == 0)
-    {
-        no_warn_builtin = codegen_parse_bool(option);
-    }
     else
     {
-        emit_error(&option->position, "Unsupported option, ignoring");
+        emit_warning(&option->position, "Unsupported option, ignoring");
     }
 }
 
@@ -266,4 +262,17 @@ bool Code::in_redzone(const std::vector<std::pair<int, int>> &redzones, const re
     }
 
     return false;
+}
+
+std::string format(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    size_t len = std::vsnprintf(nullptr, 0, format, args);
+    va_end(args);
+    std::vector<char> vec(len + 1);
+    va_start(args, format);
+    std::vsnprintf(&vec[0], len + 1, format, args);
+    va_end(args);
+    return &vec[0];
 }

@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include "codegen_impl.h"
+#include "cg_neoast_lexer.h"
 #include <parsergen/canonical_collection.h>
 #include <util/util.h>
 #include <utility>
@@ -177,43 +178,21 @@ void CodeGenImpl::parse_lexer(const File* self)
         return;
     }
 
-    if (self->lexer_rules)
+    if (!self->lexer_rules)
     {
-        if (!options.lexer_file.empty() || lexer_input)
-        {
-            emit_error(nullptr,
-                       "Multiple lexer input types defined\n"
-                       "Use %lexer {}, %option lexer_file=\"PATH\", or builtin lexer");
-            return;
-        }
-
-        // Using the builtin lexer
-        if (!options.no_warn_builtin)
-        {
-            emit_warning(&self->lexer_rules->position,
-                         "BUILTIN lexer should only be used for "
-                         "bootstrap compiler-compiler");
-        }
-
-        lexer = std::make_shared<CGBuiltinLexer>(self, m_engine, options);
+        emit_error(nullptr, "No lexing rules have been provided");
+        return;
     }
-    else if (lexer_input)
+
+    if (!options.lexer_file.empty() || lexer_input)
     {
-        if (!options.lexer_file.empty())
-        {
-            emit_error(nullptr,
-                       "Multiple lexer input types defined\n"
-                       "Use %lexer {}, %option lexer_file=\"PATH\", or builtin lexer");
-            return;
-        }
-
-        // Use the full Reflex lexer generator
-
+        emit_error(nullptr,
+                   "Multiple lexer input types defined\n"
+                   "Use %lexer {}, %option lexer_file=\"PATH\", or builtin lexer");
+        return;
     }
-    else
-    {
-        // Manual lexer file input
-    }
+
+    lexer = std::make_shared<CGNeoastLexer>(self, m_engine, options);
 }
 
 void CodeGenImpl::parse_grammar(const File* self)

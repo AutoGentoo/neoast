@@ -31,7 +31,7 @@ struct LexerTextBuffer
 static __thread struct LexerTextBuffer brace_buffer = {0};
 
 static inline void ll_add_to_brace(const char* lex_text, uint32_t len);
-static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* start_position);
+static inline void ll_match_brace(const TokenPosition* start_position);
 
 }
 
@@ -49,9 +49,9 @@ static inline void ll_add_to_brace(const char* lex_text, uint32_t len)
     brace_buffer.n += len;
 }
 
-static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* start_position)
+static inline void ll_match_brace(const TokenPosition* start_position)
 {
-    NEOAST_STACK_PUSH(lex_state, S_MATCH_BRACE);
+    yypush(S_MATCH_BRACE);
     brace_buffer.s = 1024;
     brace_buffer.buffer = malloc(brace_buffer.s);
     brace_buffer.n = 0;
@@ -63,11 +63,10 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 
 %option parser_type="LALR(1)"
 %option prefix="cc"
-%option debug_table="TRUE"
+%option debug_table="FALSE"
 %option annotate_line="FALSE"
 %option lexing_error_cb="lexing_error_cb"
 %option parsing_error_cb="parsing_error_cb"
-%option no_warn_builtin="TRUE"
 
 %union {
     char* identifier;
@@ -116,6 +115,7 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 %type<key_val> header
 %type<key_val> pair
 %type<l_rule> lexer_rules
+%type<l_rule> lexer_rules_state
 %type<l_rule> lexer_rule
 %type<token> tokens
 %type<token> token
@@ -134,29 +134,28 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 
 +literal        \"(\\.|[^\"\\])*\"
 +identifier     [A-Za-z_][\w]*
-+lex_state      <[A-Za-z_][\w]>[\s]*'{'
++lex_state      <[A-Za-z_][\w]*>[\s]*\{
 +ascii          '[\x20-\x7E]'
 +macro          \+{identifier}[ ][\s]*[^\n]+
-+whitespace     [ \t\r]+
++whitespace     [ \t\r\n]+
 
 ==
 
 // Initial state
 
 // Whitespace
-"[\n]"              { position->line++; }
 "{whitespace}"      { /* skip */ }
 "//[^\n]*"          { /* skip */ }
-"/\*"               { NEOAST_STACK_PUSH(lex_state, S_COMMENT); }
+"/\*"               { yypush(S_COMMENT); }
 
 // These take precedence over literal tokens
-"{literal}"         { yyval->identifier = strndup(yytext + 1, len - 2); return LITERAL; }
+"{literal}"         { yyval->identifier = strndup(yytext + 1, yylen - 2); return LITERAL; }
 "{ascii}"           { yyval->ascii = yytext[1]; return ASCII; }
 
 // Don't build anything during lexing to keep things simple
 // This is different from the way the bootstraping compiler does it
-"=="                { NEOAST_STACK_PUSH(lex_state, S_LL_RULES); return LL; }
-"%%"                { NEOAST_STACK_PUSH(lex_state, S_GG_RULES); return GG; }
+"=="                { yypush(S_LL_RULES); return LL; }
+"%%"                { yypush(S_GG_RULES); return GG; }
 "="                 { return '='; }
 "<"                 { return '<'; }
 ">"                 { return '>'; }
@@ -182,68 +181,64 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
                         while (*split == ' ') split++;
 
                         char* value = strdup(split);
-                        yyval->key_val = key_val_build(position, KEY_VAL_MACRO, key, value);
+                        yyval->key_val = key_val_build(yyposition, KEY_VAL_MACRO, key, value);
                         return MACRO;
                     }
 "{identifier}"      { yyval->identifier = strdup(yytext); return IDENTIFIER; }
-"{"                 { ll_match_brace(lex_state, position); }
+"\{"                { ll_match_brace(yyposition); }
 
 <S_LL_RULES> {
-"[\n]"              { position->line++; }
+"[\n]"              { /* skip */ }
 "{whitespace}"      { /* skip */ }
 "//[^\n]*"          { /* skip */ }
-"/\*"               { NEOAST_STACK_PUSH(lex_state, S_COMMENT); }
-"=="                { NEOAST_STACK_POP(lex_state); return LL; }
+"/\*"               { yypush(S_COMMENT); }
+"=="                { yypop(); return LL; }
 "{lex_state}"       {
                         const char* start_ptr = strchr(yytext, '<');
                         const char* end_ptr = strchr(yytext, '>');
                         yyval->identifier = strndup(start_ptr + 1, end_ptr - start_ptr - 1);
-                        NEOAST_STACK_PUSH(lex_state, S_LL_STATE);
+                        yypush(S_LL_STATE);
 
                         return LEX_STATE;
                     }
-"{literal}"         { yyval->identifier = strndup(yytext + 1, len - 2); return LITERAL; }
-"{"                 { ll_match_brace(lex_state, position); }
+"{literal}"         { yyval->identifier = strndup(yytext + 1, yylen - 2); return LITERAL; }
+"\{"                 { ll_match_brace(yyposition); }
 }
 
 <S_LL_STATE> {
-"[\n]"              { position->line++; }
 "{whitespace}"      { /* skip */ }
 "//[^\n]*"          { /* skip */ }
-"/\*"               { NEOAST_STACK_PUSH(lex_state, S_COMMENT); }
+"/\*"               { yypush(S_COMMENT); }
 
-"{literal}"         { yyval->identifier = strndup(yytext + 1, len - 2); return LITERAL; }
+"{literal}"         { yyval->identifier = strndup(yytext + 1, yylen - 2); return LITERAL; }
 
-"{"                 { ll_match_brace(lex_state, position); }
-"}"                 { NEOAST_STACK_POP(lex_state); return END_STATE; }
+"\{"                 { ll_match_brace(yyposition); }
+"\}"                 { yypop(); return END_STATE; }
 
 }
 
 <S_GG_RULES> {
-"[\n]"              { position->line++; }
 "{whitespace}"      { /* skip */ }
 "//[^\n]*"          { /* skip */ }
 "{ascii}"           { yyval->ascii = yytext[1]; return ASCII; }
-"/\*"               { NEOAST_STACK_PUSH(lex_state, S_COMMENT); }
-"%%"                { NEOAST_STACK_POP(lex_state); return GG; }
+"/\*"               { yypush(S_COMMENT); }
+"%%"                { yypop(); return GG; }
 "{identifier}"      { yyval->identifier = strdup(yytext); return IDENTIFIER; }
 ":"                 { return ':'; }
 "\|"                { return '|'; }
 ";"                 { return ';'; }
-"{"                 { ll_match_brace(lex_state, position); }
+"\{"                 { ll_match_brace(yyposition); }
 }
 
 <S_MATCH_BRACE> {
-"[\n]"              { position->line++; ll_add_to_brace(yytext, len); }
-
 // Add ascii charaters
-"'[\x00-\x7F]'"     { ll_add_to_brace(yytext, len); }
+"'[\x00-\x7F]'"     { ll_add_to_brace(yytext, yylen); }
 
 // String literals
-"\"(\\.|[^\"\\])*\"" { ll_add_to_brace(yytext, len); }
+"\"(\\.|[^\"\\])*\"" { ll_add_to_brace(yytext, yylen); }
 
 // Everything else
-"([^}{\"\'\n]+)"    { ll_add_to_brace(yytext, len); }
+"[^\}\{\"\']+"    { ll_add_to_brace(yytext, yylen); }
 
 "\{"                { brace_buffer.counter++; brace_buffer.buffer[brace_buffer.n++] = '{'; }
 "\}"                {
@@ -252,7 +247,7 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
                         {
                             // This is the outer-most brace
                             brace_buffer.buffer[brace_buffer.n++] = 0;
-                            NEOAST_STACK_POP(lex_state);
+                            yypop();
                             yyval->action.string = strndup(brace_buffer.buffer, brace_buffer.n);
                             yyval->action.position = brace_buffer.start_position;
                             free(brace_buffer.buffer);
@@ -267,9 +262,8 @@ static inline void ll_match_brace(ParsingStack* lex_state, const TokenPosition* 
 }
 
 <S_COMMENT> {
-"[\n]"              { position->line++; }
-"[^\*\n]+"          { /* Absorb comment */ }
-"\*/"               { NEOAST_STACK_POP(lex_state); }
+"[^\*]+"            { /* Absorb comment */ }
+"\*/"               { yypop(); }
 "\*"                { }
 }
 
@@ -305,11 +299,14 @@ header: pair                        { $$ = $1; }
       ;
 
 lexer_rule: LITERAL ACTION          { $$ = declare_lexer_rule(&$2.position, $1, $2.string); }
+          | LEX_STATE lexer_rules_state END_STATE { $$ = declare_state_rule($p1, $1, $2); }
           ;
 
+lexer_rules_state: lexer_rule                   { $$ = $1; }
+                 | lexer_rule lexer_rules_state { $$ = $1; $$->next = $2; }
+                 ;
 lexer_rules: lexer_rule             { $$ = $1; }
            | lexer_rule lexer_rules { $$ = $1; $$->next = $2; }
-           | LEX_STATE lexer_rules END_STATE { $$ = declare_state_rule($p1, $1, $2); }
            ;
 
 single_grammar: tokens ACTION                   { $$ = declare_single_grammar(&$2.position, $1, $2.string); }

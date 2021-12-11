@@ -9,7 +9,21 @@ macro(CUnitTest name)
 endmacro()
 
 
-CUnitTest(lexer)
+add_mocked_test(bootstrap_lexer_C
+        SOURCES bootstrap_lexer_test.c
+        LINK_LIBRARIES neoast neoast-bootstrap-lexer
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT ${EXEC_ENV}
+        INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
+        )
+
+add_mocked_test(neoast_lexer_C
+        SOURCES neoast_lexer_test.c
+        LINK_LIBRARIES neoast neoast-lexer
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT ${EXEC_ENV}
+        INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
+        )
 CUnitTest(lr)
 add_mocked_test(macro_C
         SOURCES macro_test.cc
