@@ -125,13 +125,10 @@ void matcher_reset(NeoastMatcher* self)
     self->cno_ = 0;
 #endif
     self->num_ = 0;
-    self->own_ = TRUE;
     self->eof_ = FALSE;
-    self->mat_ = FALSE;
 
     self->ded_ = 0;
     self->tab_.n = 0;
-    self->bmd_ = 0;
 }
 
 size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM fsm)
@@ -139,7 +136,6 @@ size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM fsm)
 {
     matcher_reset_text(self);
     self->len_ = 0;     // split text length starts with 0
-    self->anc_ = FALSE; // no word boundary anchor found and applied
     scan:
     self->txt_ = self->buf_ + self->cur_;
 #if !defined(WITH_NO_INDENT)
