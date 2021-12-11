@@ -11,7 +11,7 @@ class CGLexer
      * functions to paste into the codegen
      */
 public:
-    virtual void put_header(std::ostream &os) const = 0;
+    virtual void put_top(std::ostream &os) const = 0;
     virtual void put_global(std::ostream &os) const = 0;
 
     virtual std::string get_init() const = 0;
