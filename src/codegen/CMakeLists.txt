@@ -31,6 +31,7 @@ add_dependencies(neoast-exec neoast-bootstrap)
 target_include_directories(neoast-codegen PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../
         ${PROJECT_SOURCE_DIR}/third_party/reflex/src
+        ${PROJECT_SOURCE_DIR}/third_party/reflex/include
         ${INJA_INCLUDE_DIRECTORIES}
         )
 target_include_directories(neoast-exec PRIVATE
@@ -40,7 +41,6 @@ target_link_libraries(neoast-codegen
         neoast
         neoast-parsergen
         neoast-util
-        neoast-lexer
         reflex          # used to build regex DFAs
         reflex-unicode
         )
