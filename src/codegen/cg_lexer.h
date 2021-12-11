@@ -13,6 +13,7 @@ class CGLexer
 public:
     virtual void put_top(std::ostream &os) const = 0;
     virtual void put_global(std::ostream &os) const = 0;
+    virtual void put_bottom(std::ostream &os) const = 0;
 
     virtual std::string get_init() const = 0;
     virtual std::string get_delete() const = 0;

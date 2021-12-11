@@ -26,6 +26,10 @@
 #include "container.h"
 #include "input.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct NeoastMatcherContext_prv
 {
     const char* buf;    ///< pointer to buffer
@@ -189,5 +193,9 @@ static inline bool_t matcher_hit_end(const NeoastMatcher* self)
 {
     return self->pos_ >= self->end_ && self->eof_;
 }
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif //NEOAST_MATCHER_PRIV_H

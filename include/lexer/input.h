@@ -20,6 +20,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined(__cplusplus) && defined NEOAST_WITH_CPLUSPLUS
 #include <istream>
 #endif
@@ -136,5 +140,9 @@ NeoastInput* input_new_from_file_and_encoding(FILE* fp, file_encoding_type_t enc
 NeoastInput* input_new_from_file(FILE* fp);
 
 void input_free(NeoastInput* self);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif //NEOAST_INPUT_H

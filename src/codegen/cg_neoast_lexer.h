@@ -34,6 +34,7 @@ public:
 
     void put_top(std::ostream &os) const override;
     void put_global(std::ostream &os) const override;
+    void put_bottom(std::ostream& os) const override;
     const Options& get_options() const;
     std::string get_init() const override;
     std::string get_delete() const override;
