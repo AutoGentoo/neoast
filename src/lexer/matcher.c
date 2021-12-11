@@ -61,8 +61,8 @@ void matcher_init(NeoastMatcher* self)
     matcher_reset(self);
     option_init(&self->opt_);
 
-    vector_init(&self->lap_, sizeof(int));
-    vector_init(&self->tab_, sizeof(size_t));
+    neoast_vector_init(&self->lap_, sizeof(int));
+    neoast_vector_init(&self->tab_, sizeof(size_t));
 }
 
 void matcher_destroy(NeoastMatcher* self)
@@ -72,8 +72,8 @@ void matcher_destroy(NeoastMatcher* self)
         free(self->buf_);
         self->buf_ = NULL;
     }
-    vector_free(&self->lap_);
-    vector_free(&self->tab_);
+    neoast_vector_free(&self->lap_);
+    neoast_vector_free(&self->tab_);
 }
 
 NeoastMatcher* matcher_new(NeoastInput* input)
@@ -153,7 +153,7 @@ size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM fsm)
 #if !defined(WITH_NO_INDENT)
     redo:
 #endif
-    vector_resize(&self->lap_, 0, 0);
+    neoast_vector_resize(&self->lap_, 0, 0);
     self->cap_ = 0;
     bool_t nul = FALSE;
 
@@ -170,7 +170,7 @@ size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM fsm)
         if (self->col_ > 0 && (self->tab_.n == 0 || VECTOR_BACK(self->tab_, size_t) < self->col_))
         {
             DBGLOG("Set new stop: tab_[%zu] = %zu", self->tab_.n, self->col_);
-            vector_push_back_s(&self->tab_, self->col_);
+            neoast_vector_push_back_s(&self->tab_, self->col_);
         }
         else if (self->tab_.n && VECTOR_BACK(self->tab_, size_t) > self->col_)
         {
@@ -180,7 +180,7 @@ size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM fsm)
                     break;
             self->ded_ += self->tab_.n - n;
             DBGLOG("Dedents: ded = %zu tab_ = %zu", self->ded_, self->tab_.n);
-            vector_resize(&self->tab_, n, -1);
+            neoast_vector_resize(&self->tab_, n, -1);
 // adjust stop when indents are not aligned (Python would give an error though)
             if (n > 0)
                 VECTOR_BACK(self->tab_, size_t) = self->col_;
@@ -192,7 +192,7 @@ size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM fsm)
         if (self->col_ == 0 && bol)
         {
             self->ded_ += self->tab_.n;
-            vector_resize(&self->tab_, 0, 0);
+            neoast_vector_resize(&self->tab_, 0, 0);
             DBGLOG("Rescan for pending dedents: ded = %zu", self->ded_);
             self->pos_ = self->ind_;
 // avoid looping, match \j exactly

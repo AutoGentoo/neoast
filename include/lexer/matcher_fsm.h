@@ -72,7 +72,7 @@ static inline void FSM_REDO(NeoastMatcher* m, int c1)
 static inline void FSM_HEAD(NeoastMatcher* m, NeoastPatternLookahead la)
 {
     if (m->lap_.n <= la)
-        vector_resize(&m->lap_, la + 1, -1);
+        neoast_vector_resize(&m->lap_, la + 1, -1);
     VECTOR_AT(m->lap_, la, int) = (int) (m->pos_ - (m->txt_ - m->buf_));
 }
 
