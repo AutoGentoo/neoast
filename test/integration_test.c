@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <cmocka.h>
 #include <neoast.h>
+#include <lexer/input.h>
+#include <string.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -29,7 +31,8 @@ uint32_t FUNC(name, init)(); \
 void* FUNC(name, allocate_buffers)(); \
 void FUNC(name, free_buffers)(void* self); \
 void FUNC(name, free)(); \
-return_type FUNC(name, parse)(const void* buffers, const char* input);
+return_type FUNC(name, parse)(const void* buffers, const char* input); \
+return_type FUNC(name, parse_input)(const void* buffers, NeoastInput* input);
 
 // Pretend headers
 DEFINE_HEADER(calc, double)
@@ -97,6 +100,22 @@ CTEST(test_parser_ascii_order_of_ops)
     calc_ascii_free();
 }
 
+CTEST(test_parser_input)
+{
+    assert_int_equal(calc_ascii_init(), 0);
+    void* buffers = calc_ascii_allocate_buffers();
+
+    char* input = "3 + 5 + (4 * 2 + (5 / 2))";
+    FILE* mock_file = fmemopen(input, strlen(input), "r");
+    NeoastInput* mock_input = input_new_from_file(mock_file);
+
+    double result = calc_ascii_parse_input(buffers, mock_input);
+    assert_double_equal(result, 3 + 5 + (4 * 2 + (5.0 / 2)), 0.001);
+    calc_ascii_free_buffers(buffers);
+    calc_ascii_free();
+    input_free(mock_input);
+    fclose(mock_file);
+}
 CTEST(test_destructor)
 {
     assert_int_equal(required_use_init(), 0);
@@ -193,6 +212,7 @@ const static struct CMUnitTest left_scan_tests[] = {
         cmocka_unit_test(test_parser),
         cmocka_unit_test(test_empty_ascii),
         cmocka_unit_test(test_parser_ascii),
+        cmocka_unit_test(test_parser_input),
         cmocka_unit_test(test_destructor),
         cmocka_unit_test(test_destructor_lex),
         cmocka_unit_test(test_error_ll),

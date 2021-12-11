@@ -122,7 +122,7 @@ required_use_single : use_expr                                      {
                                                                         $$->depend = $3;
                                                                         $$->next = NULL;
                                                                     }
-                    | '(' required_use_expr ')'                   {$$ = $2;}
+                    | '(' required_use_expr ')'                     {$$ = $2;}
                     ;
 
 depend_expr_sel : use_expr '?'       {$$ = $1;}

@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <string.h>
 #include <malloc.h>
+#include <sys/stat.h>
 #include "lexer/input.h"
 
 #if defined(WITH_STANDARD_REPLACEMENT_CHARACTER)
@@ -371,15 +372,129 @@ size_t input_get(NeoastInput* self, char* s, size_t n)
         }
         case NEOAST_INPUT_FILE:
             return file_get(&self->impl_.file_, s, n);
-#ifdef __cplusplus
-        case NEOAST_INPUT_ISTREAM:
-            // TODO(tumbar)
-#endif
+        case NEOAST_INPUT_CUSTOM:
+            return self->impl_.custom_.get(self, s, n);
         default:
         case NEOAST_INPUT_UNK:
             assert(0 && "Unknown input type");
             return 0;
     }
+}
+
+NeoastInput* input_new_from_file(FILE* fp)
+{
+    return input_new_from_file_and_encoding(fp, ENCODING_plain);
+}
+
+static void input_file_init(struct FileHandle* this, file_encoding_type_t enc)
+{
+    struct stat st;
+    if (fstat(fileno(this->file_), &st) == 0 && S_ISREG(st.st_mode) && st.st_size <= 4294967295LL)
+        this->size_ = (size_t)(st.st_size);
+
+    // assume plain (ASCII, binary or UTF-8 without BOM) content by default
+    this->encoding_ = ENCODING_plain;
+    (void) enc;
+    while (TRUE)
+    {
+        // check first UTF BOM byte
+        if (fread(this->utf8_, 1, 1, this->file_) == 1)
+        {
+            this->ulen_ = 1;
+            if (this->utf8_[0] == '\0' || this->utf8_[0] == '\xef' || this->utf8_[0] == '\xfe' || this->utf8_[0] == '\xff')
+            {
+                // check second UTF BOM byte
+                if (fread(this->utf8_ + 1, 1, 1, this->file_) == 1)
+                {
+                    this->ulen_ = 2;
+                    if (this->utf8_[0] == '\0' && this->utf8_[1] == '\0')  // UTF-32 big endian BOM 0000XXXX?
+                    {
+                        if (fread(&this->utf8_[2], 2, 1, this->file_) == 1)
+                        {
+                            this->ulen_ = 4;
+                            if (this->utf8_[2] == '\xfe' && this->utf8_[3] == '\xff') // UTF-32 big endian BOM 0000FEFF?
+                            {
+                                this->size_ = 0;
+                                this->ulen_ = 0;
+                                this->encoding_ = ENCODING_utf32be;
+                            }
+                        }
+                    }
+                    else if (this->utf8_[0] == '\xfe' && this->utf8_[1] == '\xff') // UTF-16 big endian BOM FEFF?
+                    {
+                        this->size_ = 0;
+                        this->ulen_ = 0;
+                        this->encoding_ = ENCODING_utf16be;
+                    }
+                    else if (this->utf8_[0] == '\xff' && this->utf8_[1] == '\xfe') // UTF-16 or UTF-32 little endian BOM FFFEXXXX?
+                    {
+                        if (fread(&this->utf8_[2], 2, 1, this->file_) == 1)
+                        {
+                            this->size_ = 0;
+                            if (this->utf8_[2] == '\0' && this->utf8_[3] == '\0') // UTF-32 little endian BOM FFFE0000?
+                            {
+                                this->ulen_ = 0;
+                                this->encoding_ = ENCODING_utf32le;
+                            }
+                            else
+                            {
+                                int c = (unsigned char)(this->utf8_[2]) | (unsigned char)(this->utf8_[3]) << 8;
+                                if (c < 0x80)
+                                {
+                                    this->uidx_ = 2;
+                                    this->ulen_ = 1;
+                                }
+                                else
+                                {
+                                    if (c >= 0xD800 && c < 0xE000)
+                                    {
+                                        // UTF-16 surrogate pair
+                                        if (c < 0xDC00 && fread(this->utf8_, 2, 1, this->file_) == 1 && ((unsigned char)(this->utf8_[1]) & 0xFC) == 0xDC)
+                                            c = 0x010000 - 0xDC00 + ((c - 0xD800) << 10) + ((unsigned char)(this->utf8_[0]) | (unsigned char)(this->utf8_[1]) << 8);
+                                        else
+                                            c = REFLEX_NONCHAR;
+                                    }
+                                    this->ulen_ = (unsigned short)(utf8(c, this->utf8_)); // always a short unsigned int
+                                }
+                                this->encoding_ = ENCODING_utf16le;
+                            }
+                        }
+                    }
+                    else if (this->utf8_[0] == '\xef' && this->utf8_[1] == '\xbb') // UTF-8 BOM EFBBXX?
+                    {
+                        if (fread(&this->utf8_[2], 1, 1, this->file_) == 1)
+                        {
+                            this->ulen_ = 3;
+                            if (this->utf8_[2] == '\xbf') // UTF-8 BOM EFBBBF?
+                            {
+                                if (this->size_ >= 3)
+                                    this->size_ -= 3;
+                                this->ulen_ = 0;
+                                this->encoding_ = ENCODING_utf8;
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        }
+
+        break;
+    }
+}
+
+NeoastInput* input_new_from_file_and_encoding(FILE* fp, file_encoding_type_t encoding)
+{
+    NeoastInput* self = malloc(sizeof(NeoastInput));
+    self->type = NEOAST_INPUT_FILE;
+    struct FileHandle* this = &self->impl_.file_;
+    memset(this->utf8_, 0, sizeof(this->utf8_));
+    this->uidx_ = 0;
+    this->ulen_ = 0;
+    this->page_ = NULL;
+    this->file_ = fp;
+    input_file_init(this, encoding);
+    return self;
 }
 
 NeoastInput* input_new_from_buffer(const char* str, size_t len)
@@ -391,14 +506,22 @@ NeoastInput* input_new_from_buffer(const char* str, size_t len)
     return self;
 }
 
+NeoastInput* input_new_from_custom(void* ptr, neoast_input_get get)
+{
+    NeoastInput* self = malloc(sizeof(NeoastInput));
+    self->impl_.custom_.ptr = ptr;
+    self->impl_.custom_.get = get;
+    self->type = NEOAST_INPUT_CUSTOM;
+    return self;
+}
+
 void input_free(NeoastInput* self)
 {
     switch(self->type)
     {
         case NEOAST_INPUT_BUFFER:
-            break;
+        case NEOAST_INPUT_CUSTOM:
         case NEOAST_INPUT_FILE:
-            // TODO
             break;
         default:
         case NEOAST_INPUT_UNK:

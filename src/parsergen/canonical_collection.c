@@ -378,7 +378,7 @@ void gs_resolve(CanonicalCollection* cc, GrammarState* state)
         if (is_duplicate)
             continue;
 
-        // We haven't seen this state yet
+        // We haven't seen this state, yet
         // We need to register this state
         cc_add_state(cc, state->action_states[token]);
         gs_resolve(cc, state->action_states[token]);
@@ -413,7 +413,7 @@ void canonical_collection_resolve(
             for (uint32_t j = i + 1; j < self->state_n; j++)
             {
                 // If states at i and j match, we need
-                // to merge j into i.
+                // to merge 'j' into 'i'.
                 // After we merge j into i we need to
                 // replace all uses of j with i
                 // We will move the state in the final slot
@@ -530,14 +530,14 @@ uint32_t* canonical_collection_generate(const CanonicalCollection* self,
                 uint32_t grammar_id;
                 if (token_to_index(item->grammar->token, self->parser) == self->parser->token_n) // Augmented rule
                 {
-                    // This is an accept
+                    // This is an 'accept'
                     action_mask = TOK_ACCEPT_MASK;
                     grammar_id = 0;
                 }
                 else
                 {
                     action_mask = TOK_REDUCE_MASK;
-                    // This is a reduce expression
+                    // This is a 'reduce' expression
                     // Get the grammar rule we want to reduce
                     grammar_id = cc_get_grammar_id(self->parser, item->grammar);
                 }
