@@ -125,6 +125,10 @@ void matcher_reset(NeoastMatcher* self)
     self->own_ = TRUE;
     self->eof_ = FALSE;
     self->mat_ = FALSE;
+
+    self->ded_ = 0;
+    self->tab_.n = 0;
+    self->bmd_ = 0;
 }
 
 size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM fsm)

@@ -176,6 +176,9 @@ CTEST(test_lexer)
 
     tok = matcher_scan(mat, pattern_fsm);
     assert_int_equal(tok, TOK_EOF);
+
+    input_free(input);
+    matcher_free(mat);
 }
 
 const static struct CMUnitTest neoast_lexer_tests[] = {
