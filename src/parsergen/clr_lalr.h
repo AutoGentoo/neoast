@@ -19,7 +19,7 @@
 #ifndef NEOAST_CLR_LALR_H
 #define NEOAST_CLR_LALR_H
 
-#include <neoast.h>
+#include "canonical_collection.h"
 
 int lalr_1_cmp(const GrammarState* a, const GrammarState* b, uint32_t tok_n);
 void lalr_1_merge(GrammarState* target, const GrammarState* to_merge, uint32_t tok_n);

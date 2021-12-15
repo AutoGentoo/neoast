@@ -7,6 +7,7 @@
 
 struct CGGrammar
 {
+    const TokenPosition* ast_position;
     std::vector<uint32_t> &table;
 
     const GrammarRuleSingleProto* parent;
@@ -22,7 +23,7 @@ struct CGGrammar
               const CodeGen* cg,
               sp<CGGrammarToken> return_type_,
               const GrammarRuleSingleProto* self) :
-        table(table_),
+        table(table_), ast_position(&self->position),
         action(self->function ? self->function : "", &self->position),
         return_type(std::move(return_type_)), token_n(0),
         parent(self)
@@ -98,6 +99,7 @@ struct CGGrammarsImpl
 
     std::map<std::string, std::vector<CGGrammar>> rules_cg;
     std::vector<GrammarRule> rules;
+    std::vector<const TokenPosition*> rule_positions;
     uint32_t grammar_n = 0;
 
     Token* augment_rule_tok;
@@ -181,11 +183,13 @@ CGGrammars::CGGrammars(const CodeGen* cg, const File* self)
     }
 
     impl_->rules.reserve(impl_->grammar_n);
+    impl_->rule_positions.reserve(impl_->grammar_n);
     for (const auto &rules : impl_->rules_cg)
     {
         for (const auto& rule : rules.second)
         {
             impl_->rules.emplace_back(rule.initialize_grammar());
+            impl_->rule_positions.push_back(rule.ast_position);
         }
     }
 }
@@ -273,4 +277,9 @@ uint32_t CGGrammars::size() const
 GrammarRule* CGGrammars::get() const
 {
     return impl_->rules.data();
+}
+
+const TokenPosition** CGGrammars::get_positions() const
+{
+    return impl_->rule_positions.data();
 }

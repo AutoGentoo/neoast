@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <codegen/compiler.h>
 #include "canonical_collection.h"
 #include "clr_lalr.h"
 
@@ -66,10 +67,18 @@ void gs_free(GrammarState* self)
     free(self);
 }
 
-CanonicalCollection* canonical_collection_init(const GrammarParser* parser)
+DebugInfo* debug_info_init(const TokenPosition** grammar_token_positions)
+{
+    DebugInfo* self = malloc(sizeof(DebugInfo));
+    self->grammar_rule_positions = grammar_token_positions;
+    return self;
+}
+
+CanonicalCollection* canonical_collection_init(const GrammarParser* parser, DebugInfo* debug_info)
 {
     CanonicalCollection* self = malloc(sizeof(CanonicalCollection));
     self->parser = parser;
+    self->debug_info = debug_info;
     self->dfa = NULL;
     self->state_n = 0;
     self->state_s = 32;
@@ -84,11 +93,12 @@ static GrammarState* gs_init(const CanonicalCollection* parent)
                   + sizeof (GrammarState*) * parent->parser->token_n);
 }
 
-static LR_1* lr_1_init(const GrammarRule* rule, uint32_t item_i, uint32_t token_n)
+static LR_1* lr_1_init(const GrammarRule* rule, uint32_t rule_index, uint32_t item_i, uint32_t token_n)
 {
     LR_1* self = malloc(sizeof(LR_1) + (sizeof(uint8_t) * token_n));
     self->next = NULL;
     self->grammar = rule;
+    self->rule_index = rule_index;
     self->item_i = item_i;
     self->final_item = self->item_i >= rule->tok_n;
     memset(self->look_ahead, 0, sizeof(uint8_t) * token_n);
@@ -124,7 +134,7 @@ uint8_t lr_1_firstof_impl(uint8_t dest[],
 
     uint8_t merge_current_lookahead = 0;
     int32_t already_visited_clone[2] = {
-            (int32_t)token,
+            (int32_t) token,
             already_visited[0],
     };
 
@@ -161,20 +171,22 @@ uint8_t lr_1_firstof_impl(uint8_t dest[],
 }
 
 uint8_t lr_1_firstof(uint8_t dest[],
-                      uint32_t token,
-                      const GrammarParser* parser)
+                     uint32_t token,
+                     const GrammarParser* parser)
 {
     int32_t already_visited[2] = {-1, -1};
     return lr_1_firstof_impl(dest, token, parser, already_visited);
 }
 
-static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
+static void gs_apply_closure(GrammarState* self,
+                             const CanonicalCollection* cc)
 {
     // Find all rules in this state that
     // are currently looking at tokens generated
     // from other grammar rules
     // Expand those token's rules
 
+    const GrammarParser* parser = cc->parser;
     uint8_t* already_expanded = alloca(sizeof(uint8_t) * (parser->token_n - parser->action_token_n));
     memset(already_expanded, 0, sizeof(uint8_t) * (parser->token_n - parser->action_token_n));
     uint8_t dirty = 1;
@@ -255,7 +267,7 @@ static void gs_apply_closure(GrammarState* self, const GrammarParser* parser)
                 const GrammarRule* rule = &parser->grammar_rules[i];
                 if (rule->token == potential_token)
                 {
-                    LR_1* new_rule = lr_1_init(rule, 0, parser->action_token_n);
+                    LR_1* new_rule = lr_1_init(rule, i, 0, parser->action_token_n);
 
                     new_rule->next = item->next;
                     item->next = new_rule;
@@ -283,11 +295,11 @@ static GrammarState* cc_generate_augmented(const CanonicalCollection* cc)
 {
     GrammarState* initial = gs_init(cc);
     LR_1* augmented_item = lr_1_init(&cc->parser->grammar_rules[0],
-                                     0, cc->parser->action_token_n);
+                                     0, 0, cc->parser->action_token_n);
     augmented_item->look_ahead[0] = 1;
 
     initial->head_item = augmented_item;
-    gs_apply_closure(initial, cc->parser);
+    gs_apply_closure(initial, cc);
     return initial;
 }
 
@@ -299,6 +311,11 @@ void canonical_collection_free(CanonicalCollection* self)
     }
 
     free(self->all_states);
+    free(self);
+}
+
+void debug_info_free(DebugInfo* self)
+{
     free(self);
 }
 
@@ -327,7 +344,7 @@ void gs_resolve(CanonicalCollection* cc, GrammarState* state)
 
         // Create the new item to hold
         // the state of this grammar rule
-        LR_1* new_item = lr_1_init(item->grammar, item->item_i + 1, cc->parser->action_token_n);
+        LR_1* new_item = lr_1_init(item->grammar, item->rule_index, item->item_i + 1, cc->parser->action_token_n);
         lookahead_copy(new_item->look_ahead, item->look_ahead, cc->parser->action_token_n);
 
         uint32_t next_token = token_to_index(item->grammar->grammar[item->item_i], cc->parser);
@@ -349,21 +366,21 @@ void gs_resolve(CanonicalCollection* cc, GrammarState* state)
         state->action_states[next_token]->head_item = new_item;
     }
 
-    for (int32_t token = (int32_t)cc->parser->token_n - 1; token >= 0; token--)
+    for (int32_t token = (int32_t) cc->parser->token_n - 1; token >= 0; token--)
     {
         if (!state->action_states[token])
             continue;
 
         // We need to generate closures and resolve
-        gs_apply_closure(state->action_states[token], cc->parser);
+        gs_apply_closure(state->action_states[token], cc);
 
         // Check if this state matches any other added states
         uint8_t is_duplicate = 0;
         for (uint32_t i = 0; i < cc->state_n; i++)
         {
             if (clr_1_cmp(cc->all_states[i],
-                      state->action_states[token],
-                      cc->parser->action_token_n) == 0)
+                          state->action_states[token],
+                          cc->parser->action_token_n) == 0)
             {
                 // These states match
                 // We should free the duplicate state
@@ -491,6 +508,8 @@ uint32_t* canonical_collection_generate(const CanonicalCollection* self,
     uint32_t rr_conflicts = 0, sr_conflicts = 0;
     uint32_t* table = cc_allocate_table(self); // zeroes
 
+    const void** table_states_grammar_idx = calloc(self->state_n * self->parser->token_n, sizeof(void*));
+
     uint32_t i;
     for (uint32_t state_i = 0; state_i < self->state_n; state_i++)
     {
@@ -516,6 +535,7 @@ uint32_t* canonical_collection_generate(const CanonicalCollection* self,
                         self, state->action_states[tok_j]);
 
                 table[i] = target_state | TOK_SHIFT_MASK;
+                table_states_grammar_idx[i] = state->action_states[tok_j];
             }
         }
 
@@ -573,17 +593,27 @@ uint32_t* canonical_collection_generate(const CanonicalCollection* self,
                             }
                             else
                             {
-                                fprintf(stderr, "SR conflict at state %d tok %d\n", state_i, lookahead_i);
+                                if (self->debug_info)
+                                {
+                                    emit_error(self->debug_info->grammar_rule_positions[item->rule_index],
+                                               "SR conflict at token %d (%s)",
+                                               item->item_i, item->final_item ? "$" : self->parser->token_names[item->grammar->grammar[item->item_i]],
+                                               );
+                                }
+                                else
+                                    fprintf(stderr, "SR conflict at state %d tok %d\n", state_i, lookahead_i);
                                 sr_conflicts++;
                             }
                         }
                     }
                     table[idx] = action_mask | grammar_id;
+                    table_states_grammar_idx[idx] = item->grammar;
                 }
             }
         }
     }
 
+    free(table_states_grammar_idx);
     if (rr_conflicts)
     {
         fprintf(stderr, "Warning: %d RR conflicts\n", rr_conflicts);

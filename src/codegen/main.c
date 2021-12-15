@@ -84,7 +84,7 @@ static void put_position(const TokenPosition* self, const char* type)
             fputc(' ', stderr);
         }
 
-        fprintf(stderr, "^\n%s at %s:%d: ", type, path, self->line);
+        fprintf(stderr, "^\n%s at %s:%d:%d : ", type, path, self->line, self->col_start + 1);
     }
     else
     {
@@ -133,6 +133,7 @@ void emit_warning(const TokenPosition* p, const char* format, ...)
     vfprintf(stderr, format, args);
     va_end(args);
     fputc('\n', stderr);
+    fputc('\n', stderr);
 }
 
 int has_errors()
@@ -147,6 +148,7 @@ void emit_error(const TokenPosition* p, const char* format, ...)
     va_start(args, format);
     vfprintf(stderr, format, args);
     va_end(args);
+    fputc('\n', stderr);
     fputc('\n', stderr);
     error_counter++;
 }

@@ -235,7 +235,9 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
             .action_token_n = static_cast<uint32_t>(action_tokens.size()),
     };
 
-    CanonicalCollection* cc = canonical_collection_init(&parser);
+
+    DebugInfo* debug_info = debug_info_init(grammar->get_positions());
+    CanonicalCollection* cc = canonical_collection_init(&parser, debug_info);
     canonical_collection_resolve(cc, options.parser_type);
 
     uint8_t error;
@@ -272,6 +274,7 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
     os << "};";
 
     canonical_collection_free(cc);
+    debug_info_free(debug_info);
     free(parsing_table);
 }
 

@@ -43,11 +43,6 @@ typedef struct ParsingStack_prv ParsingStack;
 typedef struct ParserBuffers_prv ParserBuffers;
 typedef struct TokenPosition_prv TokenPosition;
 
-// Codegen
-typedef struct LR_1_prv LR_1;
-typedef struct GrammarState_prv GrammarState;
-typedef struct CanonicalCollection_prv CanonicalCollection;
-
 typedef void (*parser_reduce) (uint32_t reduce_rule, void* dest, void** values);
 typedef void (*parser_destructor) (void* self);
 

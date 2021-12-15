@@ -287,6 +287,7 @@ tokens: token                       { $$ = $1; }
 
 pair: OPTION IDENTIFIER '=' LITERAL         { $$ = declare_option($p1, $2, $4); }
     | TOKEN tokens                          { $$ = declare_tokens($2); }
+    | TYPE tokens                           { $$ = declare_types(NULL, $2); }
     | START '<' IDENTIFIER '>' IDENTIFIER   { $$ = declare_start($p1, $3, $5); }
     | TOKEN '<' IDENTIFIER '>' tokens       { $$ = declare_typed_tokens($3, $5); }
     | TYPE '<' IDENTIFIER '>' tokens        { $$ = declare_types($3, $5); }

@@ -794,7 +794,7 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
     precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
 
     // Generate the parsing table
-    CanonicalCollection* cc = canonical_collection_init(self);
+    CanonicalCollection* cc = canonical_collection_init(self, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
     uint8_t error;

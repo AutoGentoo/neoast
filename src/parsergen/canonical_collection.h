@@ -25,6 +25,12 @@ extern "C" {
 
 #include "neoast.h"
 
+// Codegen
+typedef struct LR_1_prv LR_1;
+typedef struct GrammarState_prv GrammarState;
+typedef struct CanonicalCollection_prv CanonicalCollection;
+typedef struct DebugInfo_prv DebugInfo;
+
 typedef enum {
     LALR_1,  // Highly recommended!!
     CLR_1,
@@ -33,6 +39,7 @@ typedef enum {
 struct LR_1_prv
 {
     const GrammarRule* grammar;
+    uint32_t rule_index;
     LR_1* next;
     uint32_t item_i;
     uint8_t final_item;
@@ -48,6 +55,7 @@ struct GrammarState_prv
 
 struct CanonicalCollection_prv
 {
+    DebugInfo* debug_info;
     const GrammarParser* parser;
     GrammarState* dfa;
 
@@ -56,8 +64,17 @@ struct CanonicalCollection_prv
     GrammarState** all_states;
 };
 
+struct DebugInfo_prv
+{
+    const TokenPosition** grammar_rule_positions;
+};
+
 void lookahead_merge(uint8_t dest[], const uint8_t src[], uint32_t n);
-CanonicalCollection* canonical_collection_init(const GrammarParser* parser);
+
+DebugInfo* debug_info_init(const TokenPosition** grammar_rule_positions);
+void debug_info_free(DebugInfo* self);
+
+CanonicalCollection* canonical_collection_init(const GrammarParser* parser, DebugInfo* debug_info);
 void canonical_collection_resolve(CanonicalCollection* self, parser_t p_type);
 uint32_t* canonical_collection_generate(const CanonicalCollection* self, const uint8_t* precedence_table, uint8_t* error);
 

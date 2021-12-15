@@ -93,14 +93,17 @@ struct CGToken : public TokenPosition
 struct CGTyped : public CGToken
 {
     std::string type;           //!< Field in union
+    bool void_type;
 
     CGTyped(const KeyVal* self, int id)
-            : CGToken(&self->position, self->value, id), type(self->key) {}
+            : CGToken(&self->position, self->value, id), type(self->key ? self->key : ""),
+              void_type(self->key == nullptr) {}
 
     CGTyped(const TokenPosition* position,
             const std::string &type,
             const std::string &name,
-            int id) : CGToken(position, name, id), type(type) {}
+            int id) : CGToken(position, name, id),
+            type(type), void_type(false) {}
 };
 
 struct CGGrammarToken : public CGTyped
