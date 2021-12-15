@@ -134,7 +134,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 +literal        \"(\\.|[^\"\\])*\"
 +identifier     [A-Za-z_][\w]*
 +lex_state      <[A-Za-z_][\w]*>[\s]*\{
-+ascii          '[\x20-\x7E]'
++ascii          '([\x20-\x7E]|\\.)'
 +macro          \+{identifier}[ ][\s]*[^\n]+
 +whitespace     [ \t\r\n]+
 
@@ -230,14 +230,19 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 }
 
 <S_MATCH_BRACE> {
-// Add ascii charaters
-"'[\x00-\x7F]'"     { ll_add_to_brace(yytext, yylen); }
+// TODO: Comments inside braces should not be ignored because we want
+//       codegen to paste these in
+"/\*"               { yypush(S_COMMENT); }
+
+// ASCII literals
+"{ascii}"           { ll_add_to_brace(yytext, yylen); }
 
 // String literals
 "\"(\\.|[^\"\\])*\"" { ll_add_to_brace(yytext, yylen); }
 
 // Everything else
-"[^\}\{\"\']+"    { ll_add_to_brace(yytext, yylen); }
+"[^\}\{\"\'/]+"      { ll_add_to_brace(yytext, yylen); }
+"/"                  { ll_add_to_brace(yytext, yylen); }
 
 "\{"                { brace_buffer.counter++; brace_buffer.buffer[brace_buffer.n++] = '{'; }
 "\}"                {
@@ -309,13 +314,16 @@ lexer_rules: lexer_rule             { $$ = $1; }
            ;
 
 single_grammar: tokens ACTION                   { $$ = declare_single_grammar(&$2.position, $1, $2.string); }
+
+              // Empty rule
+              | ACTION                          { $$ = declare_single_grammar(&$1.position, NULL, $1.string); }
+
+              // Default action
+              | tokens                          { $$ = declare_single_grammar($p1, $1, calloc(1, 1)); }
               ;
 
 multi_grammar: single_grammar                   { $$ = $1; }
              | single_grammar '|' multi_grammar { $$ = $1; $$->next = $3; }
-
-             // Empty rule
-             | ACTION                           { $$ = declare_single_grammar(&$1.position, NULL, $1.string); }
              ;
 
 grammar: IDENTIFIER ':' multi_grammar ';'       { $$ = declare_grammar($p1, $1, $3); }
