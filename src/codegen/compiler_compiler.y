@@ -230,9 +230,11 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 }
 
 <S_MATCH_BRACE> {
-// TODO: Comments inside braces should not be ignored because we want
-//       codegen to paste these in
+// TODO: Comments inside braces should not be ignored because we want codegen to paste these in
 "/\*"               { yypush(S_COMMENT); }
+
+// Line comments
+"//[^\n]*"          { ll_add_to_brace(yytext, yylen); }
 
 // ASCII literals
 "{ascii}"           { ll_add_to_brace(yytext, yylen); }
