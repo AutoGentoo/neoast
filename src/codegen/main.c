@@ -27,9 +27,13 @@
 #define ERROR_CONTEXT_LINE_N 3
 
 uint32_t cc_init();
+
 void cc_free();
+
 void* cc_allocate_buffers();
+
 void cc_free_buffers(void* self);
+
 struct File* cc_parse_len(void* buffers, const char* input, uint64_t input_len);
 
 static size_t line_n = 0;
@@ -43,14 +47,16 @@ static void put_position(const TokenPosition* self, const char* type)
     assert(type);
     assert(path);
 
-    if (!self)
+    if (!self || self->line >= line_n)
     {
         fprintf(stderr, "%s: ", type);
         return;
     }
 
-    assert(self->line < line_n);
-    for (int i = (int)self->line - ERROR_CONTEXT_LINE_N; i < (int)self->line; i++)
+    // Get the number of digits in the line number:
+    int dig_n = snprintf(NULL, 0, "%+d", self->line);
+
+    for (int i = (int) self->line - ERROR_CONTEXT_LINE_N; i < (int) self->line; i++)
     {
         if (i < 0)
         {
@@ -61,19 +67,19 @@ static void put_position(const TokenPosition* self, const char* type)
         if (newline_pos)
         {
             fprintf(stderr,
-                    "% 3d | %.*s\n", i + 1,
-                    (int)(newline_pos - file_lines[i]),
+                    "% *d | %.*s\n", dig_n, i + 1,
+                    (int) (newline_pos - file_lines[i]),
                     file_lines[i]);
         }
         else
         {
-            fprintf(stderr, "% 3d | %s\n", i + 1, file_lines[i]);
+            fprintf(stderr, "% *d | %s\n", dig_n, i + 1, file_lines[i]);
         }
     }
 
     if (self->line > 0)
     {
-        for (int j = 0; j < self->col_start + 6; j++)
+        for (int j = 0; j < self->col_start + 3 + dig_n; j++)
         {
             fputc(' ', stderr);
         }
@@ -100,11 +106,11 @@ static char* read_file(FILE* fp, size_t* file_size)
 
     /* Fill the file lines */
     line_n = 0;
-    size_t line_s = *file_size >> 6;
+    size_t line_s = *file_size >> 6 > 32 ? *file_size >> 6 : 32;
     file_lines = malloc(sizeof(char*) * line_s);
 
     char* end = input;
-    while(*end)
+    while (*end)
     {
         if (line_n + 1 >= line_s)
         {
@@ -113,7 +119,7 @@ static char* read_file(FILE* fp, size_t* file_size)
         }
 
         file_lines[line_n++] = *end == '\n' ? ++end : end;
-        while(*end && *end != '\n') end++;
+        while (*end && *end != '\n') end++;
     }
 
     return input;
