@@ -43,13 +43,12 @@ static void put_position(const TokenPosition* self, const char* type)
     assert(type);
     assert(path);
 
-    if (!self)
+    if (!self || self->line >= line_n)
     {
         fprintf(stderr, "%s: ", type);
         return;
     }
 
-    assert(self->line < line_n);
     for (int i = (int)self->line - ERROR_CONTEXT_LINE_N; i < (int)self->line; i++)
     {
         if (i < 0)
@@ -100,7 +99,7 @@ static char* read_file(FILE* fp, size_t* file_size)
 
     /* Fill the file lines */
     line_n = 0;
-    size_t line_s = *file_size >> 6;
+    size_t line_s = *file_size >> 6 > 32 ? *file_size >> 6 : 32;
     file_lines = malloc(sizeof(char*) * line_s);
 
     char* end = input;
