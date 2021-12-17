@@ -1,7 +1,7 @@
-/* 
+/*
  * This file is part of the Neoast framework
  * Copyright (c) 2021 Andrei Tumbar.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.
@@ -15,14 +15,30 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef NEOAST_C_PUB_H
+#define NEOAST_C_PUB_H
 
-#ifndef NEOAST_CLR_LALR_H
-#define NEOAST_CLR_LALR_H
+#include <neoast.h>
 
-#include "canonical_collection.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-int lalr_1_cmp(const GrammarState* a, const GrammarState* b, uint32_t tok_n);
-void lalr_1_merge(GrammarState* target, const GrammarState* to_merge, uint32_t tok_n);
-int clr_1_cmp(const GrammarState* a, const GrammarState* b, uint32_t tok_n);
+typedef enum {
+    LALR_1,  // Highly recommended!!
+    CLR_1,
+} parser_t;
 
-#endif //NEOAST_CLR_LALR_H
+// C public API
+
+void* canonical_collection_init(const GrammarParser* parser, const void* debug_info);
+void canonical_collection_resolve(void* self, parser_t p_type);
+uint32_t*
+canonical_collection_generate(const void* self, const uint8_t* precedence_table, uint8_t* error);
+void canonical_collection_free(void* self);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //NEOAST_C_PUB_H

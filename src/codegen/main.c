@@ -23,8 +23,9 @@
 #include "codegen/codegen.h"
 
 #define PATH_MAX 4096
+#define ERROR_FP stdout
 
-#define ERROR_CONTEXT_LINE_N 3
+#define ERROR_CONTEXT_LINE_N 1
 
 uint32_t cc_init();
 
@@ -41,15 +42,13 @@ static const char* path = NULL;
 static const char** file_lines = NULL;
 static int error_counter = 0;
 
-static void put_position(const TokenPosition* self, const char* type)
+static void put_position(FILE* fp, const TokenPosition* self)
 {
     assert(file_lines);
-    assert(type);
     assert(path);
 
     if (!self || self->line >= line_n)
     {
-        fprintf(stderr, "%s: ", type);
         return;
     }
 
@@ -66,29 +65,21 @@ static void put_position(const TokenPosition* self, const char* type)
         char* newline_pos = strchr(file_lines[i], '\n');
         if (newline_pos)
         {
-            fprintf(stderr,
+            fprintf(fp,
                     "% *d | %.*s\n", dig_n, i + 1,
                     (int) (newline_pos - file_lines[i]),
                     file_lines[i]);
         }
         else
         {
-            fprintf(stderr, "% *d | %s\n", dig_n, i + 1, file_lines[i]);
+            fprintf(fp, "% *d | %s\n", dig_n, i + 1, file_lines[i]);
         }
     }
 
     if (self->line > 0)
     {
-        for (int j = 0; j < self->col_start + 3 + dig_n; j++)
-        {
-            fputc(' ', stderr);
-        }
-
-        fprintf(stderr, "^\n%s at %s:%d:%d : ", type, path, self->line, self->col_start + 1);
-    }
-    else
-    {
-        fprintf(stderr, "%s: ", type);
+        for (int j = 0; j < self->col_start + 3 + dig_n; j++) fputc(' ', fp);
+        fputs("\033[1;32m^\033[0m\n", fp);
     }
 }
 
@@ -127,13 +118,12 @@ static char* read_file(FILE* fp, size_t* file_size)
 
 void emit_warning(const TokenPosition* p, const char* format, ...)
 {
-    put_position(p, "Warning");
+    fprintf(ERROR_FP, "\033[1m%s:%d:%d: \033[1;33mwarning:\033[1m ", path, p->line, p->col_start + 1);
     va_list args;
     va_start(args, format);
-    vfprintf(stderr, format, args);
+    vfprintf(ERROR_FP, format, args);
     va_end(args);
-    fputc('\n', stderr);
-    fputc('\n', stderr);
+    put_position(ERROR_FP, p);
 }
 
 int has_errors()
@@ -143,13 +133,13 @@ int has_errors()
 
 void emit_error(const TokenPosition* p, const char* format, ...)
 {
-    put_position(p, "Error");
+    fprintf(ERROR_FP, "\033[1m%s:%d:%d: \033[1;31merror:\033[1;0m ", path, p->line, p->col_start + 1);
     va_list args;
     va_start(args, format);
-    vfprintf(stderr, format, args);
+    vfprintf(ERROR_FP, format, args);
     va_end(args);
-    fputc('\n', stderr);
-    fputc('\n', stderr);
+    putc('\n', ERROR_FP);
+    put_position(ERROR_FP, p);
     error_counter++;
 }
 
@@ -173,17 +163,19 @@ void parsing_error_cb(const char* const* token_names,
     static char error_string[1024];
     error_string[0] = 0;
 
-    strcat(error_string, "Unexpected token %s after %s\nExpected one of: ");
+    strcat(error_string, "expected ");
     for (int i = 0; i < expected_tokens_n; i++)
     {
         if (i > 0)
         {
             strcat(error_string, ", ");
+            if (i + 1 == expected_tokens_n) strcat(error_string, "or ");
         }
 
         strcat(error_string, token_names[expected_tokens[i]]);
     }
 
+    strcat(error_string, " before %s (and after %s)");
     emit_error(position, error_string,
                token_names[current_token],
                token_names[last_token]);
@@ -206,6 +198,10 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
+    static char full_path[PATH_MAX];
+    const char* full_file_path = realpath(argv[1], full_path);
+    path = full_file_path;
+
     size_t file_size;
     input = read_file(fp, &file_size);
     fclose(fp);
@@ -225,9 +221,6 @@ int main(int argc, const char* argv[])
         free(input);
         return 1;
     }
-
-    static char full_path[PATH_MAX];
-    const char* full_file_path = realpath(argv[1], full_path);
 
     int error = codegen_write(full_file_path, f, argv[2], argv[3]);
     free(file_lines);

@@ -175,7 +175,7 @@ void CodeGenImpl::write_source(std::ostream &os) const
     {
         if (tok->is_ascii)
         {
-            token_names.emplace_back(1, get_ascii_from_name(tok->name.c_str()));
+            token_names.emplace_back(variadic_string("'%c'", get_ascii_from_name(tok->name.c_str())));
         }
         else
         {

@@ -4,7 +4,7 @@
 enum
 {
     // -1 = skip, 0 = EOF
-    TOK_OPTION = 1,
+    TOK_OPTION = NEOAST_ASCII_MAX + 1,
     TOK_HEADER, // 2
     TOK_BOTTOM, // 3
     TOK_UNION, // 4
@@ -45,7 +45,7 @@ enum
     TOK_AUGMENT, // 25
 };
 
-NEOAST_COMPILE_ASSERT(TOK_AUGMENT == 25, assert_token_length);
+NEOAST_COMPILE_ASSERT(TOK_AUGMENT == NEOAST_ASCII_MAX + 25, assert_token_length);
 
 enum
 {

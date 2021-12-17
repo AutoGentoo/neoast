@@ -24,7 +24,6 @@ extern "C" {
 #endif
 
 #include <neoast.h>
-#include <parsergen/canonical_collection.h>
 
 typedef enum
 {
@@ -125,7 +124,7 @@ void file_free(struct File* self);
 extern const char* tok_names_errors[];
 
 #ifdef __cplusplus
-};
+}
 #endif
 
 #endif //NEOAST_CODEGEN_H

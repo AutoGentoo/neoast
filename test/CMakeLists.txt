@@ -26,6 +26,13 @@ add_mocked_test(lr_C
         INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
         )
 
+add_mocked_test(canonical_collection_CC
+        SOURCES canonical_collection_test.cc
+        LINK_LIBRARIES neoast-parsergen neoast-util
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT ${EXEC_ENV}
+        )
+
 add_mocked_test(macro_C
         SOURCES macro_test.cc
         LINK_LIBRARIES neoast neoast-codegen

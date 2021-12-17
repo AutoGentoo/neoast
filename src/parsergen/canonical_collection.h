@@ -19,69 +19,117 @@
 #ifndef NEOAST_CANONICAL_COLLECTION_H
 #define NEOAST_CANONICAL_COLLECTION_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "neoast.h"
+#include "c_pub.h"
+#include "cc_common.h"
+#include "derivation.h"
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <memory>
 
 // Codegen
-typedef struct LR_1_prv LR_1;
-typedef struct GrammarState_prv GrammarState;
-typedef struct CanonicalCollection_prv CanonicalCollection;
-typedef struct DebugInfo_prv DebugInfo;
 
-typedef enum {
-    LALR_1,  // Highly recommended!!
-    CLR_1,
-} parser_t;
-
-struct LR_1_prv
+namespace parsergen
 {
-    const GrammarRule* grammar;
-    uint32_t rule_index;
-    LR_1* next;
-    uint32_t item_i;
-    uint8_t final_item;
-    uint8_t look_ahead[]; // List of booleans for each
-                          // token to treat as a lookahead
-};
+    struct DebugInfo
+    {
+        const TokenPosition** grammar_rule_positions;
+        void (*emit_warning)(const TokenPosition* position, const char* message, ...);
+        void (*emit_error)(const TokenPosition* position, const char* message, ...);
+    };
 
-struct GrammarState_prv
-{
-    LR_1* head_item;
-    GrammarState* action_states[];
-};
+    struct CanonicalCollection
+    {
+    private:
+        enum FirstOfOption
+        {
+            NONE,
+            INITIALIZED = 1,
+            HAS_EMPTY = 2,
+        };
 
-struct CanonicalCollection_prv
-{
-    DebugInfo* debug_info;
-    const GrammarParser* parser;
-    GrammarState* dfa;
+        const GrammarParser* parser_;               //!< Parent parser with grammar rules
+        const DebugInfo* debug_info_;               //!< Used for conflict debugging or NULL
+        const GrammarState* dfa_;                   //!< Head of the LR DFA
 
-    uint32_t state_s;
-    uint32_t state_n;
-    GrammarState** all_states;
-};
+        std::unordered_set<std::shared_ptr<GrammarState>, GrammarState::Hasher, GrammarState::Equal> states_;    //!< All registered grammar states
+        std::unordered_map<const GrammarState*, uint32_t> state_ids_;
+        std::unordered_map<uint32_t, const GrammarState*> state_id_to_ptr_;
+        std::unordered_map<const GrammarRule*, uint32_t> reduce_ids_;
+        std::unordered_map<tok_t, BitVector> first_ofs_;
+        std::unordered_map<tok_t, int> first_options_;
+        std::unordered_map<tok_t, std::vector<const GrammarRule*>> productions_;
 
-struct DebugInfo_prv
-{
-    const TokenPosition** grammar_rule_positions;
-};
+        void lr_1_firstof_impl(BitVector& dest,
+                               tok_t grammar_id,
+                               BitVector& visiting);
+        void lr_1_firstof_init(tok_t grammar_id);
 
-void lookahead_merge(uint8_t dest[], const uint8_t src[], uint32_t n);
+    public:
+        CanonicalCollection(const GrammarParser* parser, const DebugInfo* debug_info);
 
-DebugInfo* debug_info_init(const TokenPosition** grammar_rule_positions);
-void debug_info_free(DebugInfo* self);
+        inline const GrammarParser* parser() const { return parser_; }
 
-CanonicalCollection* canonical_collection_init(const GrammarParser* parser, DebugInfo* debug_info);
-void canonical_collection_resolve(CanonicalCollection* self, parser_t p_type);
-uint32_t* canonical_collection_generate(const CanonicalCollection* self, const uint8_t* precedence_table, uint8_t* error);
+        const GrammarState* add_state(const std::vector<LR1>& initial_vector);
 
-void canonical_collection_free(CanonicalCollection* self);
+        inline uint32_t get_state_id(const GrammarState* state) const
+        {
+            return state_ids_.at(state);
+        }
 
-#ifdef __cplusplus
-};
-#endif
+        inline uint32_t size() const { return states_.size(); }
+        inline const GrammarState* get_state(uint32_t id) const { return state_id_to_ptr_.at(id); }
+
+        inline uint32_t get_reduce_id(const GrammarRule* rule) const
+        {
+            return reduce_ids_.at(rule);
+        }
+
+        inline tok_t to_index(tok_t token) const
+        {
+            if (token < NEOAST_ASCII_MAX)
+            {
+                assert(parser_->ascii_mappings);
+                assert(parser_->ascii_mappings[token] >= NEOAST_ASCII_MAX);
+                token = parser_->ascii_mappings[token];
+            }
+
+            return token - NEOAST_ASCII_MAX;
+        }
+
+        inline bool is_action(tok_t token) const
+        {
+            return to_index(token) < parser_->action_token_n;
+        }
+
+        inline void merge_first_of(BitVector& dest,
+                                   tok_t token, bool& has_empty) const
+        {
+            if (is_action(token))
+            {
+                dest.select(to_index(token));
+                has_empty = false;
+                return;
+            }
+
+            dest.merge(first_ofs_.at(token));
+            has_empty = first_options_.at(token) & HAS_EMPTY;
+        }
+
+        inline const std::vector<const GrammarRule*>& get_productions(tok_t grammar) const
+        {
+            return productions_.at(grammar);
+        }
+
+        /**
+         * Resolve the entire DFA by applying closures and
+         * state transitions recursively
+         */
+        void resolve();
+
+        uint32_t* generate(const uint8_t* precedence_table, uint8_t* error) const;
+    };
+}
 
 #endif //NEOAST_CANONICAL_COLLECTION_H

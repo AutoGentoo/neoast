@@ -22,9 +22,8 @@
 #include "codegen/codegen.h"
 #include <string.h>
 #include <stdlib.h>
-#include <parsergen/canonical_collection.h>
+#include <parsergen/c_pub.h>
 #include <stdarg.h>
-#include <assert.h>
 #include "codegen/bootstrap/lexer/bootstrap_lexer.h"
 #include "grammar.h"
 
@@ -648,7 +647,6 @@ static void gg_build_l_rule_1(CodegenUnion* dest, CodegenUnion* args)
 static void gg_build_l_rule_2(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->l_rule = args[0].l_rule;
-    assert(dest->l_rule->next == NULL);
     dest->l_rule->next = args[1].l_rule;
 }
 
@@ -779,11 +777,12 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
 {
     self->grammar_rules = gg_rules;
     self->grammar_n = NEOAST_ARR_LEN(gg_rules);
-    self->action_token_n = TOK_GG_FILE;
-    self->token_n = TOK_AUGMENT;
+    self->action_token_n = TOK_GG_FILE - NEOAST_ASCII_MAX;
+    self->token_n = TOK_AUGMENT - NEOAST_ASCII_MAX + 1;
     self->token_names = tok_names_errors;
     self->destructors = NULL;
     self->ascii_mappings = NULL;
+    self->parser_error = NULL;
     self->parser_reduce = (parser_reduce) parser_reduce_all;
 
     *lexer_ptr = bootstrap_lexer_new(ll_rules,
@@ -794,7 +793,7 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
     precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
 
     // Generate the parsing table
-    CanonicalCollection* cc = canonical_collection_init(self, NULL);
+    void* cc = canonical_collection_init(self, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
     uint8_t error;

@@ -62,11 +62,8 @@ uint32_t g_lr_reduce(
     }
 
     int32_t result_token = (int32_t)reduce_rule->token;
-    if (parser->ascii_mappings)
-    {
-        result_token -= NEOAST_ASCII_MAX;
-        assert(result_token > 0);
-    }
+    result_token -= NEOAST_ASCII_MAX;
+    assert(result_token > 0);
 
     // Run the reduction code
     parser->parser_reduce(reduce_token & TOK_MASK, dest, (void**) args);

@@ -114,28 +114,23 @@ public:
         // EOF and INVALID
         if (tok <= 0) return tok;
 
-        if (parent->ascii_mappings)
+        int t_tok;
+        if (tok < NEOAST_ASCII_MAX)
         {
-            int t_tok;
-            if (tok < NEOAST_ASCII_MAX)
+            t_tok = static_cast<int32_t>(parent->ascii_mappings[tok]);
+            if (t_tok <= NEOAST_ASCII_MAX)
             {
-                t_tok = static_cast<int32_t>(parent->ascii_mappings[tok]);
-                if (t_tok <= NEOAST_ASCII_MAX)
-                {
-                    fprintf(stderr, "Lexer returned '%c' (%d) which has not been "
-                                    "explicitly defined as a token",
-                            tok, tok);
-                    fflush(stdout);
-                    exit(1);
-                }
-
-                return t_tok - NEOAST_ASCII_MAX;
+                fprintf(stderr, "Lexer returned '%c' (%d) which has not been "
+                                "explicitly defined as a token",
+                        tok, tok);
+                fflush(stdout);
+                exit(1);
             }
 
-            return tok - NEOAST_ASCII_MAX;
+            return t_tok - NEOAST_ASCII_MAX;
         }
 
-        return tok;
+        return tok - NEOAST_ASCII_MAX;
     }
 
     ~BootstrapLexerSession() override

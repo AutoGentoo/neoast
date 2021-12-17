@@ -53,7 +53,7 @@ private:
     void put_parsing_table(std::ostream &os) const;
     void put_table_debug(std::ostream& os,
                          const uint32_t* table,
-                         const CanonicalCollection* cc) const;
+                         const parsergen::CanonicalCollection* cc) const;
     void register_action(const sp<CGAction>& ptr);
     void register_grammar(const sp<CGGrammarToken>& ptr);
 };

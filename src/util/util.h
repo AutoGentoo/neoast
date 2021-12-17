@@ -24,9 +24,8 @@ extern "C" {
 #endif
 
 #include <neoast.h>
-#include <parsergen/canonical_collection.h>
 
-void dump_table(const uint32_t* table, const CanonicalCollection* cc,
+void dump_table(const uint32_t* table, const void* cc,
                 const char* tok_names, uint8_t state_wrap, FILE* fp,
                 const char* indent_str);
 
@@ -35,6 +34,7 @@ void dump_table(const uint32_t* table, const CanonicalCollection* cc,
 
 #include <ostream>
 #include <memory>
+#include <parsergen/canonical_collection.h>
 
 class Exception : std::exception
 {
@@ -65,7 +65,7 @@ std::string variadic_string(const char* format,
 }
 
 void dump_table_cxx(
-        const uint32_t* table, const CanonicalCollection* cc,
+        const uint32_t* table, const parsergen::CanonicalCollection* cc,
         const char* tok_names, uint8_t state_wrap,
         std::ostream& os, const char* indent_str);
 

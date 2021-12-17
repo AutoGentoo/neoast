@@ -19,9 +19,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <neoast.h>
-#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
 #include <cmocka.h>
+#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
 #include <stddef.h>
+#include <parsergen/c_pub.h>
+#include <util/util.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -39,7 +41,7 @@
 enum
 {
     // 0 reserved for eof
-    TOK_a = 1,
+    TOK_a = NEOAST_ASCII_MAX + 1,
     TOK_b,
     TOK_S,
     TOK_A,
@@ -100,9 +102,9 @@ static void reduce_generic(uint32_t id, CodegenStruct* dest, CodegenStruct* args
 void initialize_parser()
 {
     static LexerRule l_rules[] = {
-            {.tok = TOK_b, .regex = ";"},
+            {.regex = ";", .tok = TOK_b},
             {.regex = "[ ]+"},
-            {.expr = (lexer_expr) ll_tok_num, .regex = "[0-9]+"}
+            {.regex = "[0-9]+", .expr = (lexer_expr) ll_tok_num}
     };
 
     static uint32_t r1[] = {
@@ -136,7 +138,7 @@ void initialize_parser()
 
     p.grammar_n = 4;
     p.grammar_rules = g_rules;
-    p.token_n = TOK_AUGMENT;
+    p.token_n = TOK_AUGMENT - NEOAST_ASCII_MAX;
     p.action_token_n = 3;
     p.token_names = token_error_names;
     p.parser_reduce = (parser_reduce) reduce_generic;
@@ -146,6 +148,21 @@ void initialize_parser()
                                        offsetof(CodegenStruct, position), NULL);
 }
 
+CTEST(test_tablegen)
+{
+    void* cc = canonical_collection_init(&p, NULL);
+    canonical_collection_resolve(cc, LALR_1);
+
+    uint8_t error;
+    uint32_t* table = canonical_collection_generate(cc, NULL, &error);
+    assert_int_equal(error, 0);
+
+    dump_table(table, cc, "$abASP", 0, stdout, NULL);
+    canonical_collection_free(cc);
+    free(table);
+    bootstrap_lexer_free(lexer_parent);
+}
+
 CTEST(test_parser)
 {
     const char* lexer_input = ";"   // b
@@ -153,7 +170,6 @@ CTEST(test_parser)
                               "20 " // a
                               "30"  // a
                               ";";  // b
-    initialize_parser();
 
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenStruct), sizeof(CodegenUnion));
 
@@ -169,9 +185,11 @@ CTEST(test_parser)
 
 const static struct CMUnitTest left_scan_tests[] = {
         cmocka_unit_test(test_parser),
+        cmocka_unit_test(test_tablegen),
 };
 
 int main()
 {
+    initialize_parser();
     return cmocka_run_group_tests(left_scan_tests, NULL, NULL);
 }

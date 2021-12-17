@@ -236,9 +236,14 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
     };
 
 
-    DebugInfo* debug_info = debug_info_init(grammar->get_positions());
-    CanonicalCollection* cc = canonical_collection_init(&parser, debug_info);
-    canonical_collection_resolve(cc, options.parser_type);
+    const parsergen::DebugInfo debug_info = {
+            .grammar_rule_positions = grammar->get_positions(),
+            .emit_warning = emit_warning,
+            .emit_error = emit_error,
+    };
+    auto* cc = new parsergen::CanonicalCollection(&parser, &debug_info);
+    cc->resolve();
+//    canonical_collection_resolve(cc, options.parser_type);
 
     uint8_t error;
     up<uint8_t[]> precedence_table(new uint8_t[tokens.size()]);
@@ -263,24 +268,23 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
     // Actually put the LR parsing table
     i = 0;
     os << "static const\nuint32_t " << options.prefix << "_parsing_table[] = {\n";
-    for (int state_i = 0; state_i < cc->state_n; state_i++)
+    for (int state_i = 0; state_i < cc->size(); state_i++)
     {
         os << "        ";
-        for (int tok_i = 0; tok_i < cc->parser->token_n; tok_i++, i++)
+        for (int tok_i = 0; tok_i < cc->parser()->token_n; tok_i++, i++)
         {
-            os << variadic_string("0x%08X,%c", parsing_table[i], tok_i + 1 >= cc->parser->token_n ? '\n' : ' ');
+            os << variadic_string("0x%08X,%c", parsing_table[i], tok_i + 1 >= cc->parser()->token_n ? '\n' : ' ');
         }
     }
     os << "};";
 
-    canonical_collection_free(cc);
-    debug_info_free(debug_info);
+    delete cc;
     free(parsing_table);
 }
 
 void CodeGenImpl::put_table_debug(std::ostream &os,
                                   const uint32_t* table,
-                                  const CanonicalCollection* cc) const
+                                  const parsergen::CanonicalCollection* cc) const
 {
     os << "// Token names:\n";
 

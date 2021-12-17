@@ -17,7 +17,7 @@
 
 
 #include <stdlib.h>
-#include <parsergen/canonical_collection.h>
+#include <parsergen/c_pub.h>
 #include <math.h>
 #include <util/util.h>
 #include <string.h>
@@ -47,7 +47,7 @@
 
 enum
 {
-    TOK_EOF = 0,
+    TOK_EOF = NEOAST_ASCII_MAX,
     TOK_NUM,
     TOK_PLUS,
     TOK_MINUS,
@@ -77,7 +77,7 @@ static const char* token_error_names[] = {
 };
 
 static const char* token_names = "$N+-*/^()ES'";
-static uint8_t precedence_table[TOK_AUGMENT] = {PRECEDENCE_NONE};
+static uint8_t precedence_table[TOK_AUGMENT - NEOAST_ASCII_MAX] = {PRECEDENCE_NONE};
 
 typedef union
 {
@@ -204,11 +204,11 @@ void initialize_parser()
     static uint32_t r8[] = {TOK_E};
     static uint32_t r9[] = {};
 
-    precedence_table[TOK_PLUS] = PRECEDENCE_LEFT;
-    precedence_table[TOK_MINUS] = PRECEDENCE_LEFT;
-    precedence_table[TOK_STAR] = PRECEDENCE_LEFT;
-    precedence_table[TOK_SLASH] = PRECEDENCE_LEFT;
-    precedence_table[TOK_CARET] = PRECEDENCE_RIGHT;
+    precedence_table[TOK_PLUS - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
+    precedence_table[TOK_MINUS - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
+    precedence_table[TOK_STAR - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
+    precedence_table[TOK_SLASH - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
+    precedence_table[TOK_CARET - NEOAST_ASCII_MAX] = PRECEDENCE_RIGHT;
 
     static uint32_t a_r[] = {TOK_S};
 
@@ -234,7 +234,7 @@ void initialize_parser()
     p.grammar_n = 10;
     p.grammar_rules = g_rules;
     p.action_token_n = 9;
-    p.token_n = TOK_AUGMENT;
+    p.token_n = TOK_AUGMENT - NEOAST_ASCII_MAX + 1;
     p.token_names = token_error_names;
     p.parser_reduce = (parser_reduce) reduce_handler;
 
@@ -245,7 +245,7 @@ void initialize_parser()
 CTEST(test_clr_1)
 {
     initialize_parser();
-    CanonicalCollection* cc = canonical_collection_init(&p);
+    void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, CLR_1);
 
     uint8_t error;
@@ -261,7 +261,7 @@ CTEST(test_clr_1)
 CTEST(test_lalr_1)
 {
     initialize_parser();
-    CanonicalCollection* cc = canonical_collection_init(&p);
+    void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
     uint8_t error;
@@ -282,7 +282,7 @@ CTEST(test_lalr_1_calculator)
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct),
                                                  offsetof(CalculatorStruct, position));
 
-    CanonicalCollection* cc = canonical_collection_init(&p);
+    void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
     uint8_t error;
@@ -313,7 +313,7 @@ CTEST(test_lalr_1_order_of_ops)
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct),
                                                  offsetof(CalculatorStruct, position));
 
-    CanonicalCollection* cc = canonical_collection_init(&p);
+    void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
     uint8_t error;
@@ -334,32 +334,7 @@ CTEST(test_lalr_1_order_of_ops)
     bootstrap_lexer_free(lexer_parent);
 }
 
-uint8_t lr_1_firstof(uint8_t dest[],
-                     uint32_t token,
-                     const GrammarParser* parser);
-
-CTEST(test_first_of_expr)
-{
-    initialize_parser();
-
-    uint8_t first_of_items[TOK_E] = {0};
-    lr_1_firstof(first_of_items, TOK_E, &p);
-
-    assert_true(first_of_items[TOK_OPEN_P]);
-    assert_true(first_of_items[TOK_NUM]);
-
-    assert_false(first_of_items[TOK_EOF]);
-    assert_false(first_of_items[TOK_CLOSE_P]);
-    assert_false(first_of_items[TOK_PLUS]);
-    assert_false(first_of_items[TOK_MINUS]);
-    assert_false(first_of_items[TOK_STAR]);
-    assert_false(first_of_items[TOK_SLASH]);
-    assert_false(first_of_items[TOK_CARET]);
-    bootstrap_lexer_free(lexer_parent);
-}
-
 const static struct CMUnitTest left_scan_tests[] = {
-        cmocka_unit_test(test_first_of_expr),
         cmocka_unit_test(test_clr_1),
         cmocka_unit_test(test_lalr_1),
         cmocka_unit_test(test_lalr_1_calculator),
