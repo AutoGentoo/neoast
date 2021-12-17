@@ -79,23 +79,14 @@ namespace parsergen
                 if (expanded_rules[cc->to_index(curr)])
                 {
                     // Option 2 (merge lookaheads)
-                    if (item.has_next())
+                    // We need to merge the lookahead with every other
+                    // rule that matches this token
+                    for (const auto& lr_to_merge : lr1_items)
                     {
-                        bool merge_next_lookahead;
-                        cc->merge_first_of(item.look_ahead, item.next(), merge_next_lookahead);
-
-                        if (merge_next_lookahead)
+                        if (lr_to_merge.derivation->token == curr)
                         {
-                            // We need to merge in our lookaheads because this item
-                            // could be empty and therefore its own lookaheads are not enough
-
-                            // Get the LR(1) lookaheads
-                            item.merge_next_lookaheads(cc, item.look_ahead);
+                            lr_to_merge.look_ahead.merge(item.look_ahead);
                         }
-                    }
-                    else
-                    {
-                        // TODO aahh
                     }
                 }
                 else

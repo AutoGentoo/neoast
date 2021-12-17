@@ -33,8 +33,8 @@ enum
     TOK_EOF = NEOAST_ASCII_MAX,
     TOK_a,
     TOK_b,
-    TOK_A,
     TOK_S,
+    TOK_A,
     TOK_AUGMENT
 };
 
@@ -72,30 +72,31 @@ static const char* token_error_names[] = {
         "augment"
 };
 
+#define LR_S(i) (((uint32_t)(i)) | TOK_SHIFT_MASK)
+#define LR_R(i) (((uint32_t)(i)) | TOK_REDUCE_MASK)
+#define LR_E() TOK_SYNTAX_ERROR
+#define LR_A() TOK_ACCEPT_MASK
+
+static const
+uint32_t expected_lalr1_table[] = {
+        LR_E( ), LR_S(3), LR_S(4), LR_S(1), LR_S(2), /* 0 */
+        LR_A( ), LR_A( ), LR_A( ), LR_E( ), LR_E( ), /* 1 */
+        LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(5), /* 2 */
+        LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(6), /* 3 */
+        LR_R(3), LR_R(3), LR_R(3), LR_E( ), LR_E( ), /* 4 */
+        LR_R(1), LR_E( ), LR_E( ), LR_E( ), LR_E( ), /* 5 */
+        LR_R(2), LR_R(2), LR_R(2), LR_E( ), LR_E( ), /* 6 */
+};
+
 
 static GrammarParser p;
 void initialize_parser()
 {
-
-    static uint32_t r1[] = {
-            TOK_A,
-            TOK_A
-    };
-
-    static uint32_t r2[] = {
-            TOK_a,
-            TOK_A
-    };
-
-    static uint32_t r3[] = {
-            TOK_b
-    };
-
-    static uint32_t a_r[] = {
-            TOK_S
-    };
-
-    static GrammarRule g_rules[] = {
+    static const uint32_t r1[] = {TOK_A, TOK_A};
+    static const uint32_t r2[] = {TOK_a, TOK_A};
+    static const uint32_t r3[] = {TOK_b};
+    static const uint32_t a_r[] = {TOK_S};
+    static const GrammarRule g_rules[] = {
             {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r},
             {.token = TOK_S, .tok_n = 2, .grammar = r1},
             {.token = TOK_A, .tok_n = 2, .grammar = r2},
@@ -104,8 +105,7 @@ void initialize_parser()
 
     p.grammar_n = 4;
     p.grammar_rules = g_rules;
-    p.token_n = TOK_AUGMENT - NEOAST_ASCII_MAX + 1;
-    assert(p.token_n == 6);
+    p.token_n = TOK_AUGMENT - NEOAST_ASCII_MAX;
     p.action_token_n = 3;
     p.token_names = token_error_names;
     p.parser_reduce = (parser_reduce) nullptr;
@@ -156,7 +156,11 @@ CTEST(test_tablegen)
     uint32_t* table = cc.generate(nullptr, &error);
     assert_int_equal(error, 0);
 
-    dump_table(table, &cc, "$abASP", 0, stdout, nullptr);
+    dump_table(table, &cc, "$abSAP", 0, stdout, nullptr);
+    fprintf(stdout, "===========\n");
+    dump_table(expected_clr1_lalr1_table, &cc, "$abSAP", 0, stdout, nullptr);
+    assert_memory_equal(table, expected_clr1_lalr1_table, sizeof(expected_clr1_lalr1_table));
+
     free(table);
 }
 

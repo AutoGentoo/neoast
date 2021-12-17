@@ -107,25 +107,11 @@ void initialize_parser()
             {.regex = "[0-9]+", .expr = (lexer_expr) ll_tok_num}
     };
 
-    static uint32_t r1[] = {
-            TOK_A,
-            TOK_A
-    };
-
-    static uint32_t r2[] = {
-            TOK_a,
-            TOK_A
-    };
-
-    static uint32_t r3[] = {
-            TOK_b
-    };
-
-    static uint32_t a_r[] = {
-            TOK_AUGMENT
-    };
-
-    static GrammarRule g_rules[] = {
+    static const uint32_t r1[] = {TOK_A, TOK_A};
+    static const uint32_t r2[] = {TOK_a, TOK_A};
+    static const uint32_t r3[] = {TOK_b};
+    static const uint32_t a_r[] = {TOK_S};
+    static const GrammarRule g_rules[] = {
             {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r},
             {.token = TOK_S, .tok_n = 2, .grammar = r1},
             {.token = TOK_A, .tok_n = 2, .grammar = r2},
@@ -146,21 +132,6 @@ void initialize_parser()
     // Initialize the lexer regex rules
     lexer_parent = bootstrap_lexer_new((const LexerRule**) rules, &lex_n, 1, NULL,
                                        offsetof(CodegenStruct, position), NULL);
-}
-
-CTEST(test_tablegen)
-{
-    void* cc = canonical_collection_init(&p, NULL);
-    canonical_collection_resolve(cc, LALR_1);
-
-    uint8_t error;
-    uint32_t* table = canonical_collection_generate(cc, NULL, &error);
-    assert_int_equal(error, 0);
-
-    dump_table(table, cc, "$abASP", 0, stdout, NULL);
-    canonical_collection_free(cc);
-    free(table);
-    bootstrap_lexer_free(lexer_parent);
 }
 
 CTEST(test_parser)
@@ -185,7 +156,6 @@ CTEST(test_parser)
 
 const static struct CMUnitTest left_scan_tests[] = {
         cmocka_unit_test(test_parser),
-        cmocka_unit_test(test_tablegen),
 };
 
 int main()

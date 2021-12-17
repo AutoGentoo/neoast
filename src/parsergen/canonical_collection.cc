@@ -120,7 +120,7 @@ namespace parsergen
 
     void CanonicalCollection::lr_1_firstof_init(tok_t grammar_id)
     {
-        parsergen::BitVector already_visited(parser_->token_n);
+        parsergen::BitVector already_visited(parser_->token_n + 1);
         lr_1_firstof_impl(first_ofs_.at(grammar_id), grammar_id, already_visited);
     }
 
