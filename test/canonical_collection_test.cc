@@ -28,49 +28,42 @@ extern "C" {
 
 using namespace parsergen;
 
-enum
+namespace simple
 {
-    TOK_EOF = NEOAST_ASCII_MAX,
-    TOK_a,
-    TOK_b,
-    TOK_S,
-    TOK_A,
-    TOK_AUGMENT
-};
-
-static uint32_t r1[] = {
-        TOK_A,
-        TOK_A
-};
-
-static uint32_t r2[] = {
+    enum
+    {
+        TOK_EOF = NEOAST_ASCII_MAX,
         TOK_a,
-        TOK_A
-};
-
-static uint32_t r3[] = {
-        TOK_b
-};
-
-static uint32_t a_r[] = {
+        TOK_b,
+        TOK_S,
+        TOK_A,
         TOK_AUGMENT
-};
+    };
 
-static GrammarRule g_rules[] = {
-        {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r},
-        {.token = TOK_S, .tok_n = 2, .grammar = r1},
-        {.token = TOK_A, .tok_n = 2, .grammar = r2},
-        {.token = TOK_A, .tok_n = 1, .grammar = r3},
-};
 
-static const char* token_error_names[] = {
-        "EOF",
-        "a",
-        "b",
-        "S",
-        "A",
-        "augment"
-};
+    static const uint32_t simple_rules[][2] = {
+            {TOK_S},
+            {TOK_A, TOK_A},
+            {TOK_a, TOK_A},
+            {TOK_b}
+    };
+
+    static const GrammarRule g_rules[] = {
+            {.token = TOK_AUGMENT, .tok_n = 1, .grammar = simple_rules[0]},
+            {.token = TOK_S, .tok_n = 2, .grammar = simple_rules[1]},
+            {.token = TOK_A, .tok_n = 2, .grammar = simple_rules[2]},
+            {.token = TOK_A, .tok_n = 1, .grammar = simple_rules[3]},
+    };
+
+    static const char* token_names[] = {
+            "$",
+            "a",
+            "b",
+            "S",
+            "A",
+            "P"
+    };
+}
 
 #define LR_S(i) (((uint32_t)(i)) | TOK_SHIFT_MASK)
 #define LR_R(i) (((uint32_t)(i)) | TOK_REDUCE_MASK)
@@ -80,88 +73,157 @@ static const char* token_error_names[] = {
 static const
 uint32_t expected_lalr1_table[] = {
         LR_E( ), LR_S(3), LR_S(4), LR_S(1), LR_S(2), /* 0 */
-        LR_A( ), LR_A( ), LR_A( ), LR_E( ), LR_E( ), /* 1 */
-        LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(5), /* 2 */
-        LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(6), /* 3 */
+        LR_A( ), LR_E( ), LR_E( ), LR_E( ), LR_E( ), /* 1 */
+        LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(6), /* 2 */
+        LR_E( ), LR_S(3), LR_S(4), LR_E( ), LR_S(5), /* 3 */
         LR_R(3), LR_R(3), LR_R(3), LR_E( ), LR_E( ), /* 4 */
-        LR_R(1), LR_E( ), LR_E( ), LR_E( ), LR_E( ), /* 5 */
-        LR_R(2), LR_R(2), LR_R(2), LR_E( ), LR_E( ), /* 6 */
+        LR_R(2), LR_R(2), LR_R(2), LR_E( ), LR_E( ), /* 5 */
+        LR_R(1), LR_E( ), LR_E( ), LR_E( ), LR_E( ), /* 6 */
 };
 
-
-static GrammarParser p;
-void initialize_parser()
+void initialize_parser(GrammarParser& p,
+                       uint32_t augment,
+                       const GrammarRule g_rules[],
+                       const char* token_names[])
 {
-    static const uint32_t r1[] = {TOK_A, TOK_A};
-    static const uint32_t r2[] = {TOK_a, TOK_A};
-    static const uint32_t r3[] = {TOK_b};
-    static const uint32_t a_r[] = {TOK_S};
-    static const GrammarRule g_rules[] = {
-            {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r},
-            {.token = TOK_S, .tok_n = 2, .grammar = r1},
-            {.token = TOK_A, .tok_n = 2, .grammar = r2},
-            {.token = TOK_A, .tok_n = 1, .grammar = r3},
-    };
-
     p.grammar_n = 4;
     p.grammar_rules = g_rules;
-    p.token_n = TOK_AUGMENT - NEOAST_ASCII_MAX;
+    p.token_n = augment - NEOAST_ASCII_MAX;
     p.action_token_n = 3;
-    p.token_names = token_error_names;
+    p.token_names = token_names;
     p.parser_reduce = (parser_reduce) nullptr;
 }
 
+static GrammarParser simple_p;
+static GrammarParser bootstrap_p;
+
 CTEST(test_state_hash)
 {
-    std::unordered_set<std::shared_ptr<GrammarState>,
-                GrammarState::Hasher, GrammarState::Equal> test_set;
+    std::unordered_set<sp<GrammarState>,
+                HasherPtr<sp<GrammarState>>,
+                EqualizerPtr<sp<GrammarState>>> test_set;
 
     BitVector lookaheads(3);
     lookaheads.select(0);
 
     std::vector<LR1> items1{
-            {&g_rules[0], 0, lookaheads},
-            {&g_rules[1], 0, lookaheads},
+            {&simple::g_rules[0], 0, lookaheads},
+            {&simple::g_rules[1], 0, lookaheads},
     };
 
     std::vector<LR1> items2{
-            {&g_rules[1], 0, lookaheads},
-            {&g_rules[0], 0, lookaheads},
+            {&simple::g_rules[1], 0, lookaheads},
+            {&simple::g_rules[0], 0, lookaheads},
     };
 
     std::vector<LR1> items3{
-            {&g_rules[1], 0, lookaheads},
-            {&g_rules[0], 1, lookaheads},
+            {&simple::g_rules[1], 0, lookaheads},
+            {&simple::g_rules[0], 1, lookaheads},
     };
 
-    std::shared_ptr<GrammarState> s1(new GrammarState(nullptr, items1));
-    std::shared_ptr<GrammarState> s2(new GrammarState(nullptr, items2));
-    std::shared_ptr<GrammarState> s3(new GrammarState(nullptr, items3));
+    sp<GrammarState> s1(new GrammarState(nullptr, items1));
+    sp<GrammarState> s2(new GrammarState(nullptr, items2));
+    sp<GrammarState> s3(new GrammarState(nullptr, items3));
 
     assert_int_equal(s1->hash(), s2->hash());
 
-    test_set.insert(s1);
+    auto p = test_set.insert(s1);
+    assert_true(p.second);
     assert_true(test_set.find(s2) != test_set.end());
 
     assert_int_not_equal(s1->hash(), s3->hash());
     assert_true(test_set.find(s3) == test_set.end());
 }
 
+CTEST(test_lr1_lr0_sorting)
+{
+    BitVector l1(3);
+    l1.select(0);
+
+    BitVector l2(3);
+    l1.select(0);
+    l1.select(1);
+
+    LR1 i1(&simple::g_rules[1], 0, l1);
+    LR1 i2(&simple::g_rules[1], 0, l2);
+    LR1 i3(&simple::g_rules[1], 1, l1);
+
+    // Different lookaheads should not change the hash
+    assert_int_equal(i1.hash(), i2.hash());
+
+    // Different item will change the hash
+    assert_int_not_equal(i1.hash(), i3.hash());
+
+    std::unordered_set<LR1, Hasher<LR1>, Equalizer<LR1>> items;
+
+    auto p = items.emplace(&simple::g_rules[1], 0, l1);
+    assert_true(p.second);
+    p = items.emplace(&simple::g_rules[1], 0, l1);
+    assert_false(p.second);
+    p = items.emplace(&simple::g_rules[1], 0, l2);
+    assert_true(p.second);
+}
+
 CTEST(test_tablegen)
 {
-    CanonicalCollection cc(&p, nullptr);
-    cc.resolve();
+    CanonicalCollection cc(&simple_p, nullptr);
+    cc.resolve(LALR_1);
 
     uint8_t error;
     uint32_t* table = cc.generate(nullptr, &error);
     assert_int_equal(error, 0);
 
-    dump_table(table, &cc, "$abSAP", 0, stdout, nullptr);
+    dump_table(table, &cc, simple::token_names, 0, stdout, nullptr);
     fprintf(stdout, "===========\n");
-    dump_table(expected_clr1_lalr1_table, &cc, "$abSAP", 0, stdout, nullptr);
-    assert_memory_equal(table, expected_clr1_lalr1_table, sizeof(expected_clr1_lalr1_table));
+    dump_table(expected_lalr1_table, &cc, simple::token_names, 0, stdout, nullptr);
+    assert_memory_equal(table, expected_lalr1_table, sizeof(expected_lalr1_table));
 
     free(table);
+}
+
+CTEST(test_lookaheads)
+{
+    CanonicalCollection cc(&simple_p, nullptr);
+
+    BitVector first_of_A(simple_p.action_token_n);
+    first_of_A.select(1);
+    first_of_A.select(2);
+
+    BitVector lookaheads(simple_p.action_token_n);
+    bool has_empty;
+    cc.merge_first_of(lookaheads, simple::TOK_A, has_empty);
+
+    assert_false(has_empty);
+    assert_true(lookaheads == first_of_A);
+}
+
+CTEST(test_lalr1_consolidation)
+{
+    std::unordered_set<LR1, Hasher<LR1>, Equalizer<LR1>> lr1_1;
+    std::unordered_set<LR1, Hasher<LR1>, Equalizer<LR1>> lr1_2;
+
+    BitVector l1(3);
+    l1.select(0);
+
+    BitVector l2(3);
+    l1.select(0);
+    l1.select(1);
+
+    auto p = lr1_1.emplace(&simple::g_rules[1], 0, l1);
+    assert_true(p.second); // make sure it was added
+    p = lr1_1.emplace(&simple::g_rules[2], 0, l1);
+    assert_true(p.second);
+
+    p = lr1_2.emplace(&simple::g_rules[1], 0, l2);
+    assert_true(p.second);
+    p = lr1_2.emplace(&simple::g_rules[2], 0, l1);
+    assert_true(p.second);
+
+    // Under CLR(1) table, these are distinct states
+    assert_false(lr1_1 == lr1_2);
+
+    // Under LALR(1) table, these are identical states
+    assert_true(lalr_equal(lr1_1, lr1_1));
 }
 
 CTEST(test_bit_vector)
@@ -190,11 +252,14 @@ int main()
 {
     const static struct CMUnitTest cc_tests[] = {
             cmocka_unit_test(test_state_hash),
+            cmocka_unit_test(test_lr1_lr0_sorting),
             cmocka_unit_test(test_bit_vector),
             cmocka_unit_test(test_tablegen),
+            cmocka_unit_test(test_lookaheads),
+            cmocka_unit_test(test_lalr1_consolidation),
     };
 
-    initialize_parser();
+    initialize_parser(simple_p, simple::TOK_AUGMENT, simple::g_rules, simple::token_names);
 
     return cmocka_run_group_tests(cc_tests, nullptr, nullptr);
 }

@@ -26,7 +26,7 @@ extern "C" {
 #include <neoast.h>
 
 void dump_table(const uint32_t* table, const void* cc,
-                const char* tok_names, uint8_t state_wrap, FILE* fp,
+                const char** tok_names, uint8_t state_wrap, FILE* fp,
                 const char* indent_str);
 
 #ifdef __cplusplus
@@ -66,7 +66,7 @@ std::string variadic_string(const char* format,
 
 void dump_table_cxx(
         const uint32_t* table, const parsergen::CanonicalCollection* cc,
-        const char* tok_names, uint8_t state_wrap,
+        const char** tok_names, uint8_t state_wrap,
         std::ostream& os, const char* indent_str);
 
 #endif

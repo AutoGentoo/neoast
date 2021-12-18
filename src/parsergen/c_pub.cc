@@ -25,7 +25,7 @@ void* canonical_collection_init(const GrammarParser* parser, const void* debug_i
 
 void canonical_collection_resolve(void* self, parser_t p_type)
 {
-    static_cast<parsergen::CanonicalCollection*>(self)->resolve();
+    static_cast<parsergen::CanonicalCollection*>(self)->resolve(p_type);
 }
 
 uint32_t* canonical_collection_generate(const void* self, const uint8_t* precedence_table, uint8_t* error)

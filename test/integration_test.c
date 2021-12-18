@@ -163,6 +163,9 @@ void parser_error_cb(const char* const* token_names,
     assert_non_null(position);
     assert_non_null(expected_tokens);
 
+    assert_int_equal(position->line, 1);
+    assert_int_equal(position->col_start, 13);
+
     assert_int_equal(last_token, 1);
     assert_int_equal(current_token, 1);
 
@@ -172,13 +175,10 @@ void parser_error_cb(const char* const* token_names,
     assert_string_equal(token_names[current_token], "A_TOKEN");
 
     assert_string_equal(token_names[expected_tokens[0]], "EOF");
-    assert_string_equal(token_names[expected_tokens[1]], "/");
-    assert_string_equal(token_names[expected_tokens[2]], "*");
-    assert_string_equal(token_names[expected_tokens[3]], "-");
-    assert_string_equal(token_names[expected_tokens[4]], "+");
-
-    assert_int_equal(position->line, 1);
-    assert_int_equal(position->col_start, 13);
+    assert_string_equal(token_names[expected_tokens[1]], "'/'");
+    assert_string_equal(token_names[expected_tokens[2]], "'*'");
+    assert_string_equal(token_names[expected_tokens[3]], "'-'");
+    assert_string_equal(token_names[expected_tokens[4]], "'+'");
 
     parser_error_called = 1;
 }

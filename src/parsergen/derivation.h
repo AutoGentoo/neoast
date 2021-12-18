@@ -35,16 +35,34 @@ namespace parsergen
     struct Hasher
     {
         std::size_t operator()(const H& k) const
-        {
-            return k.hash();
-        }
+        { return k.hash(); }
+    };
+    template<typename H>
+    struct HasherPtr
+    {
+        std::size_t operator()(const H& k) const
+        { return k->hash(); }
+    };
+    template<typename H>
+    struct Equalizer
+    {
+        bool operator()(const H& k, const H& l) const
+        { return k == l; }
+    };
+    template<typename H>
+    struct EqualizerPtr
+    {
+        bool operator()(const H& k, const H& l) const
+        { return *k == *l; }
     };
 
     struct CanonicalCollection;
+    struct LR0;
+    struct LR1;
+    struct GrammarState;
 
     struct LR0
     {
-
         const GrammarRule* derivation;      //!< Grammar derivation we are pointing to
         uint32_t i;                         //!< Index where we are in the current grammar rule
 
@@ -91,6 +109,11 @@ namespace parsergen
             return LR0::operator==(other) && look_ahead == other.look_ahead;
         }
 
+        void lalr_merge(const LR1& other) const
+        {
+            look_ahead.merge(other.look_ahead);
+        }
+
         /**
          * Get the first_of the next item in the LR(1) item
          * @param cc global canonical collection keeping track of basic first_of
@@ -98,12 +121,19 @@ namespace parsergen
          */
         void merge_next_lookaheads(const CanonicalCollection* cc,
                                    parsergen::BitVector& dest) const;
-
-        inline size_t hash() const
-        {
-            return LR0::hash() + look_ahead.hash();
-        }
     };
+
+    /**
+     * Compare two LR1 sets using LR0 comparison to
+     * consolidate an LR1 canonical collection to LR0 for
+     * LALR(1) table generation
+     * @param a first set
+     * @param b second set
+     * @return true if equivalent, false if not
+     */
+    bool lalr_equal(
+            const std::unordered_set<LR1, Hasher<LR1>, Equalizer<LR1>>& a,
+            const std::unordered_set<LR1, Hasher<LR1>, Equalizer<LR1>>& b);
 
     struct GrammarState
     {
@@ -114,27 +144,10 @@ namespace parsergen
          */
         bool has_closure;
         CanonicalCollection* cc;
-        std::unordered_set<LR1, Hasher<LR1>> lr1_items;                    //!< Items in the state
+        std::unordered_set<LR1, Hasher<LR1>, Equalizer<LR1>> lr1_items;   //!< Items in the state
         mutable std::unordered_map<tok_t, const GrammarState*> dfa;       //!< State transitions
 
     public:
-        struct Hasher
-        {
-            std::size_t operator()(const std::shared_ptr<GrammarState>& k) const
-            {
-                return k->hash();
-            }
-        };
-        struct Equal
-        {
-            bool operator()(
-                    const std::shared_ptr<GrammarState>& a,
-                    const std::shared_ptr<GrammarState>& b) const
-            {
-                return *a == *b;
-            }
-        };
-
         GrammarState(GrammarState&&) = delete;
 
         GrammarState(CanonicalCollection* cc,
@@ -161,7 +174,6 @@ namespace parsergen
          * (fill dfa)
          */
         void resolve() const;
-
         void fill_table(uint32_t row[],
                         uint32_t& rr_conflicts,
                         uint32_t& sr_conflicts,
@@ -171,6 +183,10 @@ namespace parsergen
         {
             return lr1_items == other.lr1_items;
         }
+
+        bool lalr_equal(const GrammarState& other) const;
+
+        void lalr_merge(const GrammarState& other) const;
 
         inline size_t hash() const
         {

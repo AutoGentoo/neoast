@@ -22,10 +22,13 @@
 #include <cassert>
 #include <algorithm>
 #include <numeric>
+#include <memory>
 
 
 namespace parsergen
 {
+    template<typename T> using sp = std::shared_ptr<T>;
+
     class BitVector
     {
         uint32_t len_;

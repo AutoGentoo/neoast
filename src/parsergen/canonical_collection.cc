@@ -23,7 +23,7 @@
 namespace parsergen
 {
     CanonicalCollection::CanonicalCollection(const GrammarParser* parser, const DebugInfo* debug_info)
-    : debug_info_(debug_info), parser_(parser), dfa_(nullptr)
+    : debug_info_(debug_info), parser_(parser), dfa_(nullptr), state_n_(0)
     {
         // Initialize the grammar productions to an O(1) map
         for (uint32_t i = 0; i < parser_->grammar_n; i++)
@@ -93,23 +93,20 @@ namespace parsergen
                 }
                 else
                 {
-                    if (visiting[to_index(first_tok)])
+                    // Recursively resolve the first_of vector
+                    lr_1_firstof_impl(first_ofs_.at(first_tok),
+                                      first_tok, visiting);
+
+                    // If our rule only contains a rule that could be empty,
+                    // we also could be empty!
+                    if (first_options_.at(first_tok) & FirstOfOption::HAS_EMPTY &&
+                        production->tok_n == 1)
                     {
-                        // Recursively resolve the first_of vector
-                        lr_1_firstof_impl(first_ofs_.at(first_tok),
-                                          first_tok, visiting);
-
-                        // If our rule only contains a rule that could be empty,
-                        // we also could be empty!
-                        if (first_options_.at(first_tok) & FirstOfOption::HAS_EMPTY &&
-                            production->tok_n == 1)
-                        {
-                            first_options_[grammar_id] |= FirstOfOption::HAS_EMPTY;
-                        }
-
-                        // We can now merge the initialized bit vectors together
-                        dest.merge(first_ofs_.at(first_tok));
+                        first_options_[grammar_id] |= FirstOfOption::HAS_EMPTY;
                     }
+
+                    // We can now merge the initialized bit vectors together
+                    dest.merge(first_ofs_.at(first_tok));
                 }
             }
         }
@@ -126,20 +123,20 @@ namespace parsergen
 
     const GrammarState* CanonicalCollection::add_state(const std::vector<LR1>& initial_vector)
     {
-        std::shared_ptr<GrammarState> state(new GrammarState (this, initial_vector));
+        sp<GrammarState> state(new GrammarState (this, initial_vector));
         state->apply_closure();
         const auto& i = states_.find(state);
         if (i == states_.end())
         {
             // This is a new (unseen) state in the DFA
             // We can add it to the set
-            uint32_t new_state_id = state_ids_.size();
+            uint32_t new_state_id = state_n_++;
             auto out_p = states_.insert(state);
             if (!out_p.second)
                 throw Exception("Failed to add state to canonical collection");
 
-            state_ids_[out_p.first->get()] = new_state_id;
-            state_id_to_ptr_[new_state_id] = out_p.first->get();
+            state_ptr_to_id_[out_p.first->get()] = new_state_id;
+            state_id_to_ptr_.emplace(new_state_id, out_p.first->get());
             return out_p.first->get();
         }
         else
@@ -148,10 +145,17 @@ namespace parsergen
         }
     }
 
-    void CanonicalCollection::resolve()
+    struct LALR1Equal
+    {
+        bool operator()(
+                const sp<GrammarState>& a,
+                const sp<GrammarState>& b) const
+        { return a->lalr_equal(*b); }
+    };
+
+    void CanonicalCollection::resolve(parser_t type)
     {
         // Add the augment rule
-        // TODO(tumbar) IS THE FIRST RULE ALWAYS THE AUGMENT RULE?
         BitVector augment_lookahead(parser_->action_token_n);
         augment_lookahead.select(0); // select EOF
         std::vector<LR1> augment_vector{LR1(&parser_->grammar_rules[0], 0, augment_lookahead)};
@@ -160,7 +164,56 @@ namespace parsergen
         dfa_ = add_state(augment_vector);
         dfa_->resolve(); // resolve the entire DFA
 
-        // TODO(tumbar) Consolidate for LALR(1) CC
+        if (type == CLR_1)
+        {
+            // CLR(1) tables need a canonical collection of LR(1)
+            // items. This is what the DFA is currently.
+            return;
+        }
+
+        // LALR(1) does not distinguish between LR(1) with different lookaheads
+        // To consolidate these we can build an unordered_set of GrammarStates
+        // that follows a different equality predicate (only compare LR(0) items)
+        std::unordered_set<
+                sp<GrammarState>, HasherPtr<sp<GrammarState>>,
+                LALR1Equal> lalr_states;
+
+        for (const auto& clr_state : states_)
+        {
+            auto p = lalr_states.insert(clr_state);
+            if (!p.second)
+            {
+                // Choose the state with the lower id number
+                uint32_t m1 = get_state_id((*p.first).get());
+                uint32_t m2 = get_state_id(clr_state.get());
+
+                uint32_t keep_id, merge_id;
+                const GrammarState* keep, *merge;
+                if (m1 < m2)
+                {
+                    keep_id = m1; keep = p.first->get();
+                    merge_id = m2; merge = clr_state.get();
+                }
+                else
+                {
+                    keep_id = m2; keep = clr_state.get();
+                    merge_id = m1; merge = p.first->get();
+                }
+
+                // We can merge these two states together
+                keep->lalr_merge(*merge);
+
+                // Move the last ID into the removed slot
+                // Delete the last ID
+                uint32_t to_remove_id = --state_n_;
+                const GrammarState* to_remove = state_id_to_ptr_.at(to_remove_id);
+
+                state_ptr_to_id_[to_remove] = merge_id;
+                state_id_to_ptr_[merge_id] = to_remove;
+                state_id_to_ptr_.erase(to_remove_id);
+                state_ptr_to_id_[merge] = keep_id;
+            }
+        }
     }
 
     uint32_t* CanonicalCollection::generate(const uint8_t* precedence_table, uint8_t* error) const

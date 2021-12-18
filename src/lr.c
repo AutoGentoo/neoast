@@ -61,8 +61,7 @@ uint32_t g_lr_reduce(
                buffers->val_s);
     }
 
-    int32_t result_token = (int32_t)reduce_rule->token;
-    result_token -= NEOAST_ASCII_MAX;
+    int32_t result_token = (int32_t)reduce_rule->token - NEOAST_ASCII_MAX;
     assert(result_token > 0);
 
     // Run the reduction code

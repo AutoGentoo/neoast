@@ -76,7 +76,20 @@ static const char* token_error_names[] = {
         "augment"
 };
 
-static const char* token_names = "$N+-*/^()ES'";
+static const char* token_names[] = {
+        "$",
+        "N",
+        "+",
+        "-",
+        "*",
+        "/",
+        "^",
+        "(",
+        ")",
+        "E",
+        "S",
+        "'"
+};
 static uint8_t precedence_table[TOK_AUGMENT - NEOAST_ASCII_MAX] = {PRECEDENCE_NONE};
 
 typedef union
@@ -234,7 +247,7 @@ void initialize_parser()
     p.grammar_n = 10;
     p.grammar_rules = g_rules;
     p.action_token_n = 9;
-    p.token_n = TOK_AUGMENT - NEOAST_ASCII_MAX + 1;
+    p.token_n = TOK_AUGMENT - NEOAST_ASCII_MAX;
     p.token_names = token_error_names;
     p.parser_reduce = (parser_reduce) reduce_handler;
 

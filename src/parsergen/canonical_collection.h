@@ -52,14 +52,34 @@ namespace parsergen
         const GrammarParser* parser_;               //!< Parent parser with grammar rules
         const DebugInfo* debug_info_;               //!< Used for conflict debugging or NULL
         const GrammarState* dfa_;                   //!< Head of the LR DFA
+        uint32_t state_n_;
 
-        std::unordered_set<std::shared_ptr<GrammarState>, GrammarState::Hasher, GrammarState::Equal> states_;    //!< All registered grammar states
-        std::unordered_map<const GrammarState*, uint32_t> state_ids_;
+        /**
+         * Whenever a new state is added to the DFA,
+         * it must register with the entire canonical collection
+         * so that we can avoid redundant states.
+         */
+        std::unordered_set<sp<GrammarState>, HasherPtr<sp<GrammarState>>, EqualizerPtr<sp<GrammarState>>> states_;
+
+        /**
+         * Maps each grammar state to some id number
+         * And the ID number back to the state
+         */
+        std::unordered_map<const GrammarState*, uint32_t> state_ptr_to_id_;
         std::unordered_map<uint32_t, const GrammarState*> state_id_to_ptr_;
+
+        /**
+         * Reduction IDs are simply indices in the grammar rule table
+         * We need to agree on rule indices before hand
+         */
         std::unordered_map<const GrammarRule*, uint32_t> reduce_ids_;
+        std::unordered_map<tok_t, std::vector<const GrammarRule*>> productions_;
+
+        /**
+         * Caching the first_of vectors will help speed of DFA resolution
+         */
         std::unordered_map<tok_t, BitVector> first_ofs_;
         std::unordered_map<tok_t, int> first_options_;
-        std::unordered_map<tok_t, std::vector<const GrammarRule*>> productions_;
 
         void lr_1_firstof_impl(BitVector& dest,
                                tok_t grammar_id,
@@ -75,10 +95,10 @@ namespace parsergen
 
         inline uint32_t get_state_id(const GrammarState* state) const
         {
-            return state_ids_.at(state);
+            return state_ptr_to_id_.at(state);
         }
 
-        inline uint32_t size() const { return states_.size(); }
+        inline uint32_t size() const { return state_n_; }
         inline const GrammarState* get_state(uint32_t id) const { return state_id_to_ptr_.at(id); }
 
         inline uint32_t get_reduce_id(const GrammarRule* rule) const
@@ -126,7 +146,7 @@ namespace parsergen
          * Resolve the entire DFA by applying closures and
          * state transitions recursively
          */
-        void resolve();
+        void resolve(parser_t type);
 
         uint32_t* generate(const uint8_t* precedence_table, uint8_t* error) const;
     };

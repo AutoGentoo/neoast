@@ -21,6 +21,7 @@ void parser_error_cb(const char* const* token_names,
 %option parsing_error_cb="parser_error_cb"
 %option lexing_error_cb="lexer_error_cb"
 %option annotate_line="FALSE"
+%option debug_table="TRUE"
 
 %union {
     int out;
@@ -51,10 +52,10 @@ out: expr           { $$ = $1; }
     ;
 
 expr: A_TOKEN       { $$ = $1; }
-    | out '+' out   { $$ = $1 + $3; }
-    | out '-' out   { $$ = $1 - $3; }
-    | out '*' out   { $$ = $1 * $3; }
-    | out '/' out   { $$ = $1 / $3; }
+    | expr '+' expr { $$ = $1 + $3; }
+    | expr '-' expr { $$ = $1 - $3; }
+    | expr '*' expr { $$ = $1 * $3; }
+    | expr '/' expr { $$ = $1 / $3; }
     ;
 
 %%

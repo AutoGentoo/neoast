@@ -34,31 +34,34 @@ namespace parsergen
             }
 
             cc->merge_first_of(dest, derivation->grammar[next_item], last_has_empty);
+            next_item++;
         } while (last_has_empty);
     }
 
     void GrammarState::apply_closure()
     {
         // We don't need to recalculate closure
-        if (has_closure)
-        {
-            return;
-        }
-
-        // We haven't applied closure to all rules yet
-        bool has_dirty = true;
+        if (has_closure) return;
 
         // These are the rules we have already added to this production
         // We don't need to apply closure multiple times on the same item
         // Wo DO need to merge the lookaheads however
-        BitVector expanded_rules(cc->parser()->token_n);
+        BitVector expanded_rules(cc->parser()->token_n + 1);
+
+        std::vector<const LR1*> vec1;
+        std::vector<const LR1*> vec2;
+        for (auto& item : lr1_items)
+        {
+            vec1.push_back(&item);
+        }
+
+        std::vector<const LR1*>* curr_dirty = &vec1;
+        std::vector<const LR1*>* next_dirty = &vec2;
 
         // Keep applying closure to the dirty rules
-        while (has_dirty)
+        while (!curr_dirty->empty())
         {
-            has_dirty = false;
-
-            for (auto &item: lr1_items)
+            for (auto* item: *curr_dirty)
             {
                 // Check if this item needs to be expanded
                 // This just involves checking if the next item is a derivation
@@ -69,8 +72,8 @@ namespace parsergen
                 //     3. Next token is production (unexpanded) -> Apply closure by adding all rules describing this grammar
 
                 // No need to apply closure to final items (lookaheads are action tokens)
-                if (item.is_final()) continue;
-                tok_t curr = item.curr();
+                if (item->is_final()) continue;
+                tok_t curr = item->curr();
 
                 // Option 1 (no action)
                 if (cc->is_action(curr)) continue;
@@ -81,11 +84,13 @@ namespace parsergen
                     // Option 2 (merge lookaheads)
                     // We need to merge the lookahead with every other
                     // rule that matches this token
-                    for (const auto& lr_to_merge : lr1_items)
+                    BitVector new_lookaheads(cc->parser()->action_token_n);
+                    item->merge_next_lookaheads(cc, new_lookaheads);
+                    for (auto& item2 : lr1_items)
                     {
-                        if (lr_to_merge.derivation->token == curr)
+                        if (item2.derivation->token == curr)
                         {
-                            lr_to_merge.look_ahead.merge(item.look_ahead);
+                            item2.look_ahead.merge(new_lookaheads);
                         }
                     }
                 }
@@ -93,18 +98,27 @@ namespace parsergen
                 {
                     // Get the LR(1) lookaheads
                     BitVector new_lookaheads(cc->parser()->action_token_n);
-                    item.merge_next_lookaheads(cc, new_lookaheads);
+                    item->merge_next_lookaheads(cc, new_lookaheads);
                     expanded_rules.select(cc->to_index(curr));
 
                     // Add all the productions describing this grammar
                     const auto &new_prods = cc->get_productions(curr);
-                    has_dirty = true;
                     for (const auto &prod: new_prods)
                     {
-                        lr1_items.emplace(prod, 0, new_lookaheads);
+                        auto p = lr1_items.emplace(prod, 0, new_lookaheads);
+                        if (!p.second)
+                        {
+                            // Item was already in this state
+                        }
+                        next_dirty->push_back(&*p.first);
                     }
                 }
             }
+
+            curr_dirty->clear();
+            std::vector<const LR1*>* temp = next_dirty;
+            next_dirty = curr_dirty;
+            curr_dirty = temp;
         }
 
         has_closure = true;
@@ -221,7 +235,9 @@ namespace parsergen
                         }
                         else
                         {
-                            // TODO
+                            fprintf(stderr, "SR conflict tok %d state %d attempting to shift to %d\n",
+                                    i, cc->get_state_id(this),
+                                    row[i] & TOK_MASK);
                             sr_conflicts++;
                         }
                     }
@@ -230,5 +246,60 @@ namespace parsergen
                 row[i] = action_mask | reduce_id;
             }
         }
+    }
+
+    bool GrammarState::lalr_equal(const GrammarState &other) const
+    {
+        return parsergen::lalr_equal(lr1_items, other.lr1_items);
+    }
+
+    void GrammarState::lalr_merge(const GrammarState &other) const
+    {
+        // TODO(tumbar) Find a way to keep this set from lalr_equal
+        std::unordered_set<const LR1*, HasherPtr<const LR1*>, EqualizerPtr<const LR0*>> build;
+
+        for (const auto& ours : lr1_items)
+        {
+            auto p = build.insert(&ours);
+            assert(p.second);
+        }
+
+        // Merge all redundant state
+        for (const auto& theirs : other.lr1_items)
+        {
+            auto p = build.find(&theirs);
+            assert(p != build.end());
+
+            // We can merge this LR(1) item down
+            (*p)->lalr_merge(theirs);
+        }
+
+        // All LR(1) items are now merged together
+    }
+
+    bool lalr_equal(const std::unordered_set<LR1, Hasher<LR1>, Equalizer<LR1>> &a,
+                    const std::unordered_set<LR1, Hasher<LR1>, Equalizer<LR1>> &b)
+    {
+        if (a.size() != b.size()) return false;
+
+        // Perform LR0 comparison on every LR1 item
+        // We can make this easier by generating another set with LR0 predicate
+        std::unordered_set<const LR1*, HasherPtr<const LR1*>, EqualizerPtr<const LR0*>> build;
+
+        for (const auto& a_i : a)
+        {
+            auto p = build.insert(&a_i);
+            assert(p.second);
+        }
+
+        // Try to add each item from b
+        // If any add succeeds, this item does not exist in a
+        for (const auto& b_i : b)
+        {
+            auto p = build.insert(&b_i);
+            if (p.second) return false;
+        }
+
+        return true;
     }
 }

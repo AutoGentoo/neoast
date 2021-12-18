@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <parsergen/c_pub.h>
 #include <stdarg.h>
+#include <util/util.h>
 #include "codegen/bootstrap/lexer/bootstrap_lexer.h"
 #include "grammar.h"
 
@@ -61,6 +62,8 @@ const char* tok_names_errors[] = {
         "grammars",
         "augment rule"
 };
+
+//const char* tok_dump_names = "$ohbud=lr}eg|;{FKHL'G\"TiIP";
 
 struct LexerTextBuffer
 {
@@ -764,7 +767,7 @@ static const GrammarRule gg_rules[] = {
         {.token=TOK_GG_FILE, .tok_n=7, .grammar=grammars[21]}, // 21
 };
 
-uint8_t precedence_table[TOK_AUGMENT] = {0};
+uint8_t precedence_table[TOK_AUGMENT - NEOAST_ASCII_MAX] = {0};
 
 static void ll_error(const char* input, const TokenPosition* position, uint32_t lexer_state)
 {
@@ -778,7 +781,7 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
     self->grammar_rules = gg_rules;
     self->grammar_n = NEOAST_ARR_LEN(gg_rules);
     self->action_token_n = TOK_GG_FILE - NEOAST_ASCII_MAX;
-    self->token_n = TOK_AUGMENT - NEOAST_ASCII_MAX + 1;
+    self->token_n = TOK_AUGMENT - NEOAST_ASCII_MAX;
     self->token_names = tok_names_errors;
     self->destructors = NULL;
     self->ascii_mappings = NULL;
@@ -790,7 +793,7 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
                                      NEOAST_ARR_LEN(ll_rules_n),
                                      ll_error, sizeof(CodegenUnion), NULL);
 
-    precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
+    precedence_table[TOK_G_OR - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
 
     // Generate the parsing table
     void* cc = canonical_collection_init(self, NULL);
@@ -798,6 +801,7 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
 
     uint8_t error;
     GEN_parsing_table = canonical_collection_generate(cc, precedence_table, &error);
+    dump_table(GEN_parsing_table, cc, tok_names_errors, 0, stdout, NULL);
     canonical_collection_free(cc);
 
     if (error)

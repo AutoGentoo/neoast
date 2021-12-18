@@ -242,8 +242,7 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
             .emit_error = emit_error,
     };
     auto* cc = new parsergen::CanonicalCollection(&parser, &debug_info);
-    cc->resolve();
-//    canonical_collection_resolve(cc, options.parser_type);
+    cc->resolve(options.parser_type);
 
     uint8_t error;
     up<uint8_t[]> precedence_table(new uint8_t[tokens.size()]);
@@ -326,7 +325,11 @@ void CodeGenImpl::put_table_debug(std::ostream &os,
 
     os << "\n";
 
-    dump_table_cxx(table, cc, debug_ids, 0, os, "//  ");
+    up<const char* []> token_names_ptr(new const char* [tokens.size()]);
+    int i = 0;
+    for (const auto &n : tokens)
+    { token_names_ptr[i++] = n.c_str(); }
+    dump_table_cxx(table, cc, token_names_ptr.get(), 0, os, "//  ");
 }
 
 sp<CGToken> CodeGenImpl::get_token(const std::string &name) const

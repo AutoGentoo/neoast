@@ -20,7 +20,7 @@
 #include <sstream>
 #include "util.h"
 
-void dump_item(const parsergen::LR1& lr1, uint32_t tok_n, const char* tok_names, std::ostream &os)
+void dump_item(const parsergen::LR1& lr1, uint32_t tok_n, const char** tok_names, std::ostream &os)
 {
     uint8_t printed = 0;
     os << "['";
@@ -31,10 +31,12 @@ void dump_item(const parsergen::LR1& lr1, uint32_t tok_n, const char* tok_names,
             printed = 1;
             os << "•";
         }
+        else if (i > 0)
+        {
+            os << " ";
+        }
 
-        os << tok_names[
-                (lr1.derivation->grammar[i] < NEOAST_ASCII_MAX)
-                ? lr1.derivation->grammar[i] : lr1.derivation->grammar[i] - NEOAST_ASCII_MAX];
+        os << tok_names[lr1.derivation->grammar[i] - NEOAST_ASCII_MAX];
     }
 
     if (lr1.is_final())
@@ -65,7 +67,7 @@ void dump_item(const parsergen::LR1& lr1, uint32_t tok_n, const char* tok_names,
     os << "];";
 }
 
-void dump_state(const parsergen::GrammarState* state, uint32_t tok_n, uint32_t lookahead_n, const char* tok_names,
+void dump_state(const parsergen::GrammarState* state, uint32_t tok_n, uint32_t lookahead_n, const char** tok_names,
                 uint8_t line_wrap, std::ostream &os)
 {
     bool is_first = true;
@@ -92,7 +94,7 @@ void dump_state(const parsergen::GrammarState* state, uint32_t tok_n, uint32_t l
 
 void dump_table_cxx(
         const uint32_t* table, const parsergen::CanonicalCollection* cc,
-        const char* tok_names, uint8_t state_wrap,
+        const char** tok_names, uint8_t state_wrap,
         std::ostream& os, const char* indent_str)
 
 {
@@ -113,7 +115,7 @@ void dump_table_cxx(
     {
         if (col == cc->parser()->action_token_n)
             os << "|";
-        os << variadic_string("  %c  |", tok_names[col]);
+        os << variadic_string("  %s  |", tok_names[col]);
     }
     os << "\n" << indent_str << "___________";
     for (uint32_t col = 0; col < cc->parser()->token_n; col++)
@@ -153,7 +155,7 @@ void dump_table_cxx(
 
 void dump_table(const uint32_t* table,
                 const void* cc,
-                const char* tok_names,
+                const char** tok_names,
                 uint8_t state_wrap,
                 FILE* fp,
                 const char* indent_str)
