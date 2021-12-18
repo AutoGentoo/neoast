@@ -163,6 +163,9 @@ namespace parsergen
         std::unordered_set<LR1>::const_iterator begin() const { return lr1_items.begin(); }
         std::unordered_set<LR1>::const_iterator end() const { return lr1_items.end(); }
 
+        std::unordered_map<tok_t, const GrammarState*>::const_iterator dfa_begin() const { return dfa.begin(); };
+        std::unordered_map<tok_t, const GrammarState*>::const_iterator dfa_end() const { return dfa.end(); };
+
         /**
          * Given the initialization rules are already added to the state,
          * Apply LR closure to this state.

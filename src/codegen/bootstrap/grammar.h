@@ -5,7 +5,7 @@ enum
 {
     // -1 = skip, 0 = EOF
     TOK_OPTION = NEOAST_ASCII_MAX + 1, // 257
-    TOK_HEADER, // 2, 258
+    TOK_TOP, // 2, 258
     TOK_BOTTOM, // 3, 259
     TOK_UNION, // 4, 260
     TOK_DESTRUCTOR, // 5, 261

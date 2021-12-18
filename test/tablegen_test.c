@@ -62,8 +62,8 @@ enum
 };
 
 static const char* token_error_names[] = {
-        "EOF",
-        "number",
+        "$",
+        "n",
         "+",
         "-",
         "*",
@@ -71,9 +71,9 @@ static const char* token_error_names[] = {
         "^",
         "(",
         ")",
-        "expression",
-        "input",
-        "augment"
+        "E",
+        "I",
+        "A"
 };
 
 static const char* token_names[] = {

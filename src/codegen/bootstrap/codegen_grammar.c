@@ -35,22 +35,22 @@
 
 uint32_t* GEN_parsing_table = NULL;
 const char* tok_names_errors[] = {
-        "eof",
-        "option",
-        "header",
-        "bottom",
-        "union",
-        "destructor",
-        "==",
-        "lex_state",
+        "$",
+        "%o",
+        "%t",
+        "%b",
+        "%u",
+        "%d",
+        "=",
+        "ll_s",
         "regex",
-        "}",
+        "ll_s_end",
         "expr_def",
         "grammar_token",
-        "|",
+        "end_state",
         ";",
-        "{grammar action}",
-        "file",
+        "{action}",
+        "F",
         "key_value",
         "header",
         "lexer_rule",
@@ -60,7 +60,7 @@ const char* tok_names_errors[] = {
         "grammar_tokens",
         "grammar",
         "grammars",
-        "augment rule"
+        "A"
 };
 
 //const char* tok_dump_names = "$ohbud=lr}eg|;{FKHL'G\"TiIP";
@@ -483,7 +483,7 @@ static LexerRule ll_rules_s0[] = {
         {.regex = "%left" WS_X ASCII, .expr = (lexer_expr) ll_left_ascii},
         {.regex = "%right" WS_X ID_X, .expr = (lexer_expr) ll_right},
         {.regex = "%right" WS_X ASCII, .expr = (lexer_expr) ll_right_ascii},
-        {.regex = "%top", .tok = TOK_HEADER},
+        {.regex = "%top", .tok = TOK_TOP},
         {.regex = "%bottom", .tok = TOK_BOTTOM},
         {.regex = "%union", .tok = TOK_UNION},
         {.regex = "%destructor" WS_OPT "<" ID_X ">", .expr = (lexer_expr) ll_destructor},
@@ -568,14 +568,14 @@ const uint32_t grammars[][7] = {
 
         /* TOK_GG_KEY_VALS => */
         {TOK_OPTION},
-        {TOK_HEADER,            TOK_G_ACTION},
-        {TOK_UNION,             TOK_G_ACTION},
-        {TOK_BOTTOM,            TOK_G_ACTION},
-        {TOK_DESTRUCTOR,        TOK_G_ACTION},
+        {TOK_TOP,         TOK_G_ACTION},
+        {TOK_UNION,       TOK_G_ACTION},
+        {TOK_BOTTOM,      TOK_G_ACTION},
+        {TOK_DESTRUCTOR,  TOK_G_ACTION},
 
         /* TOK_GG_HEADER */
         {TOK_GG_KEY_VALS},
-        {TOK_GG_KEY_VALS,       TOK_GG_HEADER},
+        {TOK_GG_KEY_VALS, TOK_GG_HEADER},
 
         /* Lexer Rules */
         // TOK_GG_LEX_RULE =>

@@ -29,6 +29,8 @@ void dump_table(const uint32_t* table, const void* cc,
                 const char** tok_names, uint8_t state_wrap, FILE* fp,
                 const char* indent_str);
 
+void dump_graphviz(const void* cc, FILE* fp);
+
 #ifdef __cplusplus
 }
 
@@ -68,6 +70,10 @@ void dump_table_cxx(
         const uint32_t* table, const parsergen::CanonicalCollection* cc,
         const char** tok_names, uint8_t state_wrap,
         std::ostream& os, const char* indent_str);
+
+void dump_graphviz_cxx(
+        const parsergen::CanonicalCollection* cc,
+        std::ostream& os);
 
 #endif
 
