@@ -185,6 +185,10 @@ namespace parsergen
                     merge = p.first->get();
                 }
 
+                // Get the top level merge of this id
+                keep = state_id_to_ptr_.at(keep->get_id());
+                merge = state_id_to_ptr_.at(merge->get_id());
+
                 // We can merge these two states together
                 keep->lalr_merge(merge);
 
@@ -200,8 +204,8 @@ namespace parsergen
                     to_remove->set_id(merge->get_id()); // merge the highest id into the open slot
                 }
                 state_id_to_ptr_.erase(to_remove_id);
-                merge->set_id(keep->get_id()); // merge the state into the lower id
                 keep->set_id(keep->get_id()); // set ids for all states merged into this one
+                assert(merge->get_id() == keep->get_id());
             }
         }
     }
