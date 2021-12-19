@@ -1,23 +1,14 @@
+%include {
+    #include <codegen/codegen.h>
+    #include <codegen/compiler.h>
+    #include <stdlib.h>
+    #include <stddef.h>
+    #include <string.h>
+    #include <stdint.h>
+    #include <assert.h>
+}
+
 %top {
-
-#include <stdlib.h>
-#include <codegen/codegen.h>
-#include <codegen/compiler.h>
-#include <stddef.h>
-#include <string.h>
-#include <stdint.h>
-#include <assert.h>
-
-void lexing_error_cb(const char* input,
-                     const TokenPosition* position,
-                     const char* lexer_state);
-
-void parsing_error_cb(const char* const* token_names,
-                      const TokenPosition* position,
-                      uint32_t last_token,
-                      uint32_t current_token,
-                      const uint32_t expected_tokens[],
-                      uint32_t expected_tokens_n);
 
 struct LexerTextBuffer
 {
@@ -63,7 +54,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 %option parser_type="LALR(1)"
 %option prefix="cc"
 %option debug_table="FALSE"
-%option annotate_line="FALSE"
+%option annotate_line="TRUE"
 %option lexing_error_cb="lexing_error_cb"
 %option parsing_error_cb="parsing_error_cb"
 

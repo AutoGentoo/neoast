@@ -180,7 +180,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
                         const uint32_t* parsing_table,
                         const ParserBuffers* buffers,
                         void* lexer,
-                        int ll_next(void*, void*));
+                        int ll_next(void*, void*, void*));
 #endif
 
 #ifdef __cplusplus

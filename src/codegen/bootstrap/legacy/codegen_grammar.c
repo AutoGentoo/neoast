@@ -23,8 +23,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <parsergen/c_pub.h>
-#include <stddef.h>
-#include <codegen/compiler.h>
+#include <stdarg.h>
+#include <util/util.h>
 #include "codegen/bootstrap/lexer/bootstrap_lexer.h"
 #include "grammar.h"
 
@@ -610,115 +610,115 @@ const uint32_t grammars[][7] = {
         {TOK_GG_HEADER,         TOK_DELIMITER,        TOK_GG_LEX_RULES, TOK_DELIMITER, TOK_DELIMITER, TOK_GG_GRAMMARS, TOK_DELIMITER}
 };
 
-static void gg_key_val_add_next(CodegenStruct* dest, CodegenStruct* args)
+static void gg_key_val_add_next(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.key_val = args[0].value.key_val;
-    dest->value.key_val->next = args[1].value.key_val;
+    dest->key_val = args[0].key_val;
+    dest->key_val->next = args[1].key_val;
 }
 
-static void gg_build_header(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_header(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.key_val = key_val_build(NULL, KEY_VAL_TOP, NULL, args[1].value.string);
+    dest->key_val = key_val_build(NULL, KEY_VAL_TOP, NULL, args[1].string);
 }
 
-static void gg_build_union(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_union(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.key_val = key_val_build(NULL, KEY_VAL_UNION, NULL, args[1].value.string);
+    dest->key_val = key_val_build(NULL, KEY_VAL_UNION, NULL, args[1].string);
 }
 
-static void gg_build_bottom(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_bottom(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.key_val = key_val_build(NULL, KEY_VAL_BOTTOM, NULL, args[1].value.string);
+    dest->key_val = key_val_build(NULL, KEY_VAL_BOTTOM, NULL, args[1].string);
 }
 
-static void gg_build_destructor(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_destructor(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.key_val = args[0].value.key_val;
-    dest->value.key_val->value = args[1].value.string;
+    dest->key_val = args[0].key_val;
+    dest->key_val->value = args[1].string;
 }
 
-static void gg_build_l_rule_1(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_l_rule_1(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.l_rule = malloc(sizeof(struct LexerRuleProto));
-    dest->value.l_rule->regex = args[0].value.string;
-    dest->value.l_rule->function = args[1].value.string;
-    dest->value.l_rule->lexer_state = NULL;
-    dest->value.l_rule->state_rules = NULL;
-    dest->value.l_rule->next = NULL;
+    dest->l_rule = malloc(sizeof(struct LexerRuleProto));
+    dest->l_rule->regex = args[0].string;
+    dest->l_rule->function = args[1].string;
+    dest->l_rule->lexer_state = NULL;
+    dest->l_rule->state_rules = NULL;
+    dest->l_rule->next = NULL;
 }
 
-static void gg_build_l_rule_2(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_l_rule_2(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.l_rule = args[0].value.l_rule;
-    dest->value.l_rule->next = args[1].value.l_rule;
+    dest->l_rule = args[0].l_rule;
+    dest->l_rule->next = args[1].l_rule;
 }
 
-static void gg_build_l_rule_3(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_l_rule_3(CodegenUnion* dest, CodegenUnion* args)
 {
     // Every rule here is part of this state
-    dest->value.l_rule = malloc(sizeof(struct LexerRuleProto));
-    dest->value.l_rule->regex = NULL;
-    dest->value.l_rule->function = NULL;
-    dest->value.l_rule->lexer_state = args[0].value.string;
-    dest->value.l_rule->state_rules = args[1].value.l_rule;
-    dest->value.l_rule->next = NULL;
+    dest->l_rule = malloc(sizeof(struct LexerRuleProto));
+    dest->l_rule->regex = NULL;
+    dest->l_rule->function = NULL;
+    dest->l_rule->lexer_state = args[0].string;
+    dest->l_rule->state_rules = args[1].l_rule;
+    dest->l_rule->next = NULL;
 }
 
-static void gg_build_tok(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_tok(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.token = args[0].value.token;
-    dest->value.token->next = args[1].value.token;
+    dest->token = args[0].token;
+    dest->token->next = args[1].token;
 }
 
-static void gg_build_single(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_single(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.g_single_rule = malloc(sizeof(struct GrammarRuleSingleProto));
-    dest->value.g_single_rule->next = NULL;
-    dest->value.g_single_rule->tokens = args[0].value.token;
-    dest->value.g_single_rule->function = args[1].value.string;
+    dest->g_single_rule = malloc(sizeof(struct GrammarRuleSingleProto));
+    dest->g_single_rule->next = NULL;
+    dest->g_single_rule->tokens = args[0].token;
+    dest->g_single_rule->function = args[1].string;
 }
 
-static void gg_build_multi(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_multi(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.g_single_rule = args[0].value.g_single_rule;
-    dest->value.g_single_rule->next = args[2].value.g_single_rule;
+    dest->g_single_rule = args[0].g_single_rule;
+    dest->g_single_rule->next = args[2].g_single_rule;
 }
 
-static void gg_build_multi_empty(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_multi_empty(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.g_single_rule = malloc(sizeof(struct GrammarRuleSingleProto));
-    dest->value.g_single_rule->next = NULL;
-    dest->value.g_single_rule->tokens = NULL;
-    dest->value.g_single_rule->function = args[0].value.string;
+    dest->g_single_rule = malloc(sizeof(struct GrammarRuleSingleProto));
+    dest->g_single_rule->next = NULL;
+    dest->g_single_rule->tokens = NULL;
+    dest->g_single_rule->function = args[0].string;
 }
 
-static void gg_build_grammar(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_grammar(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.g_rule = malloc(sizeof(struct GrammarRuleProto));
-    dest->value.g_rule->name = args[0].value.string;
-    dest->value.g_rule->rules = args[1].value.g_single_rule;
-    dest->value.g_rule->next = NULL;
+    dest->g_rule = malloc(sizeof(struct GrammarRuleProto));
+    dest->g_rule->name = args[0].string;
+    dest->g_rule->rules = args[1].g_single_rule;
+    dest->g_rule->next = NULL;
 }
 
-static void gg_build_grammars(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_grammars(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.g_rule = args[0].value.g_rule;
-    dest->value.g_rule->next = args[1].value.g_rule;
+    dest->g_rule = args[0].g_rule;
+    dest->g_rule->next = args[1].g_rule;
 }
 
-static void gg_build_file(CodegenStruct* dest, CodegenStruct* args)
+static void gg_build_file(CodegenUnion* dest, CodegenUnion* args)
 {
-    dest->value.file = malloc(sizeof(struct File));
-    dest->value.file->header = args[0].value.key_val;
-    dest->value.file->lexer_rules = args[2].value.l_rule;
-    dest->value.file->grammar_rules = args[5].value.g_rule;
+    dest->file = malloc(sizeof(struct File));
+    dest->file->header = args[0].key_val;
+    dest->file->lexer_rules = args[2].l_rule;
+    dest->file->grammar_rules = args[5].g_rule;
 }
 
-void parser_reduce_all(uint32_t rule_id, CodegenStruct* dest, CodegenStruct* args)
+void parser_reduce_all(uint32_t rule_id, CodegenUnion* dest, CodegenUnion* args)
 {
     // Don't actually do this in real life :)
     // I'm lazy
-    static void (* const reduce_table[])(CodegenStruct*, CodegenStruct*) = {
+    static void (* const reduce_table[])(CodegenUnion*, CodegenUnion*) = {
             NULL, NULL, // 0,1
             gg_build_header, gg_build_union, // 2,3
             gg_build_bottom, gg_build_destructor, // 4,5
@@ -735,9 +735,6 @@ void parser_reduce_all(uint32_t rule_id, CodegenStruct* dest, CodegenStruct* arg
     if (reduce_table[rule_id])
     {
         reduce_table[rule_id](dest, args);
-
-        // Assume the position is just the position of the first argument
-        dest->position = args[0].position;
     }
     else
     {
@@ -772,6 +769,13 @@ static const GrammarRule gg_rules[] = {
 
 uint8_t precedence_table[TOK_AUGMENT - NEOAST_ASCII_MAX] = {0};
 
+static void ll_error(const char* input, const TokenPosition* position, uint32_t lexer_state)
+{
+    (void) input;
+
+    emit_error(position, "[state %d] Failed to match token", lexer_state);
+}
+
 int gen_parser_init(GrammarParser* self, void** lexer_ptr)
 {
     self->grammar_rules = gg_rules;
@@ -787,7 +791,7 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
     *lexer_ptr = bootstrap_lexer_new(ll_rules,
                                      ll_rules_n,
                                      NEOAST_ARR_LEN(ll_rules_n),
-                                     lexing_error_cb, sizeof(CodegenUnion), NULL);
+                                     ll_error, sizeof(CodegenUnion), NULL);
 
     precedence_table[TOK_G_OR - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
 
@@ -795,8 +799,9 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
     void* cc = canonical_collection_init(self, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
-    GEN_parsing_table = calloc(canonical_collection_table_size(cc), sizeof(uint32_t));
-    uint32_t error = canonical_collection_generate(cc, GEN_parsing_table, precedence_table);
+    uint8_t error;
+    GEN_parsing_table = canonical_collection_generate(cc, precedence_table, &error);
+    dump_table(GEN_parsing_table, cc, tok_names_errors, 0, stdout, NULL);
     canonical_collection_free(cc);
 
     if (error)
@@ -809,64 +814,46 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
     return 0;
 }
 
-static GrammarParser parser;
-static void* lexer_ptr = NULL;
-static uint32_t initialized = 0;
-uint32_t cc_init()
+void emit_warning(const TokenPosition* position, const char* message, ...)
 {
-    if (!initialized)
+    if (position)
     {
-        initialized = 1;
-        gen_parser_init(&parser, &lexer_ptr);
+        fprintf(stderr, "Warning on line %d:%d: ", position->line, position->col_start);
     }
-    return 0;
-}
-
-void cc_free()
-{
-    if (initialized)
+    else
     {
-        bootstrap_lexer_free(lexer_ptr);
-        free(GEN_parsing_table);
-        lexer_ptr = NULL;
-        GEN_parsing_table = NULL;
-        initialized = 0;
-    }
-}
-
-void* cc_allocate_buffers()
-{
-    return parser_allocate_buffers(
-            256, 256,
-            sizeof(CodegenStruct), offsetof(CodegenStruct, position));
-}
-
-void cc_free_buffers(void* self)
-{
-    parser_free_buffers(self);
-}
-
-struct File* cc_parse_len(void* error_ctx, void* buffers, const char* input, uint64_t input_len)
-{
-    void* lexer_instance = bootstrap_lexer_instance_new(lexer_ptr, error_ctx, input, input_len);
-
-    int32_t result_idx = parser_parse_lr(&parser, error_ctx, GEN_parsing_table, buffers,
-                                         lexer_instance, bootstrap_lexer_next);
-
-    bootstrap_lexer_instance_free(lexer_instance);
-
-    if (result_idx == -1)
-    {
-        return NULL;
+        fprintf(stderr, "Warning: ");
     }
 
-    struct File* f = ((CodegenUnion*)((ParserBuffers*) buffers)->value_table)[result_idx].file;
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    fputc('\n', stderr);
+}
 
-    TokenPosition p = {0, 0};
-    KeyVal* builtin_includes = declare_include(&p,
-                                               strdup("#include <codegen/codegen.h>\n"
-                                                      "#include <codegen/compiler.h>"));
-    builtin_includes->next = f->header;
-    f->header = builtin_includes;
-    return f;
+static int error_counter = 0;
+
+void emit_error(const TokenPosition* position, const char* message, ...)
+{
+    if (position)
+    {
+        fprintf(stderr, "Error on line %d:%d: ", position->line, position->col_start);
+    }
+    else
+    {
+        fprintf(stderr, "Error: ");
+    }
+
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    fputc('\n', stderr);
+    error_counter++;
+}
+
+int has_errors()
+{
+    return error_counter;
 }

@@ -13,7 +13,9 @@ add_library(neoast-codegen STATIC
 
 target_compile_definitions(neoast-codegen PRIVATE NEOAST_CODEGEN_BACKDOOR)
 
-add_subdirectory(bootstrap)
+# Build the bootstrap compiler with the pre-generated parser
+add_executable(neoast-bootstrap bootstrap/bootstrap.c bootstrap/bootstrap.h main.cc)
+target_link_libraries(neoast-bootstrap neoast-codegen)
 
 set(compiler_compiler
         ${CMAKE_CURRENT_BINARY_DIR}/neoast_compiler_compiler.c
@@ -26,7 +28,7 @@ add_custom_command(OUTPUT ${compiler_compiler}
         DEPENDS neoast-bootstrap neoast-codegen compiler_compiler.y
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_library(neoast_compiler_compiler ${compiler_compiler})
+add_library(neoast_compiler_compiler STATIC ${compiler_compiler})
 target_include_directories(neoast_compiler_compiler PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/../
         ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
@@ -50,7 +52,13 @@ target_link_libraries(neoast-codegen
         reflex          # used to build regex DFAs
         reflex-unicode
         )
-target_link_libraries(neoast-exec neoast_compiler_compiler neoast-codegen)
+target_link_libraries(neoast-exec
+        neoast_compiler_compiler
+        neoast-codegen
+        # Link twice to work around circular dependencies
+        neoast_compiler_compiler
+        neoast-codegen
+)
 add_executable(neoast-debug debug.cc)
 target_link_libraries(neoast-debug neoast_compiler_compiler neoast-codegen neoast-util)
 

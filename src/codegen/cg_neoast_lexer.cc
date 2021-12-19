@@ -190,7 +190,7 @@ void CGNeoastLexer::put_global(std::ostream &os) const
     }
 
     // Put the lexing function
-    os << "static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination)\n"
+    os << "static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination, void* error_ctx)\n"
           "{\n"
           ""// Lexing macros\n"
           "#define yyval (&(destination->value))\n"
@@ -227,7 +227,7 @@ void CGNeoastLexer::put_global(std::ostream &os) const
         else
         {
             os << "                if (!matcher_at_end(self)) { " << get_options().lexing_error_cb
-               << "(yytext, yyposition, \"" << state.name << "\"); return -1; }\n"
+               << "(error_ctx, yytext, yyposition, \"" << state.name << "\"); return -1; }\n"
                                                              "                else return 0;\n";
         }
 
@@ -263,9 +263,9 @@ void CGNeoastLexer::put_global(std::ostream &os) const
 void CGNeoastLexer::put_bottom(std::ostream& os) const
 {
     // Write the wrapper function
-    os << "static int neoast_lexer_next_wrapper(void* matcher, void* dest)\n"
+    os << "static int neoast_lexer_next_wrapper(void* matcher, void* dest, void* error_ctx)\n"
           "{\n"
-          "    int tok = neoast_lexer_next((NeoastMatcher*)matcher, (NeoastValue*)dest);\n\n"
+          "    int tok = neoast_lexer_next((NeoastMatcher*)matcher, (NeoastValue*)dest, error_ctx);\n\n"
           "    // EOF and INVALID\n"
           "    if (tok <= 0) return tok;\n\n"
           "    if (tok < NEOAST_ASCII_MAX)\n"

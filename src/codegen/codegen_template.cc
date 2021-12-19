@@ -1,11 +1,46 @@
-//
-// Created by tumbar on 7/17/21.
-//
+/*
+ * This file is part of the Neoast framework
+ * Copyright (c) 2021 Andrei Tumbar.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 
 #include <codegen/codegen_impl.h>
 #include <inja/inja.hpp>
 
-void CodeGenImpl::write_header(std::ostream &os) const
+static const char license_header[] = R"(/*
+ * This file is part of the Neoast framework
+ * Copyright (c) 2021 Andrei Tumbar.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * THIS FILE HAS BEEN AUTOMATICALLY GENERATED, DO NOT CHANGE
+ */
+
+)";
+
+void CodeGenImpl::write_header(std::ostream &os, bool dump_license) const
 {
     std::ostringstream os_tokens;
     std::ostringstream os_lexer;
@@ -20,6 +55,11 @@ void CodeGenImpl::write_header(std::ostream &os) const
     header_data["union_name"] = CODEGEN_UNION;
     header_data["struct_name"] = CODEGEN_STRUCT;
     header_data["start_type"] = start_type;
+
+    if (dump_license)
+    {
+        os << license_header;
+    }
 
     os << inja::render(
             R"(#ifndef __NEOAST_{{ upper(prefix) }}_H__
@@ -64,8 +104,8 @@ extern {{ union_name }} __{{ prefix }}__t_;
  * @param input_len length of input in bytes
  * @return top of the generated AST
  */
-typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_len(void* buffers_, const char* input, uint32_t input_len);
-typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse(void* buffers_, const char* input);
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_len(void* error_ctx, void* buffers_, const char* input, uint32_t input_len);
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse(void* error_ctx, void* buffers_, const char* input);
 
 /**
  * Advanced entrypoint into the {{ prefix }} parser
@@ -73,7 +113,7 @@ typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse(void* buffers_, c
  * @param input initialized neoast input from <lexer/input.h>
  * @return top of the generated AST
  */
-typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_input(void* buffers_, NeoastInput* input);
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_input(void* error_ctx, void* buffers_, NeoastInput* input);
 
 #ifdef __cplusplus
 }
@@ -83,11 +123,11 @@ typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_input(void* buffe
 )", header_data);
 }
 
-void CodeGenImpl::write_source(std::ostream &os) const
+void CodeGenImpl::write_source(std::ostream &os, bool dump_license) const
 {
     // Act as a preprocessor and put the external header
     std::ostringstream os_header_preprocessor;
-    write_header(os_header_preprocessor);
+    write_header(os_header_preprocessor, false);
 
     std::ostringstream os_lexer_top;
     lexer->put_top(os_lexer_top);
@@ -175,14 +215,16 @@ void CodeGenImpl::write_source(std::ostream &os) const
     source_data["ascii_mappings"] = os_ascii_mappings.str();
     source_data["parsing_table"] = os_parsing_table.str();
 
-    os << inja::render(
-            R"(#define NEOAST_GET_TOKENS
-#define NEOAST_GET_STRUCTURE
-#define NEOAST_GET_LEXER
+    if (dump_license)
+    {
+        os << license_header;
+    }
 
-#include <neoast.h>
+    os << inja::render(R"(#include <neoast.h>
 #include <string.h>
 
+#define NEOAST_GET_TOKENS
+#define NEOAST_GET_STRUCTURE
 {{ include_header }}
 
 {{ lexer_top }}
@@ -276,23 +318,23 @@ void {{ prefix }}_free_buffers(void* self)
     parser_free_buffers((ParserBuffers*)self);
 }
 
-typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_len(void* buffers_, const char* input, uint32_t input_len)
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_len(void* error_ctx, void* buffers_, const char* input, uint32_t input_len)
 {
     NeoastInput* lexer_input = input_new_from_buffer(input, input_len);
 
     typeof(__{{ prefix }}__t_.{{ start_type }}) ret;
-    ret = {{ prefix }}_parse_input(buffers_, lexer_input);
+    ret = {{ prefix }}_parse_input(error_ctx, buffers_, lexer_input);
 
     input_free(lexer_input);
     return ret;
 }
 
-typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse(void* buffers_, const char* input)
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse(void* error_ctx, void* buffers_, const char* input)
 {
-    return {{ prefix }}_parse_len(buffers_, input, strlen(input));
+    return {{ prefix }}_parse_len(error_ctx, buffers_, input, strlen(input));
 }
 
-typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_input(void* buffers_, NeoastInput* input)
+typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_input(void* error_ctx, void* buffers_, NeoastInput* input)
 {
     ParserBuffers* buffers = (ParserBuffers*) buffers_;
     parser_reset_buffers(buffers);
@@ -300,7 +342,7 @@ typeof(__{{ prefix }}__t_.{{ start_type }}) {{ prefix }}_parse_input(void* buffe
     {{ lexer_new_inst }}
 
     int32_t output_idx = parser_parse_lr(
-            &parser, {{ prefix }}_parsing_table,
+            &parser, error_ctx, {{ prefix }}_parsing_table,
             buffers, ll_inst, {{ lexer_next }});
 
     {{ lexer_del_inst }}

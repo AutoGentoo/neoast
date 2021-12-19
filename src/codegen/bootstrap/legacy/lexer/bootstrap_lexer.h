@@ -42,7 +42,7 @@ typedef struct
 } LexerRule;
 
 void* bootstrap_lexer_new(const LexerRule* rules[], const uint32_t rules_n[],
-                          uint32_t state_n, ll_error_cb error_cb,
+                          uint32_t state_n, ll_eor_cb error_cb,
                           size_t position_offset, const uint32_t* ascii_mappings);
 void bootstrap_lexer_free(void* lexer);
 

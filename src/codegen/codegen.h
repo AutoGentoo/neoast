@@ -98,12 +98,6 @@ struct File
     struct GrammarRuleProto* grammar_rules;
 };
 
-int gen_parser_init(GrammarParser* self, void** lexer_ptr);
-int codegen_write(const char* grammar_file_path,
-                  const struct File* self,
-                  const char* output_file_cc,
-                  const char* output_file_hh);
-
 void emit_warning(const TokenPosition* position, const char* message, ...);
 void emit_error(const TokenPosition* position, const char* message, ...);
 uint32_t has_errors();
@@ -133,8 +127,6 @@ void lexer_rule_free(struct LexerRuleProto* self);
 void grammar_rule_single_free(struct GrammarRuleSingleProto* self);
 void grammar_rule_multi_free(struct GrammarRuleProto* self);
 void file_free(struct File* self);
-
-extern const char* tok_names_errors[];
 
 #ifdef __cplusplus
 }

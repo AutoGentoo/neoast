@@ -37,7 +37,7 @@ class CodeGen
     CodeGenImpl* impl_;
 
 public:
-    explicit CodeGen(const File* self);
+    explicit CodeGen(const File* self, const std::string& file_path);
 
     sp<CGToken> get_token(const std::string &name) const;
     const char* get_start_token() const;

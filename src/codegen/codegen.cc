@@ -407,9 +407,10 @@ void CodeGenImpl::parse(const File* self)
     init_cc();
 }
 
-CodeGen::CodeGen(const File* self)
+CodeGen::CodeGen(const File* self, const std::string& file_path)
         : impl_(new CodeGenImpl(this))
 {
+    grammar_filename = file_path;
     impl_->parse(self);
 }
 
@@ -433,38 +434,3 @@ void CodeGen::write_source(std::ostream &os) const
 
 CodeGen::~CodeGen()
 { delete impl_; }
-
-int codegen_write(const char* grammar_file_path,
-                  const File* self,
-                  const char* output_file_cc,
-                  const char* output_file_hh)
-{
-    if (grammar_file_path)
-    { grammar_filename = grammar_file_path; }
-
-    std::ofstream hh_os(output_file_hh);
-    std::ofstream cc_os(output_file_cc);
-
-    try
-    {
-        CodeGen c(self);
-        if (has_errors())
-        { return 1; }
-
-        c.write_header(hh_os);
-        if (has_errors())
-        { return 1; }
-
-        c.write_source(cc_os);
-        if (has_errors())
-        { return 1; }
-    }
-    catch (const ASTException &e)
-    { emit_error(e.position(), e.what()); }
-    catch (const Exception &e)
-    { emit_error(nullptr, e.what()); }
-    catch (const std::exception &e)
-    { emit_error(nullptr, "System exception: %s", e.what()); }
-
-    return has_errors();
-}

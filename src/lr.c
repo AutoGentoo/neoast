@@ -205,7 +205,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
                         const uint32_t* parsing_table,
                         const ParserBuffers* buffers,
                         void* lexer,
-                        int ll_next(void*, void*))
+                        int ll_next(void*, void*, void*))
 {
     // Lexer states
     char* lex_val = buffers->value_table;
@@ -216,7 +216,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
 
     uint32_t i = 0;
     uint32_t prev_tok = 0;
-    int32_t tok = ll_next(lexer, lex_val);
+    int32_t tok = ll_next(lexer, lex_val, error_ctx);
     buffers->token_table[0] = tok;
 
     uint32_t dest_idx = 0; // index of the last reduction
@@ -258,7 +258,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
             prev_tok = tok;
 
             lex_val += buffers->val_s;
-            tok = ll_next(lexer, lex_val);
+            tok = ll_next(lexer, lex_val, error_ctx);
             buffers->token_table[++i] = tok;
         }
         else if (table_value & TOK_REDUCE_MASK)

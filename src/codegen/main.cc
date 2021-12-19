@@ -38,7 +38,7 @@ int main(int argc, const char* argv[])
     try
     {
         InputFile input(input_file);
-        CodeGen cg(input.file);
+        CodeGen cg(input.file, input.full_path);
 
         if (has_errors()) return 1;
 
@@ -54,11 +54,12 @@ int main(int argc, const char* argv[])
 
         if (has_errors()) return 3;
     }
-    catch (Exception& e)
-    {
-        std::cerr << e.what();
-        return 6;
-    }
+    catch (const ASTException &e)
+    { emit_error(e.position(), e.what()); }
+    catch (const Exception &e)
+    { emit_error(nullptr, e.what()); }
+    catch (const std::exception &e)
+    { emit_error(nullptr, "System exception: %s", e.what()); }
 
-    return 0;
+    return (int)has_errors();
 }

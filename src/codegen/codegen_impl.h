@@ -49,8 +49,8 @@ struct CodeGenImpl
     sp<CGToken> get_token(const std::string &name) const;
     void parse(const File* self);
 
-    void write_header(std::ostream &os) const;
-    void write_source(std::ostream &os) const;
+    void write_header(std::ostream &os, bool dump_license=true) const;
+    void write_source(std::ostream &os, bool dump_license=true) const;
 
 private:
     void parse_header(const File* self);
