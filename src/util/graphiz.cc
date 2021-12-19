@@ -20,25 +20,56 @@
 #include <sstream>
 #include "util.h"
 
+static inline void dump_name(const char* t_name, std::ostream& os)
+{
+#define MAPPING(ascii, html) \
+    case (ascii): \
+        os << (html); \
+        break
+
+    for (const char* iter = t_name; *iter; iter++)
+    {
+        switch(*iter)
+        {
+            MAPPING('\\', "&bsol;");
+            MAPPING('"', "&quot;");
+            MAPPING('\'', "&apos;");
+            MAPPING('&', "&amp;");
+            default:
+                os << *iter;
+        }
+    }
+#undef MAPPING
+}
+
 static void dump_graphviz_state(
         const parsergen::CanonicalCollection* cc,
         const parsergen::GrammarState* gs,
-        std::ostream& os)
+        std::ostream &os,
+        bool full)
 {
+    if (!full)
+    {
+        os << "s" << gs->get_id()
+           << "shape=none, margin=0, label=<s" << gs->get_id() << ">]\n";
+        return;
+    }
+
     os << "s" << gs->get_id()
        << " [shape=none, margin=0, label=<\n"
           "    <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">\n"
           "    <TR><TD>s" << gs->get_id() << "</TD></TR>\n" // header
-          "    <TR><TD>\n";
+                                             "    <TR><TD>\n";
 
-    for (const auto& lr1 : *gs)
+    for (const auto &lr1: *gs)
     {
         // Place production
-        os << cc->parser()->token_names[cc->to_index(lr1.derivation->token)] << " &rarr; ";
+        os << cc->parser()->token_names[cc->to_index(lr1.derivation->token)] << " &rarr;";
         for (uint32_t i = 0; i < lr1.derivation->tok_n; i++)
         {
-            if (i == lr1.i) os << " &bull;";
-            os << " " << cc->parser()->token_names[cc->to_index(lr1.derivation->grammar[i])];
+            os << " ";
+            if (i == lr1.i) os << "&bull; ";
+            dump_name(cc->parser()->token_names[cc->to_index(lr1.derivation->grammar[i])], os);
         }
 
         if (lr1.is_final()) os << " &bull;";
@@ -46,9 +77,10 @@ static void dump_graphviz_state(
         // Place lookaheads
         os << " (";
         std::string sep;
-        for (const auto& idx : lr1.look_ahead)
+        for (const auto &idx: lr1.look_ahead)
         {
-            os << sep << cc->parser()->token_names[idx];
+            os << sep;
+            dump_name(cc->parser()->token_names[idx], os);
             sep = ", ";
         }
         os << ")<br/>\n";
@@ -60,26 +92,28 @@ static void dump_graphviz_state(
 static void dump_graphviz_state_edges(
         const parsergen::CanonicalCollection* cc,
         const parsergen::GrammarState* gs,
-        std::ostream& os)
+        std::ostream &os)
 {
     for (auto iter = gs->dfa_begin(); iter != gs->dfa_end(); iter++)
     {
         os << "s" << gs->get_id() << " -> s" << iter->second->get_id()
-           << " [taillabel=\"" << cc->parser()->token_names[cc->to_index(iter->first)]
-           << "\"]\n";
+           << " [taillabel=\"";
+           dump_name(cc->parser()->token_names[cc->to_index(iter->first)], os);
+           os << "\"]\n";
     }
 }
 
 void dump_graphviz_cxx(
         const parsergen::CanonicalCollection* cc,
-        std::ostream& os)
+        std::ostream &os,
+        bool full)
 {
     os << "digraph{\n";
 
     // Dump all state nodes
     for (uint32_t st_i = 0; st_i < cc->size(); st_i++)
     {
-        dump_graphviz_state(cc, cc->get_state(st_i), os);
+        dump_graphviz_state(cc, cc->get_state(st_i), os, full);
     }
 
     // Connect the states with transitions
@@ -98,5 +132,5 @@ void dump_graphviz(const void* cc, FILE* fp)
     dump_graphviz_cxx(static_cast<const parsergen::CanonicalCollection*>(cc), os_fp);
     std::string s = os_fp.str();
 
-    fwrite(s.c_str(),s.length(), 1, fp);
+    fwrite(s.c_str(), s.length(), 1, fp);
 }

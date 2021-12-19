@@ -218,53 +218,57 @@ void CodeGenImpl::put_ascii_mappings(std::ostream &os) const
     }
 }
 
-void CodeGenImpl::put_parsing_table(std::ostream &os) const
+void CodeGenImpl::init_cc()
 {
-    up<const char* []> token_names_ptr(new const char* [tokens_names.size()]);
+
+
+    // Generate the canonical collection and resolve it
+    token_names_ptr = up<const char*[]>(new const char* [tokens_names.size()]);
     int i = 0;
     for (const auto &n : tokens_names)
     { token_names_ptr[i++] = n.c_str(); }
+    parser = up<GrammarParser>(new GrammarParser);
+    parser->ascii_mappings = ascii_mappings;
+    parser->grammar_rules = grammar->get();
+    parser->token_names = token_names_ptr.get();
+    parser->grammar_n = grammar->size();
+    parser->token_n = static_cast<uint32_t>(tokens.size()) - 1;
+    parser->action_token_n = static_cast<uint32_t>(action_tokens.size());
 
-    const GrammarParser parser{
-            .ascii_mappings = ascii_mappings,
-            .grammar_rules = grammar->get(),
-            .token_names = token_names_ptr.get(),
-            .grammar_n = grammar->size(),
-            .token_n = static_cast<uint32_t>(tokens.size()) - 1,
-            .action_token_n = static_cast<uint32_t>(action_tokens.size()),
-    };
+    debug_info = up<parsergen::DebugInfo>(new parsergen::DebugInfo);
+    debug_info->grammar_rule_positions = grammar->get_positions();
+    debug_info->emit_error = emit_error;
+    debug_info->emit_warning = emit_warning;
 
-
-    const parsergen::DebugInfo debug_info = {
-            .grammar_rule_positions = grammar->get_positions(),
-            .emit_warning = emit_warning,
-            .emit_error = emit_error,
-    };
-    auto* cc = new parsergen::CanonicalCollection(&parser, &debug_info);
+    cc = up<parsergen::CanonicalCollection>(new parsergen::CanonicalCollection(parser.get(), debug_info.get()));
     cc->resolve(options.parser_type);
 
-    uint8_t error;
-    up<uint8_t[]> precedence_table(new uint8_t[tokens.size()]);
+    precedence_table = up<uint8_t[]>(new uint8_t[tokens.size()]);
     for (const auto &mapping : precedence_mapping)
     {
         precedence_table[mapping.first] = mapping.second;
     }
 
-    uint32_t* parsing_table = cc->generate(precedence_table.get(), &error);
+    parsing_table = up<uint32_t[]>(new uint32_t[cc->table_size()]);
+    auto error = cc->generate(parsing_table.get(), precedence_table.get());
 
     if (error)
     {
         emit_error(nullptr, "Failed to generate parsing table");
         return;
     }
+}
+
+void CodeGenImpl::put_parsing_table(std::ostream &os) const
+{
 
     if (options.debug_table)
     {
-        put_table_debug(os, parsing_table, cc);
+        put_table_debug(os);
     }
 
     // Actually put the LR parsing table
-    i = 0;
+    int i = 0;
     os << "static const\nuint32_t " << options.prefix << "_parsing_table[] = {\n";
     for (int state_i = 0; state_i < cc->size(); state_i++)
     {
@@ -279,17 +283,12 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
     if (!options.graphviz_file.empty())
     {
         std::ofstream gf(options.graphviz_file);
-        dump_graphviz_cxx(cc, gf);
+        dump_graphviz_cxx(cc.get(), gf);
         gf.close();
     }
-
-    delete cc;
-    free(parsing_table);
 }
 
-void CodeGenImpl::put_table_debug(std::ostream &os,
-                                  const uint32_t* table,
-                                  const parsergen::CanonicalCollection* cc) const
+void CodeGenImpl::put_table_debug(std::ostream &os) const
 {
     os << "// Token names:\n";
 
@@ -331,11 +330,7 @@ void CodeGenImpl::put_table_debug(std::ostream &os,
 
     os << "\n";
 
-    up<const char* []> token_names_ptr(new const char* [tokens.size()]);
-    int i = 0;
-    for (const auto &n : tokens)
-    { token_names_ptr[i++] = n.c_str(); }
-    dump_table_cxx(table, cc, token_names_ptr.get(), 0, os, "//  ");
+    dump_table_cxx(parsing_table.get(), cc.get(), token_names_ptr.get(), 0, os, "//  ");
 }
 
 sp<CGToken> CodeGenImpl::get_token(const std::string &name) const

@@ -25,7 +25,9 @@ add_custom_command(OUTPUT ${compiler_compiler}
         DEPENDS neoast-bootstrap neoast-codegen compiler_compiler.y
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(neoast-exec ${compiler_compiler} main.c)
+add_library(neoast_compiler_compiler ${compiler_compiler})
+
+add_executable(neoast-exec main.c)
 add_dependencies(neoast-exec neoast-bootstrap)
 
 target_include_directories(neoast-codegen PRIVATE
@@ -44,4 +46,7 @@ target_link_libraries(neoast-codegen
         reflex          # used to build regex DFAs
         reflex-unicode
         )
-target_link_libraries(neoast-exec neoast-codegen)
+target_link_libraries(neoast-exec neoast_compiler_compiler neoast-codegen)
+add_executable(neoast-debug debug.cc)
+target_link_libraries(neoast-exec neoast_compiler_compiler neoast-util)
+

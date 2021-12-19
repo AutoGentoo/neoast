@@ -15,6 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cstring>
 #include "derivation.h"
 #include "canonical_collection.h"
 
@@ -175,6 +176,7 @@ namespace parsergen
     {
         // The row starts initialized with zeroes (syntax error)
         // We just need to fill in SHIFT, GOTO (basically just shift), and REDUCE
+        memset(row, 0, sizeof(uint32_t) * cc->parser()->token_n);
 
         // Go through each state transition in fill in SHIFT/GOTO
         for (const auto &tok_and_state: dfa)

@@ -73,7 +73,8 @@ void dump_table_cxx(
 
 void dump_graphviz_cxx(
         const parsergen::CanonicalCollection* cc,
-        std::ostream& os);
+        std::ostream& os,
+        bool full = true);
 
 #endif
 

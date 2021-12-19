@@ -28,9 +28,14 @@ void canonical_collection_resolve(void* self, parser_t p_type)
     static_cast<parsergen::CanonicalCollection*>(self)->resolve(p_type);
 }
 
-uint32_t* canonical_collection_generate(const void* self, const uint8_t* precedence_table, uint8_t* error)
+size_t canonical_collection_table_size(const void* self)
 {
-    return static_cast<const parsergen::CanonicalCollection*>(self)->generate(precedence_table, error);
+    return static_cast<const parsergen::CanonicalCollection*>(self)->table_size();
+}
+
+uint32_t canonical_collection_generate(const void* self, uint32_t* table, const uint8_t* precedence_table)
+{
+    return static_cast<const parsergen::CanonicalCollection*>(self)->generate(table, precedence_table);
 }
 
 void canonical_collection_free(void* self)

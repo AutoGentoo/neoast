@@ -33,8 +33,8 @@ typedef enum {
 
 void* canonical_collection_init(const GrammarParser* parser, const void* debug_info);
 void canonical_collection_resolve(void* self, parser_t p_type);
-uint32_t*
-canonical_collection_generate(const void* self, const uint8_t* precedence_table, uint8_t* error);
+size_t canonical_collection_table_size(const void* self);
+uint32_t canonical_collection_generate(const void* self, uint32_t* table, const uint8_t* precedence_table);
 void canonical_collection_free(void* self);
 
 #ifdef __cplusplus

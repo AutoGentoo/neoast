@@ -210,9 +210,8 @@ namespace parsergen
         }
     }
 
-    uint32_t* CanonicalCollection::generate(const uint8_t* precedence_table, uint8_t* error) const
+    uint32_t CanonicalCollection::generate(uint32_t* table, const uint8_t* precedence_table) const
     {
-        auto* table = static_cast<uint32_t*>(calloc(parser_->token_n * states_.size(), sizeof(uint32_t)));
         auto* curr_row = table;
         uint32_t rr_conflicts = 0, sr_conflicts = 0;
 
@@ -227,7 +226,6 @@ namespace parsergen
             curr_row += parser_->token_n;
         }
 
-        *error = rr_conflicts || sr_conflicts;
-        return table;
+        return rr_conflicts || sr_conflicts;
     }
 }

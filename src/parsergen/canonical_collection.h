@@ -137,12 +137,23 @@ namespace parsergen
         }
 
         /**
+         * @return Number of items in the parsing table
+         */
+        inline size_t table_size() const { return parser_->token_n * size(); }
+
+        /**
          * Resolve the entire DFA by applying closures and
          * state transitions recursively
          */
         void resolve(parser_t type);
 
-        uint32_t* generate(const uint8_t* precedence_table, uint8_t* error) const;
+        /**
+         * Write the parsing table to a matrix
+         * @param table matrix to fill parsing table with
+         * @param precedence_table precedence_table  or null
+         * @return error code or 0 for success
+         */
+        uint32_t generate(uint32_t* table, const uint8_t* precedence_table) const;
     };
 }
 

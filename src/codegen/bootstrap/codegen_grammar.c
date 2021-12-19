@@ -799,8 +799,8 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
     void* cc = canonical_collection_init(self, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
-    uint8_t error;
-    GEN_parsing_table = canonical_collection_generate(cc, precedence_table, &error);
+    GEN_parsing_table = calloc(canonical_collection_table_size(cc), sizeof(uint32_t));
+    uint32_t error = canonical_collection_generate(cc, GEN_parsing_table, precedence_table);
     dump_table(GEN_parsing_table, cc, tok_names_errors, 0, stdout, NULL);
     canonical_collection_free(cc);
 
