@@ -68,6 +68,8 @@ std::string variadic_string(const char* format,
 
 inline std::string variadic_string(const char* format, va_list args)
 {
+    va_list original;
+    va_copy(original, args);
     int size = std::vsnprintf(nullptr, 0, format, args);
     if(size <= 0)
     {
@@ -76,7 +78,7 @@ inline std::string variadic_string(const char* format, va_list args)
     size += 1;
 
     auto buf = std::unique_ptr<char[]>(new char[size]);
-    std::vsnprintf(buf.get(), size, format, args);
+    std::vsnprintf(buf.get(), size, format, original);
 
     return {buf.get(), buf.get() + size - 1}; // We don't want the '\0' inside
 }

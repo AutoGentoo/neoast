@@ -88,11 +88,9 @@ void parsing_error_cb(void* ctx,
         err_os << token_names[expected_tokens[i]];
     }
 
-    err_os << " before %s (and after %s)";
-    static_cast<InputFile*>(ctx)->emit_error(
-            position, err_os.str().c_str(),
-            token_names[current_token],
-            token_names[last_token]);
+    err_os << " before " << token_names[current_token]
+           << " (and after " << token_names[last_token] << ")";
+    static_cast<InputFile*>(ctx)->emit_error(position, err_os.str().c_str());
 }
 
 InputFile::InputFile(const std::string &file_path)
