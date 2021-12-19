@@ -35,9 +35,11 @@ int main(int argc, const char* argv[])
     const char* output_c = argv[2];
     const char* output_h = argv[3];
 
+    InputFile input(input_file);
+    if (has_errors()) goto error;
+
     try
     {
-        InputFile input(input_file);
         CodeGen cg(input.file, input.full_path);
         std::ofstream h(output_h);
         std::ofstream c(output_c);
@@ -53,10 +55,6 @@ int main(int argc, const char* argv[])
         c.close();
 
         if (has_errors()) goto error;
-
-    error:
-        input.put_errors();
-        if (has_errors()) return (int) has_errors();
     }
     catch (const ASTException &e)
     { emit_error(e.position(), e.what()); }
@@ -65,5 +63,7 @@ int main(int argc, const char* argv[])
     catch (const std::exception &e)
     { emit_error(nullptr, "System exception: %s", e.what()); }
 
-    return 0;
+error:
+    input.put_errors();
+    return (int)has_errors();
 }

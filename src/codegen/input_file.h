@@ -43,7 +43,7 @@ struct InputFile
 
     ~InputFile()
     {
-        file_free(file);
+        if (file) file_free(file);
     }
 
     uint32_t put_errors() const;
