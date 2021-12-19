@@ -19,6 +19,7 @@
 #include <getopt.h>
 #include <cstdint>
 #include <iostream>
+#include "codegen_priv.h"
 
 uint32_t cc_init();
 
@@ -75,6 +76,12 @@ int main(int argc, char* argv[])
         }
     }
 
+    if (!graph_file && !table_file && !states_file)
+    {
+        std::cout << "at least one of --graph, --table, or --states is required\n";
+        error = 1;
+    }
+
     if (error || help)
     {
         std::cout << "Usage: neoast-debug [OPTION]... -i input.y\n"
@@ -90,7 +97,13 @@ int main(int argc, char* argv[])
         return error;
     }
 
+    // Parse and generate the canonical collection
+    CodeGen cg()
 
+    if (graph_file)
+    {
+
+    }
 
     return 0;
 }

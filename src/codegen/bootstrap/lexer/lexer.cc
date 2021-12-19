@@ -92,11 +92,15 @@ class BootstrapLexerSession : public reflex::AbstractLexer<reflex::Matcher>
     const BootstrapLexer* parent;
     const reflex::Input input;
     ParsingStack* lexer_states;
+    void* err_ctx;
 
 public:
-    BootstrapLexerSession(const char* input, uint32_t length, const BootstrapLexer* parent,
+    BootstrapLexerSession(const char* input,
+                          void* err_ctx,
+                          uint32_t length, const BootstrapLexer* parent,
                           std::ostream &os = std::cout) :
-            AbstractLexer(input, os), parent(parent), input(input, length)
+            AbstractLexer(input, os), parent(parent), input(input, length),
+            err_ctx(err_ctx)
     {
         lexer_states = parser_allocate_stack(32);
         NEOAST_STACK_PUSH(lexer_states, 0);
@@ -166,7 +170,7 @@ private:
 
                 if (parent->error_cb)
                 {
-                    parent->error_cb(input.cstring(), &p, current_state);
+                    parent->error_cb(err_ctx, input.cstring(), &p, std::to_string(current_state).c_str());
                 }
                 else
                 {
@@ -202,7 +206,8 @@ private:
 };
 
 
-void* bootstrap_lexer_new(const LexerRule* rules[], const uint32_t rules_n[], uint32_t state_n, ll_error_cb error_cb,
+void* bootstrap_lexer_new(const LexerRule* rules[], const uint32_t rules_n[], uint32_t state_n,
+                          ll_error_cb error_cb,
                           size_t position_offset, const uint32_t* ascii_mappings)
 {
     return new BootstrapLexer(rules, rules_n, state_n, error_cb, position_offset, ascii_mappings);
@@ -213,9 +218,11 @@ void bootstrap_lexer_free(void* lexer)
     delete reinterpret_cast<BootstrapLexer*>(lexer);
 }
 
-void* bootstrap_lexer_instance_new(const void* lexer_parent, const char* input, size_t length)
+void* bootstrap_lexer_instance_new(const void* lexer_parent,
+                                   void* err_ctx,
+                                   const char* input, size_t length)
 {
-    return new BootstrapLexerSession(input, length, reinterpret_cast<const BootstrapLexer*>(lexer_parent));
+    return new BootstrapLexerSession(input, err_ctx, length, reinterpret_cast<const BootstrapLexer*>(lexer_parent));
 }
 
 void bootstrap_lexer_instance_free(void* lexer_inst)

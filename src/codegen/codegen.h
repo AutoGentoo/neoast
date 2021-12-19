@@ -106,7 +106,20 @@ int codegen_write(const char* grammar_file_path,
 
 void emit_warning(const TokenPosition* position, const char* message, ...);
 void emit_error(const TokenPosition* position, const char* message, ...);
-int has_errors();
+uint32_t has_errors();
+
+void lexing_error_cb(void* error_ctx,
+                     const char* input,
+                     const TokenPosition* position,
+                     const char* lexer_state);
+
+void parsing_error_cb(void* error_ctx,
+                      const char* const* token_names,
+                      const TokenPosition* position,
+                      uint32_t last_token,
+                      uint32_t current_token,
+                      const uint32_t expected_tokens[],
+                      uint32_t expected_tokens_n);
 
 KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value);
 struct Token* build_token(const TokenPosition* position, char* name);

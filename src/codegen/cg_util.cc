@@ -4,6 +4,7 @@
 #include "cg_util.h"
 #include "codegen_priv.h"
 
+static bool in_redzone(const std::vector<std::pair<int, int>> &redzones, const reflex::AbstractMatcher& m);
 reflex::Pattern redzone_pattern(
         "(?mx)"
         "(\\/\\/[^\n]*\n)|"                 // Line comments
@@ -241,7 +242,7 @@ Code::get_complex(const Options &options, const std::vector<std::string> &argume
     return os.str();
 }
 
-bool Code::in_redzone(const std::vector<std::pair<int, int>> &redzones, const reflex::AbstractMatcher &m)
+static bool in_redzone(const std::vector<std::pair<int, int>> &redzones, const reflex::AbstractMatcher& m)
 {
     for (const auto& iter : redzones)
     {

@@ -53,17 +53,19 @@ typedef void (*parser_destructor) (void* self);
 
 // Called when no matching token could be found
 typedef void (*ll_error_cb)(
+        void* error_ctx,                 //!< Arbitrary pointer passed to error
         const char* input,               //!< NeoastInput passed in with parse()
         const TokenPosition* position,   //!< Position of unmatched token
-        tok_t lexer_state);
+        const char* lexer_state);
 
 typedef void (*yy_error_cb)(
-        const char* const* token_names,
-        const TokenPosition* position,
-        tok_t last_token,
-        tok_t current_token,
-        const tok_t expected_tokens[],
-        tok_t expected_tokens_n);
+        void* error_ctx,                 //!< Arbitrary pointer passed to error
+        const char* const* token_names,  //!< List of token names
+        const TokenPosition* position,   //!< Position of syntax error
+        tok_t last_token,                //!< Token before
+        tok_t current_token,             //!< Error token
+        const tok_t expected_tokens[],   //!< Excepted next tokens
+        tok_t expected_tokens_n);        //!< Number of expected tokens
 
 enum
 {
@@ -174,6 +176,7 @@ void parser_reset_buffers(const ParserBuffers* self);
  * @return index in token/value table where the parsed value resides
  */
 int32_t parser_parse_lr(const GrammarParser* parser,
+                        void* error_ctx,
                         const uint32_t* parsing_table,
                         const ParserBuffers* buffers,
                         void* lexer,

@@ -10,8 +10,8 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <reflex.h>
-#include <reflex/matcher.h>
+#include "neoast.h"
+#include "codegen.h"
 #include "cg_util.h"
 #include "regex.h"
 
@@ -47,6 +47,9 @@ public:
     void write_header(std::ostream &os) const;
     void write_source(std::ostream &os) const;
 
+    const CodeGenImpl* get_impl() const { return impl_; }
+    CodeGenImpl* get_impl() { return impl_; }
+
     ~CodeGen();
 };
 
@@ -70,9 +73,6 @@ struct Code : public TokenPosition
     std::string
     get_complex(const Options &options, const std::vector<std::string> &argument_replace, const std::string &zero_arg,
                 const std::string &non_zero_arg, bool is_union) const;
-
-private:
-    static bool in_redzone(const std::vector<std::pair<int, int>>& redzones, const reflex::AbstractMatcher& m);
 };
 
 struct CGToken : public TokenPosition

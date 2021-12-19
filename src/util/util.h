@@ -66,6 +66,21 @@ std::string variadic_string(const char* format,
     return {buf.get(), buf.get() + size - 1}; // We don't want the '\0' inside
 }
 
+inline std::string variadic_string(const char* format, va_list args)
+{
+    int size = std::vsnprintf(nullptr, 0, format, args);
+    if(size <= 0)
+    {
+        throw Exception( "Error during formatting: " + std::string(format));
+    }
+    size += 1;
+
+    auto buf = std::unique_ptr<char[]>(new char[size]);
+    std::vsnprintf(buf.get(), size, format, args);
+
+    return {buf.get(), buf.get() + size - 1}; // We don't want the '\0' inside
+}
+
 void dump_table_cxx(
         const uint32_t* table, const parsergen::CanonicalCollection* cc,
         const char** tok_names, uint8_t state_wrap,

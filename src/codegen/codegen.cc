@@ -20,9 +20,12 @@
 #include <string>
 #include "codegen_impl.h"
 #include "cg_neoast_lexer.h"
+#include "codegen_priv.h"
+
 #include <parsergen/canonical_collection.h>
 #include <util/util.h>
 #include <utility>
+#include <fstream>
 
 
 std::string grammar_filename;
@@ -205,23 +208,8 @@ void CodeGenImpl::parse_grammar(const File* self)
     grammar = std::make_shared<CGGrammars>(parent, self);
 }
 
-void CodeGenImpl::put_ascii_mappings(std::ostream &os) const
-{
-    int i = 0;
-    for (int row = 0; i < NEOAST_ASCII_MAX; row++)
-    {
-        os << "        ";
-        for (int col = 0; col < 6 && i < NEOAST_ASCII_MAX; col++, i++)
-        {
-            os << variadic_string("0x%03X,%c", ascii_mappings[i], (col + 1 >= 6) ? '\n' : ' ');
-        }
-    }
-}
-
 void CodeGenImpl::init_cc()
 {
-
-
     // Generate the canonical collection and resolve it
     token_names_ptr = up<const char*[]>(new const char* [tokens_names.size()]);
     int i = 0;
@@ -256,6 +244,19 @@ void CodeGenImpl::init_cc()
     {
         emit_error(nullptr, "Failed to generate parsing table");
         return;
+    }
+}
+
+void CodeGenImpl::put_ascii_mappings(std::ostream &os) const
+{
+    int i = 0;
+    for (int row = 0; i < NEOAST_ASCII_MAX; row++)
+    {
+        os << "        ";
+        for (int col = 0; col < 6 && i < NEOAST_ASCII_MAX; col++, i++)
+        {
+            os << variadic_string("0x%03X,%c", ascii_mappings[i], (col + 1 >= 6) ? '\n' : ' ');
+        }
     }
 }
 
@@ -401,6 +402,9 @@ void CodeGenImpl::parse(const File* self)
     parse_grammar(self);
     if (has_errors())
     { return; }
+
+    // Resolve the grammar into an LR(1) parser
+    init_cc();
 }
 
 CodeGen::CodeGen(const File* self)
@@ -429,7 +433,6 @@ void CodeGen::write_source(std::ostream &os) const
 
 CodeGen::~CodeGen()
 { delete impl_; }
-
 
 int codegen_write(const char* grammar_file_path,
                   const File* self,

@@ -2,7 +2,7 @@ add_subdirectory(lexer)
 
 add_executable(neoast-bootstrap
         codegen_grammar.c
-        main.c
+        ../main.cc
         grammar.h)
 target_include_directories(neoast-bootstrap PRIVATE
         ${PROJECT_SOURCE_DIR}/src/

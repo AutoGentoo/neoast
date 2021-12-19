@@ -15,6 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <reflex/convert.h>
 #include "cg_neoast_lexer.h"
 #include "cg_pattern.h"
 
