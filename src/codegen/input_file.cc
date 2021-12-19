@@ -55,7 +55,7 @@ void emit_error(const TokenPosition* p, const char* format, ...)
     va_end(args);
 }
 
-void lexing_error_cb(void* error_ctx,
+void lexing_error_cb(void* ctx,
                      const char* input,
                      const TokenPosition* position,
                      const char* lexer_state)
@@ -63,10 +63,10 @@ void lexing_error_cb(void* error_ctx,
     (void) lexing_error_cb;
     (void) input;
 
-    static_cast<InputFile*>(error_ctx)->emit_error(position, "[state %s] Unmatched token near", lexer_state);
+    static_cast<InputFile*>(ctx)->emit_error(position, "[state %s] Unmatched token near", lexer_state);
 }
 
-void parsing_error_cb(void* error_ctx,
+void parsing_error_cb(void* ctx,
                       const char* const* token_names,
                       const TokenPosition* position,
                       uint32_t last_token,
@@ -89,7 +89,7 @@ void parsing_error_cb(void* error_ctx,
     }
 
     err_os << " before %s (and after %s)";
-    static_cast<InputFile*>(error_ctx)->emit_error(
+    static_cast<InputFile*>(ctx)->emit_error(
             position, err_os.str().c_str(),
             token_names[current_token],
             token_names[last_token]);
@@ -98,6 +98,8 @@ void parsing_error_cb(void* error_ctx,
 InputFile::InputFile(const std::string &file_path)
 : file(nullptr), warn_n(0), err_n(0)
 {
+    current_input_file = this;
+
     static char file_p[PATH_MAX];
     full_path = realpath(file_path.c_str(), file_p);
     FILE* fp = fopen(full_path.c_str(), "r");
@@ -107,7 +109,7 @@ InputFile::InputFile(const std::string &file_path)
     }
 
     fseek(fp, 0, SEEK_END);
-    size_t file_length = ftell(fp);
+    file_length = ftell(fp);
     fseek(fp, 0, SEEK_SET);
     contents = std::unique_ptr<char[]>(new char[file_length + 1]);
     char* start = contents.get();
@@ -121,17 +123,17 @@ InputFile::InputFile(const std::string &file_path)
     // null terminator
     contents[file_length] = 0;
 
-    size_t last_line_end = 0;
+    size_t line_start = 0;
     char* end = start + file_length;
     char* iter = start;
     while(iter < end)
     {
         if (*iter == '\n')
         {
-            size_t pos = end - start;
-            line_starts.push_back(pos);
-            line_sizes.push_back(pos - last_line_end);
-            last_line_end = pos;
+            size_t pos = iter - start;
+            line_starts.push_back(line_start);
+            line_sizes.push_back(pos - line_start);
+            line_start = pos + 1;
         }
         iter++;
     }
@@ -166,14 +168,17 @@ void InputFile::put_position(std::ostream &os, const TokenPosition* position) co
         }
 
         size_t l_len;
+        const char* line = get_line(i, l_len);
         os << variadic_string("% *d | %.*s\n", dig_n, i + 1,
-                              get_line(i, l_len), l_len);
+                              l_len, line);
     }
 
     if (position->line > 0)
     {
-        os << std::string(position->col_start + 3 + dig_n, ' ')
-           << "\033[1;32m^\033[0m\n";
+        os << std::string(position->col + 3 + dig_n, ' ')
+           << "\033[1;32m^"
+           << std::string(position->len - 1, '~')
+           << "\033[0m\n";
     }
 }
 
@@ -196,7 +201,7 @@ void InputFile::emit_warning(const TokenPosition* p, const char* format, ...)
 void InputFile::emit_error(const TokenPosition* p, const char* format, va_list args)
 {
     error_stream
-            << variadic_string("\033[1m%s:%d:%d: \033[1;31merror:\033[1;0m ", full_path.c_str(), p->line, p->col_start + 1)
+            << variadic_string("\033[1m%s:%d:%d: \033[1;31merror:\033[1;0m ", full_path.c_str(), p->line, p->col + 1)
             << variadic_string(format, args)
             << "\n";
     put_position(error_stream, p);
@@ -206,7 +211,7 @@ void InputFile::emit_error(const TokenPosition* p, const char* format, va_list a
 void InputFile::emit_warning(const TokenPosition* p, const char* format, va_list args)
 {
     warning_stream
-            << variadic_string("\033[1m%s:%d:%d: \033[1;33mwarning:\033[1m ", full_path.c_str(), p->line, p->col_start + 1)
+            << variadic_string("\033[1m%s:%d:%d: \033[1;33mwarning:\033[1;0m ", full_path.c_str(), p->line, p->col + 1)
             << variadic_string(format, args)
             << "\n";
     put_position(warning_stream, p);
@@ -216,7 +221,10 @@ void InputFile::emit_warning(const TokenPosition* p, const char* format, va_list
 const char* InputFile::get_line(uint32_t lineno, size_t &len) const
 {
     len = line_sizes.at(lineno);
-    return &contents[line_sizes.at(lineno)];
+    size_t start = line_starts.at(lineno);
+    assert(start + len <= file_length);
+    const char* out = contents.get() + start;
+    return out;
 }
 
 uint32_t InputFile::put_errors() const
@@ -227,29 +235,8 @@ uint32_t InputFile::put_errors() const
     if (err_n || warn_n)
     {
         std::cout << "Generated " << warn_n << " warnings and "
-                  << err_n << "errors\n";
+                  << err_n << " errors\n";
     }
 
     return err_n;
-}
-
-void* input_file_parse(const char* file_path)
-{
-    current_input_file = new InputFile(file_path);
-    return current_input_file;
-}
-
-File* input_file_get(void* input_file)
-{
-    return static_cast<InputFile*>(input_file)->file;
-}
-
-uint32_t input_file_put_errors(const void* input_file)
-{
-    return static_cast<const InputFile*>(input_file)->put_errors();
-}
-
-void input_file_delete(void* input_file)
-{
-    delete static_cast<InputFile*>(input_file);
 }

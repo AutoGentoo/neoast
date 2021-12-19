@@ -1,6 +1,33 @@
+/*
+ * This file is part of the Neoast framework
+ * Copyright (c) 2021 Andrei Tumbar.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * THIS FILE HAS BEEN AUTOMATICALLY GENERATED, DO NOT CHANGE
+ */
+
 #ifndef __NEOAST_CC_H__
 #define __NEOAST_CC_H__
 
+
+    #include <codegen/codegen.h>
+    #include <codegen/compiler.h>
+    #include <stdlib.h>
+    #include <stddef.h>
+    #include <string.h>
+    #include <stdint.h>
+    #include <assert.h>
 
 
 #ifdef __cplusplus
@@ -94,8 +121,8 @@ extern NeoastUnion __cc__t_;
  * @param input_len length of input in bytes
  * @return top of the generated AST
  */
-typeof(__cc__t_.file) cc_parse_len(void* buffers_, const char* input, uint32_t input_len);
-typeof(__cc__t_.file) cc_parse(void* buffers_, const char* input);
+typeof(__cc__t_.file) cc_parse_len(void* error_ctx, void* buffers_, const char* input, uint32_t input_len);
+typeof(__cc__t_.file) cc_parse(void* error_ctx, void* buffers_, const char* input);
 
 /**
  * Advanced entrypoint into the cc parser
@@ -103,7 +130,7 @@ typeof(__cc__t_.file) cc_parse(void* buffers_, const char* input);
  * @param input initialized neoast input from <lexer/input.h>
  * @return top of the generated AST
  */
-typeof(__cc__t_.file) cc_parse_input(void* buffers_, NeoastInput* input);
+typeof(__cc__t_.file) cc_parse_input(void* error_ctx, void* buffers_, NeoastInput* input);
 
 #ifdef __cplusplus
 }

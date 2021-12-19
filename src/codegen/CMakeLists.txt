@@ -48,7 +48,6 @@ target_include_directories(neoast-codegen PUBLIC
 target_link_libraries(neoast-codegen
         neoast
         neoast-parsergen
-        neoast-util
         reflex          # used to build regex DFAs
         reflex-unicode
         )

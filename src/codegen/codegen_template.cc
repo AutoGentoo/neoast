@@ -240,7 +240,7 @@ static void
 
 // Destructor table
 static const
-parser_destructor __neoast_token_destructors[] = {
+parser_destructor neoast_token_destructors[] = {
 {%- for entry in destructor_table %}    {{ entry.function }}, // {{ entry.token_name }}
 {% endfor %}
 };
@@ -253,13 +253,13 @@ parser_destructor __neoast_token_destructors[] = {
 
 /******************************* ASCII MAPPINGS *********************************/
 static const
-uint32_t __neoast_ascii_mappings[NEOAST_ASCII_MAX] = {
+uint32_t neoast_ascii_mappings[NEOAST_ASCII_MAX] = {
 {{ ascii_mappings }}
 };
 
 /***************************** NEOAST DEFINITIONS ********************************/
 static const
-char* __neoast_token_names[] = {
+char* neoast_token_names[] = {
 {%- for name in tokens %}        "{{ name }}",
 {%- endfor -%}
 };
@@ -267,12 +267,12 @@ char* __neoast_token_names[] = {
 {{ lexer_bottom }}
 
 static GrammarParser parser = {
-        .ascii_mappings = __neoast_ascii_mappings,
-        .grammar_rules = __neoast_grammar_rules,
-        .token_names = __neoast_token_names,
-        .destructors = __neoast_token_destructors,
+        .ascii_mappings = neoast_ascii_mappings,
+        .grammar_rules = neoast_grammar_rules,
+        .token_names = neoast_token_names,
+        .destructors = neoast_token_destructors,
         .parser_error = {{ parser_error }},
-        .parser_reduce = (parser_reduce) __neoast_reduce_handler,
+        .parser_reduce = (parser_reduce) neoast_reduce_handler,
         .grammar_n = {{ grammar_n }},
         .token_n = TOK_AUGMENT - NEOAST_ASCII_MAX,
         .action_token_n = {{ action_n }}

@@ -262,12 +262,6 @@ void CodeGenImpl::put_ascii_mappings(std::ostream &os) const
 
 void CodeGenImpl::put_parsing_table(std::ostream &os) const
 {
-
-    if (options.debug_table)
-    {
-        put_table_debug(os);
-    }
-
     // Actually put the LR parsing table
     int i = 0;
     os << "static const\nuint32_t " << options.prefix << "_parsing_table[] = {\n";
@@ -280,58 +274,6 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
         }
     }
     os << "};";
-
-    if (!options.graphviz_file.empty())
-    {
-        std::ofstream gf(options.graphviz_file);
-        dump_graphviz_cxx(cc.get(), gf);
-        gf.close();
-    }
-}
-
-void CodeGenImpl::put_table_debug(std::ostream &os) const
-{
-    os << "// Token names:\n";
-
-    std::string fallback;
-    fallback.reserve(tokens.size() + 1);
-    for (int i = 0; i < tokens.size(); i++)
-    {
-        if (i == 0)
-        {
-            fallback[i] = '$';
-        }
-        else if (i < action_tokens.size())
-        {
-            fallback[i] = (char) ('a' + (char) i - 1);
-        }
-        else
-        {
-            fallback[i] = (char) ('A' + (char) i - (action_tokens.size()));
-        }
-    }
-
-    const char* debug_ids = fallback.c_str();
-    if (!options.debug_ids.empty())
-    { debug_ids = options.debug_ids.c_str(); }
-
-    for (int i = 0; i < tokens.size(); i++)
-    {
-        if (tokens[i].substr(0, 13) == "ASCII_CHAR_0x")
-        {
-            os << variadic_string("//  %s => '%c' ('%c')\n",
-                                  tokens[i].c_str(), debug_ids[i],
-                                  get_ascii_from_name(tokens[i].c_str()));
-        }
-        else
-        {
-            os << variadic_string("//  %s => '%c'\n", tokens[i].c_str(), debug_ids[i]);
-        }
-    }
-
-    os << "\n";
-
-    dump_table_cxx(parsing_table.get(), cc.get(), token_names_ptr.get(), 0, os, "//  ");
 }
 
 sp<CGToken> CodeGenImpl::get_token(const std::string &name) const

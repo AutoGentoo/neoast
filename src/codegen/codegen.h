@@ -102,12 +102,12 @@ void emit_warning(const TokenPosition* position, const char* message, ...);
 void emit_error(const TokenPosition* position, const char* message, ...);
 uint32_t has_errors();
 
-void lexing_error_cb(void* error_ctx,
+void lexing_error_cb(void* ctx,
                      const char* input,
                      const TokenPosition* position,
                      const char* lexer_state);
 
-void parsing_error_cb(void* error_ctx,
+void parsing_error_cb(void* ctx,
                       const char* const* token_names,
                       const TokenPosition* position,
                       uint32_t last_token,

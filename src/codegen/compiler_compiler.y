@@ -53,8 +53,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 
 %option parser_type="LALR(1)"
 %option prefix="cc"
-%option debug_table="FALSE"
-%option annotate_line="TRUE"
+%option annotate_line="FALSE"
 %option lexing_error_cb="lexing_error_cb"
 %option parsing_error_cb="parsing_error_cb"
 
@@ -276,7 +275,7 @@ tokens: token                       { $$ = $1; }
       | token tokens                { $$ = $1; $$->next = $2; }
       ;
 
-pair: OPTION IDENTIFIER '=' LITERAL         { $$ = declare_option($p1, $2, $4); }
+pair: OPTION IDENTIFIER '=' LITERAL         { $$ = declare_option($p2, $2, $4); }
     | TOKEN tokens                          { $$ = declare_tokens($2); }
     | TYPE tokens                           { $$ = declare_types(NULL, $2); }
     | START '<' IDENTIFIER '>' IDENTIFIER   { $$ = declare_start($p1, $3, $5); }

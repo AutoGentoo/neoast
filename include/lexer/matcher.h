@@ -48,6 +48,7 @@ size_t matcher_scan(NeoastMatcher* self, NeoastPatternFSM pattern_fsm);
 
 size_t matcher_lineno(NeoastMatcher* self);
 size_t matcher_columno(NeoastMatcher* self);
+size_t matcher_size(NeoastMatcher* self);
 const char* matcher_text(NeoastMatcher* self);
 
 #ifdef __cplusplus

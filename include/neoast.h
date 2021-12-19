@@ -45,7 +45,7 @@ typedef struct TokenPosition_prv TokenPosition;
 
 typedef uint32_t tok_t;
 
-typedef void (*parser_reduce) (tok_t reduce_rule, void* dest, void** values);
+typedef void (*parser_reduce) (tok_t reduce_rule, void* dest, void** values, void* context);
 typedef void (*parser_destructor) (void* self);
 
 
@@ -149,7 +149,8 @@ struct ParserBuffers_prv
 struct TokenPosition_prv
 {
     uint32_t line;
-    uint32_t col_start;
+    uint16_t col;
+    uint16_t len;
 };
 
 #ifndef NEOAST_PARSER_H
@@ -176,7 +177,7 @@ void parser_reset_buffers(const ParserBuffers* self);
  * @return index in token/value table where the parsed value resides
  */
 int32_t parser_parse_lr(const GrammarParser* parser,
-                        void* error_ctx,
+                        void* context,
                         const uint32_t* parsing_table,
                         const ParserBuffers* buffers,
                         void* lexer,

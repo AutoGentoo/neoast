@@ -74,7 +74,7 @@ struct CGGrammar
         }
 
         os << "        case " << i << ":\n"
-           << action.get_complex(options, argument_types, "dest", "args", false)
+           << action.get_complex(options, argument_types, "dest__", "args__", false)
            << "            break;\n";
     }
 
@@ -236,7 +236,7 @@ void CGGrammars::put_rules(std::ostream &os) const
     // Print the grammar rules
     uint32_t grammar_offset_i = 0;
     os << "static const\n"
-          "GrammarRule __neoast_grammar_rules[] = {\n";
+          "GrammarRule neoast_grammar_rules[] = {\n";
 
     for (const auto &rule : impl_->rules)
     {
@@ -253,9 +253,10 @@ void CGGrammars::put_rules(std::ostream &os) const
 void CGGrammars::put_actions(std::ostream &os) const
 {
     int gg_i = 0;
-    os << variadic_string("static void __neoast_reduce_handler(uint32_t reduce_id, %s* dest, %s* args)\n{\n",
+    os << variadic_string("static void neoast_reduce_handler(uint32_t reduce_id__, %s* dest__, %s* args__, void* context__)\n"
+                          "{\n#define yycontext (context__)\n",
                           CODEGEN_STRUCT, CODEGEN_STRUCT)
-       << "    switch(reduce_id)\n    {\n";
+       << "    switch(reduce_id__)\n    {\n";
     for (const auto &rules : impl_->rules_cg)
     {
         for (const auto &rule : rules.second)
@@ -264,8 +265,8 @@ void CGGrammars::put_actions(std::ostream &os) const
         }
     }
     os << "    default:\n"
-          "        *dest = args[0];\n"
-          "        break;\n    }\n}\n";
+          "        *dest__ = args__[0];\n"
+          "        break;\n    }\n#undef yycontext\n}\n";
 }
 
 uint32_t CGGrammars::size() const

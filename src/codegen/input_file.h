@@ -28,6 +28,7 @@
 struct InputFile
 {
     File* file;
+    size_t file_length;
     std::string full_path;
     std::unique_ptr<char[]> contents;
     std::vector<size_t> line_starts;

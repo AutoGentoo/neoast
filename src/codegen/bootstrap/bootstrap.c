@@ -1,16 +1,46 @@
+/*
+ * This file is part of the Neoast framework
+ * Copyright (c) 2021 Andrei Tumbar.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * THIS FILE HAS BEEN AUTOMATICALLY GENERATED, DO NOT CHANGE
+ */
+
 #include <neoast.h>
 #include <string.h>
 
+#define NEOAST_GET_TOKENS
+#define NEOAST_GET_STRUCTURE
 #ifndef __NEOAST_CC_H__
 #define __NEOAST_CC_H__
 
-#include "codegen/codegen.h"
+
+    #include <codegen/codegen.h>
+    #include <codegen/compiler.h>
+    #include <stdlib.h>
+    #include <stddef.h>
+    #include <string.h>
+    #include <stdint.h>
+    #include <assert.h>
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*************************** NEOAST Token definition ****************************/
+#ifdef NEOAST_GET_TOKENS
 enum
 {
     LL = 257,
@@ -54,8 +84,12 @@ enum
     TOK_AUGMENT, // 295 0x127
 };
 
+
+#endif // NEOAST_GET_TOKENS
+
 #include <lexer/input.h>
 
+#ifdef NEOAST_GET_STRUCTURE
 /************************ NEOAST Union/Struct definition ************************/
 typedef union { 
     char* identifier;
@@ -74,6 +108,7 @@ typedef struct {
     NeoastUnion value;
     TokenPosition position;
 } NeoastValue;
+#endif // NEOAST_GET_STRUCTURE
 
 /*************************** NEOAST Lexer definition ****************************/
 
@@ -111,6 +146,7 @@ typeof(__cc__t_.file) cc_parse_input(void* error_ctx, void* buffers_, NeoastInpu
 
 #include <lexer/matcher_fsm.h>
 #include <lexer/matcher.h>
+#include <lexer/input.h>
 
 enum {
     LEX_STATE_DEFAULT,
@@ -124,12 +160,6 @@ enum {
 
 /************************************ TOP ***************************************/
 
-
-#include <stdlib.h>
-#include <codegen/compiler.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <assert.h>
 
 struct LexerTextBuffer
 {
@@ -1129,30 +1159,32 @@ S9:
 }
 
 
-static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination, void* error_ctx)
+static int neoast_lexer_next(NeoastMatcher* self__, NeoastValue* destination__, void* context__)
 {
-#define yyval (&(destination->value))
-#define yystate (self->lexing_state)
+#define yyval (&(destination__->value))
+#define yystate (self__->lexing_state)
 #define yypush(state) NEOAST_STACK_PUSH(yystate, (state))
 #define yypop() NEOAST_STACK_POP(yystate)
-#define yyposition (&(destination->position))
-#define yylen (self->len_)
+#define yyposition (&(destination__->position))
+#define yycontext (context__)
+#define yylen (self__->len_)
 
-    while (!matcher_at_end(self))
+    while (!matcher_at_end(self__))
     {
         switch (NEOAST_STACK_PEEK(yystate))
         {
         case LEX_STATE_DEFAULT:
         {
-            size_t neoast_tok___ = matcher_scan(self, LEX_STATE_DEFAULT_FSM);
-            const char* yytext = matcher_text(self);
-            yyposition->line = matcher_lineno(self);
-            yyposition->col_start = matcher_columno(self);
+            size_t neoast_tok___ = matcher_scan(self__, LEX_STATE_DEFAULT_FSM);
+            const char* yytext = matcher_text(self__);
+            yyposition->line = matcher_lineno(self__);
+            yyposition->col = matcher_columno(self__);
+            yyposition->len = matcher_size(self__);
 
             switch(neoast_tok___)
             {
             case 0:
-                if (!matcher_at_end(self)) { lexing_error_cb(error_ctx, yytext, yyposition, "LEX_STATE_DEFAULT"); return -1; }
+                if (!matcher_at_end(self__)) { lexing_error_cb(yycontext, yytext, yyposition, "LEX_STATE_DEFAULT"); return -1; }
                 else return 0;
             case 1:
  {  }
@@ -1245,15 +1277,16 @@ static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination, void
         break;
         case S_LL_RULES:
         {
-            size_t neoast_tok___ = matcher_scan(self, S_LL_RULES_FSM);
-            const char* yytext = matcher_text(self);
-            yyposition->line = matcher_lineno(self);
-            yyposition->col_start = matcher_columno(self);
+            size_t neoast_tok___ = matcher_scan(self__, S_LL_RULES_FSM);
+            const char* yytext = matcher_text(self__);
+            yyposition->line = matcher_lineno(self__);
+            yyposition->col = matcher_columno(self__);
+            yyposition->len = matcher_size(self__);
 
             switch(neoast_tok___)
             {
             case 0:
-                if (!matcher_at_end(self)) { lexing_error_cb(error_ctx, yytext, yyposition, "S_LL_RULES"); return -1; }
+                if (!matcher_at_end(self__)) { lexing_error_cb(yycontext, yytext, yyposition, "S_LL_RULES"); return -1; }
                 else return 0;
             case 1:
  {  }
@@ -1292,15 +1325,16 @@ static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination, void
         break;
         case S_LL_STATE:
         {
-            size_t neoast_tok___ = matcher_scan(self, S_LL_STATE_FSM);
-            const char* yytext = matcher_text(self);
-            yyposition->line = matcher_lineno(self);
-            yyposition->col_start = matcher_columno(self);
+            size_t neoast_tok___ = matcher_scan(self__, S_LL_STATE_FSM);
+            const char* yytext = matcher_text(self__);
+            yyposition->line = matcher_lineno(self__);
+            yyposition->col = matcher_columno(self__);
+            yyposition->len = matcher_size(self__);
 
             switch(neoast_tok___)
             {
             case 0:
-                if (!matcher_at_end(self)) { lexing_error_cb(error_ctx, yytext, yyposition, "S_LL_STATE"); return -1; }
+                if (!matcher_at_end(self__)) { lexing_error_cb(yycontext, yytext, yyposition, "S_LL_STATE"); return -1; }
                 else return 0;
             case 1:
  {  }
@@ -1326,15 +1360,16 @@ static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination, void
         break;
         case S_GG_RULES:
         {
-            size_t neoast_tok___ = matcher_scan(self, S_GG_RULES_FSM);
-            const char* yytext = matcher_text(self);
-            yyposition->line = matcher_lineno(self);
-            yyposition->col_start = matcher_columno(self);
+            size_t neoast_tok___ = matcher_scan(self__, S_GG_RULES_FSM);
+            const char* yytext = matcher_text(self__);
+            yyposition->line = matcher_lineno(self__);
+            yyposition->col = matcher_columno(self__);
+            yyposition->len = matcher_size(self__);
 
             switch(neoast_tok___)
             {
             case 0:
-                if (!matcher_at_end(self)) { lexing_error_cb(error_ctx, yytext, yyposition, "S_GG_RULES"); return -1; }
+                if (!matcher_at_end(self__)) { lexing_error_cb(yycontext, yytext, yyposition, "S_GG_RULES"); return -1; }
                 else return 0;
             case 1:
  {  }
@@ -1372,15 +1407,16 @@ static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination, void
         break;
         case S_MATCH_BRACE:
         {
-            size_t neoast_tok___ = matcher_scan(self, S_MATCH_BRACE_FSM);
-            const char* yytext = matcher_text(self);
-            yyposition->line = matcher_lineno(self);
-            yyposition->col_start = matcher_columno(self);
+            size_t neoast_tok___ = matcher_scan(self__, S_MATCH_BRACE_FSM);
+            const char* yytext = matcher_text(self__);
+            yyposition->line = matcher_lineno(self__);
+            yyposition->col = matcher_columno(self__);
+            yyposition->len = matcher_size(self__);
 
             switch(neoast_tok___)
             {
             case 0:
-                if (!matcher_at_end(self)) { lexing_error_cb(error_ctx, yytext, yyposition, "S_MATCH_BRACE"); return -1; }
+                if (!matcher_at_end(self__)) { lexing_error_cb(yycontext, yytext, yyposition, "S_MATCH_BRACE"); return -1; }
                 else return 0;
             case 1:
  { yypush(S_COMMENT); }
@@ -1429,15 +1465,16 @@ static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination, void
         break;
         case S_COMMENT:
         {
-            size_t neoast_tok___ = matcher_scan(self, S_COMMENT_FSM);
-            const char* yytext = matcher_text(self);
-            yyposition->line = matcher_lineno(self);
-            yyposition->col_start = matcher_columno(self);
+            size_t neoast_tok___ = matcher_scan(self__, S_COMMENT_FSM);
+            const char* yytext = matcher_text(self__);
+            yyposition->line = matcher_lineno(self__);
+            yyposition->col = matcher_columno(self__);
+            yyposition->len = matcher_size(self__);
 
             switch(neoast_tok___)
             {
             case 0:
-                if (!matcher_at_end(self)) { lexing_error_cb(error_ctx, yytext, yyposition, "S_COMMENT"); return -1; }
+                if (!matcher_at_end(self__)) { lexing_error_cb(yycontext, yytext, yyposition, "S_COMMENT"); return -1; }
                 else return 0;
             case 1:
  {  }
@@ -1461,124 +1498,127 @@ static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination, void
 #undef yypush
 #undef yypop
 #undef yyposition
+#undef yycontext
 #undef yylen
 }
 
 
 /*********************************** GRAMMAR ************************************/
-static void neoast_reduce_handler(uint32_t reduce_id, NeoastValue* dest, NeoastValue* args)
+static void neoast_reduce_handler(uint32_t reduce_id__, NeoastValue* dest__, NeoastValue* args__, void* context__)
 {
-    switch(reduce_id)
+#define yycontext (context__)
+    switch(reduce_id__)
     {
         case 1:
- dest->value.g_rule = declare_grammar(((const TokenPosition*)&args[0].position), args[0].value.identifier, args[2].value.g_single_rule); 
+ dest__->value.g_rule = declare_grammar(((const TokenPosition*)&args__[0].position), args__[0].value.identifier, args__[2].value.g_single_rule); 
             break;
         case 2:
- dest->value.g_rule = args[0].value.g_rule; 
+ dest__->value.g_rule = args__[0].value.g_rule; 
             break;
         case 3:
- dest->value.g_rule = args[0].value.g_rule; dest->value.g_rule->next = args[1].value.g_rule; 
+ dest__->value.g_rule = args__[0].value.g_rule; dest__->value.g_rule->next = args__[1].value.g_rule; 
             break;
         case 4:
- dest->value.key_val = args[0].value.key_val; 
+ dest__->value.key_val = args__[0].value.key_val; 
             break;
         case 5:
- dest->value.key_val = args[0].value.key_val->back ? args[0].value.key_val->back : args[0].value.key_val; args[0].value.key_val->next = args[1].value.key_val; 
+ dest__->value.key_val = args__[0].value.key_val->back ? args__[0].value.key_val->back : args__[0].value.key_val; args__[0].value.key_val->next = args__[1].value.key_val; 
             break;
         case 6:
- dest->value.l_rule = declare_lexer_rule(&args[1].value.action.position, args[0].value.identifier, args[1].value.action.string); 
+ dest__->value.l_rule = declare_lexer_rule(&args__[1].value.action.position, args__[0].value.identifier, args__[1].value.action.string); 
             break;
         case 7:
- dest->value.l_rule = declare_state_rule(((const TokenPosition*)&args[0].position), args[0].value.identifier, args[1].value.l_rule); 
+ dest__->value.l_rule = declare_state_rule(((const TokenPosition*)&args__[0].position), args__[0].value.identifier, args__[1].value.l_rule); 
             break;
         case 8:
- dest->value.l_rule = args[0].value.l_rule; 
+ dest__->value.l_rule = args__[0].value.l_rule; 
             break;
         case 9:
- dest->value.l_rule = args[0].value.l_rule; dest->value.l_rule->next = args[1].value.l_rule; 
+ dest__->value.l_rule = args__[0].value.l_rule; dest__->value.l_rule->next = args__[1].value.l_rule; 
             break;
         case 10:
- dest->value.l_rule = args[0].value.l_rule; 
+ dest__->value.l_rule = args__[0].value.l_rule; 
             break;
         case 11:
- dest->value.l_rule = args[0].value.l_rule; dest->value.l_rule->next = args[1].value.l_rule; 
+ dest__->value.l_rule = args__[0].value.l_rule; dest__->value.l_rule->next = args__[1].value.l_rule; 
             break;
         case 12:
- dest->value.g_single_rule = args[0].value.g_single_rule; 
+ dest__->value.g_single_rule = args__[0].value.g_single_rule; 
             break;
         case 13:
- dest->value.g_single_rule = args[0].value.g_single_rule; dest->value.g_single_rule->next = args[2].value.g_single_rule; 
+ dest__->value.g_single_rule = args__[0].value.g_single_rule; dest__->value.g_single_rule->next = args__[2].value.g_single_rule; 
             break;
         case 14:
- dest->value.key_val = declare_option(((const TokenPosition*)&args[0].position), args[1].value.identifier, args[3].value.identifier); 
+ dest__->value.key_val = declare_option(((const TokenPosition*)&args__[1].position), args__[1].value.identifier, args__[3].value.identifier); 
             break;
         case 15:
- dest->value.key_val = declare_tokens(args[1].value.token); 
+ dest__->value.key_val = declare_tokens(args__[1].value.token); 
             break;
         case 16:
- dest->value.key_val = declare_types(NULL, args[1].value.token); 
+ dest__->value.key_val = declare_types(NULL, args__[1].value.token); 
             break;
         case 17:
- dest->value.key_val = declare_start(((const TokenPosition*)&args[0].position), args[2].value.identifier, args[4].value.identifier); 
+ dest__->value.key_val = declare_start(((const TokenPosition*)&args__[0].position), args__[2].value.identifier, args__[4].value.identifier); 
             break;
         case 18:
- dest->value.key_val = declare_typed_tokens(args[2].value.identifier, args[4].value.token); 
+ dest__->value.key_val = declare_typed_tokens(args__[2].value.identifier, args__[4].value.token); 
             break;
         case 19:
- dest->value.key_val = declare_types(args[2].value.identifier, args[4].value.token); 
+ dest__->value.key_val = declare_types(args__[2].value.identifier, args__[4].value.token); 
             break;
         case 20:
- dest->value.key_val = declare_destructor(&args[4].value.action.position, args[2].value.identifier, args[4].value.action.string); 
+ dest__->value.key_val = declare_destructor(&args__[4].value.action.position, args__[2].value.identifier, args__[4].value.action.string); 
             break;
         case 21:
- dest->value.key_val = declare_right(args[1].value.token); 
+ dest__->value.key_val = declare_right(args__[1].value.token); 
             break;
         case 22:
- dest->value.key_val = declare_left(args[1].value.token); 
+ dest__->value.key_val = declare_left(args__[1].value.token); 
             break;
         case 23:
- dest->value.key_val = declare_top(&args[1].value.action.position, args[1].value.action.string); 
+ dest__->value.key_val = declare_top(&args__[1].value.action.position, args__[1].value.action.string); 
             break;
         case 24:
- dest->value.key_val = declare_include(&args[1].value.action.position, args[1].value.action.string); 
+ dest__->value.key_val = declare_include(&args__[1].value.action.position, args__[1].value.action.string); 
             break;
         case 25:
- dest->value.key_val = declare_bottom(&args[1].value.action.position, args[1].value.action.string); 
+ dest__->value.key_val = declare_bottom(&args__[1].value.action.position, args__[1].value.action.string); 
             break;
         case 26:
- dest->value.key_val = declare_union(&args[1].value.action.position, args[1].value.action.string); 
+ dest__->value.key_val = declare_union(&args__[1].value.action.position, args__[1].value.action.string); 
             break;
         case 27:
- dest->value.key_val = args[0].value.key_val; 
+ dest__->value.key_val = args__[0].value.key_val; 
             break;
         case 28:
- dest->value.file = declare_file(args[0].value.key_val, args[2].value.l_rule, args[5].value.g_rule); 
+ dest__->value.file = declare_file(args__[0].value.key_val, args__[2].value.l_rule, args__[5].value.g_rule); 
             break;
         case 29:
- dest->value.g_single_rule = declare_single_grammar(&args[1].value.action.position, args[0].value.token, args[1].value.action.string); 
+ dest__->value.g_single_rule = declare_single_grammar(&args__[1].value.action.position, args__[0].value.token, args__[1].value.action.string); 
             break;
         case 30:
- dest->value.g_single_rule = declare_single_grammar(&args[0].value.action.position, NULL, args[0].value.action.string); 
+ dest__->value.g_single_rule = declare_single_grammar(&args__[0].value.action.position, NULL, args__[0].value.action.string); 
             break;
         case 31:
- dest->value.g_single_rule = declare_single_grammar(((const TokenPosition*)&args[0].position), args[0].value.token, calloc(1, 1)); 
+ dest__->value.g_single_rule = declare_single_grammar(((const TokenPosition*)&args__[0].position), args__[0].value.token, calloc(1, 1)); 
             break;
         case 32:
- dest->value.token = build_token(((const TokenPosition*)&args[0].position), args[0].value.identifier); 
+ dest__->value.token = build_token(((const TokenPosition*)&args__[0].position), args__[0].value.identifier); 
             break;
         case 33:
- dest->value.token = build_token_ascii(((const TokenPosition*)&args[0].position), args[0].value.ascii); 
+ dest__->value.token = build_token_ascii(((const TokenPosition*)&args__[0].position), args__[0].value.ascii); 
             break;
         case 34:
- dest->value.token = args[0].value.token; 
+ dest__->value.token = args__[0].value.token; 
             break;
         case 35:
- dest->value.token = args[0].value.token; dest->value.token->next = args[1].value.token; 
+ dest__->value.token = args__[0].value.token; dest__->value.token->next = args__[1].value.token; 
             break;
     default:
-        *dest = args[0];
+        *dest__ = args__[0];
         break;
     }
+#undef yycontext
 }
 static const
 unsigned int grammar_token_table[] = {
@@ -1831,9 +1871,9 @@ uint32_t cc_parsing_table[] = {
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000041, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000017, 0x00000000, 0x00000000, 0x40000016, 0x00000000, 0x40000043, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000042, 0x40000015, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000017, 0x00000000, 0x00000000, 0x40000016, 0x00000000, 0x40000048, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000047, 0x40000015, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000026, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000027, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x80000004, 0x00000000, 0x4000000E, 0x4000000C, 0x40000004, 0x4000000B, 0x40000001, 0x40000002, 0x40000009, 0x40000007, 0x00000000, 0x40000003, 0x40000006, 0x4000000A, 0x4000000F, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x4000002A, 0x4000000D, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000027, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000025, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000010, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000011, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000012, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -1856,9 +1896,9 @@ uint32_t cc_parsing_table[] = {
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000029, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x8000000A, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x4000001F, 0x00000000, 0x00000000, 0x4000001D, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000028, 0x40000023, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x80000011, 0x00000000, 0x80000011, 0x80000011, 0x80000011, 0x80000011, 0x80000011, 0x80000011, 0x80000011, 0x80000011, 0x00000000, 0x80000011, 0x80000011, 0x80000011, 0x80000011, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000038, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x80000013, 0x00000000, 0x80000013, 0x80000013, 0x80000013, 0x80000013, 0x80000013, 0x80000013, 0x80000013, 0x80000013, 0x00000000, 0x80000013, 0x80000013, 0x80000013, 0x80000013, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000036, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000037, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000037, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x8000000B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x80000007, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x80000007, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x80000007, 0x00000000, 0x00000000, 0x80000007, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x80000005, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -1873,9 +1913,9 @@ uint32_t cc_parsing_table[] = {
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x4000003A, 0x8000000C, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x8000001E, 0x8000001E, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000039, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x8000001F, 0x8000001F, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000032, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000038, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x8000000E, 0x00000000, 0x8000000E, 0x8000000E, 0x8000000E, 0x8000000E, 0x8000000E, 0x8000000E, 0x8000000E, 0x8000000E, 0x00000000, 0x8000000E, 0x8000000E, 0x8000000E, 0x8000000E, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000032, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000036, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x8000001D, 0x8000001D, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000017, 0x00000000, 0x40000034, 0x40000016, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000033, 0x4000003B, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000035, 0x40000015, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x8000000D, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -1893,7 +1933,7 @@ uint32_t cc_parsing_table[] = {
         0x00000000, 0x80000010, 0x00000000, 0x80000010, 0x80000010, 0x80000010, 0x80000010, 0x80000010, 0x80000010, 0x80000010, 0x80000010, 0x00000000, 0x80000010, 0x80000010, 0x80000010, 0x80000010, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000049, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x4000004A, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000017, 0x00000000, 0x00000000, 0x40000016, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000025, 0x40000015, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000017, 0x00000000, 0x00000000, 0x40000016, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x40000026, 0x40000015, 0x00000000,
 };
 
 /******************************* PARSER DEFINITIONS ******************************/

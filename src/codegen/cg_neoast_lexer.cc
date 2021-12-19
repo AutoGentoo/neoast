@@ -190,16 +190,17 @@ void CGNeoastLexer::put_global(std::ostream &os) const
     }
 
     // Put the lexing function
-    os << "static int neoast_lexer_next(NeoastMatcher* self, NeoastValue* destination, void* error_ctx)\n"
+    os << "static int neoast_lexer_next(NeoastMatcher* self__, NeoastValue* destination__, void* context__)\n"
           "{\n"
           ""// Lexing macros\n"
-          "#define yyval (&(destination->value))\n"
-          "#define yystate (self->lexing_state)\n"
+          "#define yyval (&(destination__->value))\n"
+          "#define yystate (self__->lexing_state)\n"
           "#define yypush(state) NEOAST_STACK_PUSH(yystate, (state))\n"
           "#define yypop() NEOAST_STACK_POP(yystate)\n"
-          "#define yyposition (&(destination->position))\n"
-          "#define yylen (self->len_)\n\n"
-          "    while (!matcher_at_end(self))\n"
+          "#define yyposition (&(destination__->position))\n"
+          "#define yycontext (context__)\n"
+          "#define yylen (self__->len_)\n\n"
+          "    while (!matcher_at_end(self__))\n"
           "    {\n"
           "        switch (NEOAST_STACK_PEEK(yystate))\n"
           "        {\n";
@@ -209,25 +210,26 @@ void CGNeoastLexer::put_global(std::ostream &os) const
         os <<
            "        case " << state.name << ":\n"
                                             "        {\n"
-                                            "            size_t neoast_tok___ = matcher_scan(self, " << state.name
+                                            "            size_t neoast_tok___ = matcher_scan(self__, " << state.name
            << "_FSM);\n"
-              "            const char* yytext = matcher_text(self);\n"
-              "            yyposition->line = matcher_lineno(self);\n"
-              "            yyposition->col_start = matcher_columno(self);\n\n"
+              "            const char* yytext = matcher_text(self__);\n"
+              "            yyposition->line = matcher_lineno(self__);\n"
+              "            yyposition->col = matcher_columno(self__);\n\n"
+              "            yyposition->len = matcher_size(self__);\n\n"
               "            switch(neoast_tok___)\n"
               "            {\n"
               "            case 0:\n";
         if (get_options().lexing_error_cb.empty())
         {
-            os << "                if (!matcher_at_end(self)) { fprintf(stderr, \"Failed to match token near "
+            os << "                if (!matcher_at_end(self__)) { fprintf(stderr, \"Failed to match token near "
                   "line:col %d:%d (state " << state.name
                << ")\", yyposition->line, yyposition->col_start); return -1; }\n"
                   "                else return 0;\n";
         }
         else
         {
-            os << "                if (!matcher_at_end(self)) { " << get_options().lexing_error_cb
-               << "(error_ctx, yytext, yyposition, \"" << state.name << "\"); return -1; }\n"
+            os << "                if (!matcher_at_end(self__)) { " << get_options().lexing_error_cb
+               << "(yycontext, yytext, yyposition, \"" << state.name << "\"); return -1; }\n"
                                                              "                else return 0;\n";
         }
 
@@ -256,6 +258,7 @@ void CGNeoastLexer::put_global(std::ostream &os) const
        "#undef yypush\n"
        "#undef yypop\n"
        "#undef yyposition\n"
+       "#undef yycontext\n"
        "#undef yylen\n"
        "}\n";
 
@@ -270,7 +273,7 @@ void CGNeoastLexer::put_bottom(std::ostream& os) const
           "    if (tok <= 0) return tok;\n\n"
           "    if (tok < NEOAST_ASCII_MAX)\n"
           "    {\n"
-          "         int t_tok = (int32_t)__neoast_ascii_mappings[tok];\n"
+          "         int t_tok = (int32_t)neoast_ascii_mappings[tok];\n"
           "         if (t_tok <= NEOAST_ASCII_MAX)\n"
           "         {\n"
           "             fprintf(stderr, \"Lexer return '%c' (%d) which has not been explicitly defined as a token\",\n"
