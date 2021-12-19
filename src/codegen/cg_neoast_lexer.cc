@@ -166,8 +166,7 @@ void CGNeoastLexer::put_top(std::ostream &os) const
 {
     // Lexer includes
     os << "#include <lexer/matcher_fsm.h>\n"
-          "#include <lexer/matcher.h>\n"
-          "#include <lexer/input.h>\n\n";
+          "#include <lexer/matcher.h>\n\n";
 
     // Build the enum of state ids
     os << "enum {\n";
@@ -214,10 +213,11 @@ void CGNeoastLexer::put_global(std::ostream &os) const
            << "_FSM);\n"
               "            const char* yytext = matcher_text(self__);\n"
               "            yyposition->line = matcher_lineno(self__);\n"
-              "            yyposition->col = matcher_columno(self__);\n\n"
+              "            yyposition->col = matcher_columno(self__);\n"
               "            yyposition->len = matcher_size(self__);\n\n"
               "            switch(neoast_tok___)\n"
               "            {\n"
+              "            default:\n"
               "            case 0:\n";
         if (get_options().lexing_error_cb.empty())
         {
