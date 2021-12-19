@@ -201,7 +201,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
                         return LEX_STATE;
                     }
 "{literal}"         { yyval->identifier = strndup(yytext + 1, yylen - 2); return LITERAL; }
-"\{"                 { yypush(S_MATCH_BRACE); ll_match_brace(yyposition); }
+"\{"                { yypush(S_MATCH_BRACE); ll_match_brace(yyposition); }
 }
 
 <S_LL_STATE> {

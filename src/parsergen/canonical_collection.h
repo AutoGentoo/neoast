@@ -65,14 +65,13 @@ namespace parsergen
          * Maps each grammar state to some id number
          * And the ID number back to the state
          */
-        std::unordered_map<const GrammarState*, uint32_t> state_ptr_to_id_;
         std::unordered_map<uint32_t, const GrammarState*> state_id_to_ptr_;
 
         /**
          * Reduction IDs are simply indices in the grammar rule table
          * We need to agree on rule indices before hand
          */
-        std::unordered_map<const GrammarRule*, uint32_t> reduce_ids_;
+        std::unordered_map<const GrammarRule*, uint32_t, HasherRawPtr<const GrammarRule>> reduce_ids_;
         std::unordered_map<tok_t, std::vector<const GrammarRule*>> productions_;
 
         /**
@@ -92,11 +91,6 @@ namespace parsergen
         inline const GrammarParser* parser() const { return parser_; }
 
         const GrammarState* add_state(const std::vector<LR1>& initial_vector);
-
-        inline uint32_t get_state_id(const GrammarState* state) const
-        {
-            return state_ptr_to_id_.at(state);
-        }
 
         inline uint32_t size() const { return state_n_; }
         inline const GrammarState* get_state(uint32_t id) const { return state_id_to_ptr_.at(id); }

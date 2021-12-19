@@ -179,7 +179,9 @@ namespace parsergen
         // Go through each state transition in fill in SHIFT/GOTO
         for (const auto &tok_and_state: dfa)
         {
-            row[cc->to_index(tok_and_state.first)] = cc->get_state_id(tok_and_state.second) | TOK_SHIFT_MASK;
+            uint32_t target_state = tok_and_state.second->get_id();
+            assert(target_state < cc->size());
+            row[cc->to_index(tok_and_state.first)] = target_state | TOK_SHIFT_MASK;
         }
 
         // Fill any REDUCE moves (if any)
@@ -236,7 +238,7 @@ namespace parsergen
                         else
                         {
                             fprintf(stderr, "SR conflict tok %d state %d attempting to shift to %d\n",
-                                    i, cc->get_state_id(this),
+                                    i, get_id(),
                                     row[i] & TOK_MASK);
                             sr_conflicts++;
                         }
@@ -253,7 +255,7 @@ namespace parsergen
         return parsergen::lalr_equal(lr1_items, other.lr1_items);
     }
 
-    void GrammarState::lalr_merge(const GrammarState &other) const
+    void GrammarState::lalr_merge(const GrammarState* other) const
     {
         // TODO(tumbar) Find a way to keep this set from lalr_equal
         std::unordered_set<const LR1*, HasherPtr<const LR1*>, EqualizerPtr<const LR0*>> build;
@@ -265,7 +267,7 @@ namespace parsergen
         }
 
         // Merge all redundant state
-        for (const auto& theirs : other.lr1_items)
+        for (const auto& theirs : other->lr1_items)
         {
             auto p = build.find(&theirs);
             assert(p != build.end());
@@ -275,6 +277,8 @@ namespace parsergen
         }
 
         // All LR(1) items are now merged together
+        // Keep track of states that are merged
+        merged_states.push_back(other);
     }
 
     bool lalr_equal(const std::unordered_set<LR1, Hasher<LR1>, Equalizer<LR1>> &a,

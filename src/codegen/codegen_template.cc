@@ -170,24 +170,8 @@ void CodeGenImpl::write_source(std::ostream &os) const
     source_data["parsing_stack_n"] = options.parsing_stack_n;
 
     /* Generated */
-    std::vector<std::string> token_names;
-    for (const auto& tok : action_tokens)
-    {
-        if (tok->is_ascii)
-        {
-            token_names.emplace_back(variadic_string("'%c'", get_ascii_from_name(tok->name.c_str())));
-        }
-        else
-        {
-            token_names.push_back(tok->name);
-        }
-    }
-    for (const auto& tok : grammar_tokens)
-    {
-        token_names.push_back(tok->name);
-    }
 
-    source_data["tokens"] = token_names;
+    source_data["tokens"] = tokens_names;
     source_data["ascii_mappings"] = os_ascii_mappings.str();
     source_data["parsing_table"] = os_parsing_table.str();
 

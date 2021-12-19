@@ -25,11 +25,10 @@ static void dump_graphviz_state(
         const parsergen::GrammarState* gs,
         std::ostream& os)
 {
-    uint32_t id = cc->get_state_id(gs);
-    os << "s" << id
+    os << "s" << gs->get_id()
        << " [shape=none, margin=0, label=<\n"
           "    <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">\n"
-          "    <TR><TD>s" << id << "</TD></TR>\n" // header
+          "    <TR><TD>s" << gs->get_id() << "</TD></TR>\n" // header
           "    <TR><TD>\n";
 
     for (const auto& lr1 : *gs)
@@ -63,10 +62,9 @@ static void dump_graphviz_state_edges(
         const parsergen::GrammarState* gs,
         std::ostream& os)
 {
-    uint32_t id = cc->get_state_id(gs);
     for (auto iter = gs->dfa_begin(); iter != gs->dfa_end(); iter++)
     {
-        os << "s" << id << " -> s" << cc->get_state_id(iter->second)
+        os << "s" << gs->get_id() << " -> s" << iter->second->get_id()
            << " [taillabel=\"" << cc->parser()->token_names[cc->to_index(iter->first)]
            << "\"]\n";
     }

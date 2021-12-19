@@ -123,26 +123,15 @@ namespace parsergen
 
     const GrammarState* CanonicalCollection::add_state(const std::vector<LR1>& initial_vector)
     {
-        sp<GrammarState> state(new GrammarState (this, initial_vector));
-        state->apply_closure();
-        const auto& i = states_.find(state);
-        if (i == states_.end())
+        auto p = states_.emplace(std::make_shared<GrammarState>(this, initial_vector, state_n_));
+        if (p.second)
         {
             // This is a new (unseen) state in the DFA
-            // We can add it to the set
-            uint32_t new_state_id = state_n_++;
-            auto out_p = states_.insert(state);
-            if (!out_p.second)
-                throw Exception("Failed to add state to canonical collection");
+            // We need to register this new state number
+            state_id_to_ptr_[state_n_++] = p.first->get();
+        }
 
-            state_ptr_to_id_[out_p.first->get()] = new_state_id;
-            state_id_to_ptr_.emplace(new_state_id, out_p.first->get());
-            return out_p.first->get();
-        }
-        else
-        {
-            return i->get();
-        }
+        return p.first->get();
     }
 
     struct LALR1Equal
@@ -184,34 +173,35 @@ namespace parsergen
             if (!p.second)
             {
                 // Choose the state with the lower id number
-                uint32_t m1 = get_state_id((*p.first).get());
-                uint32_t m2 = get_state_id(clr_state.get());
-
-                uint32_t keep_id, merge_id;
                 const GrammarState* keep, *merge;
-                if (m1 < m2)
+                if ((*p.first)->get_id() < clr_state->get_id())
                 {
-                    keep_id = m1; keep = p.first->get();
-                    merge_id = m2; merge = clr_state.get();
+                    keep = p.first->get();
+                    merge = clr_state.get();
                 }
                 else
                 {
-                    keep_id = m2; keep = clr_state.get();
-                    merge_id = m1; merge = p.first->get();
+                    keep = clr_state.get();
+                    merge = p.first->get();
                 }
 
                 // We can merge these two states together
-                keep->lalr_merge(*merge);
+                keep->lalr_merge(merge);
 
                 // Move the last ID into the removed slot
                 // Delete the last ID
                 uint32_t to_remove_id = --state_n_;
                 const GrammarState* to_remove = state_id_to_ptr_.at(to_remove_id);
+                assert(to_remove->get_id() == to_remove_id);
 
-                state_ptr_to_id_[to_remove] = merge_id;
-                state_id_to_ptr_[merge_id] = to_remove;
+                if (merge->get_id() != to_remove_id)
+                {
+                    state_id_to_ptr_[merge->get_id()] = to_remove;
+                    to_remove->set_id(merge->get_id()); // merge the highest id into the open slot
+                }
                 state_id_to_ptr_.erase(to_remove_id);
-                state_ptr_to_id_[merge] = keep_id;
+                merge->set_id(keep->get_id()); // merge the state into the lower id
+                keep->set_id(keep->get_id()); // set ids for all states merged into this one
             }
         }
     }

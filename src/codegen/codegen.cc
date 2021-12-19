@@ -41,7 +41,6 @@ void CodeGenImpl::parse_header(const File* self)
             {KEY_VAL_TOP,     {"top",     &top}},
             {KEY_VAL_BOTTOM,  {"bottom",  &bottom}},
             {KEY_VAL_UNION,   {"union",   &union_}},
-            {KEY_VAL_LEXER,   {"lexer",   &lexer_input}},
             {KEY_VAL_INCLUDE, {"include", &include_}},
     };
 
@@ -166,29 +165,29 @@ void CodeGenImpl::parse_header(const File* self)
     { tokens.push_back(i->name); }
     for (const auto &i : grammar_tokens)
     { tokens.push_back(i->name); }
+
+    for (const auto& tok : action_tokens)
+    {
+        if (tok->is_ascii)
+        {
+            tokens_names.emplace_back(std::string(1, get_ascii_from_name(tok->name.c_str())));
+        }
+        else
+        {
+            tokens_names.push_back(tok->name);
+        }
+    }
+    for (const auto& tok : grammar_tokens)
+    {
+        tokens_names.push_back(tok->name);
+    }
 }
 
 void CodeGenImpl::parse_lexer(const File* self)
 {
-    if (!(self->lexer_rules || !options.lexer_file.empty() || lexer_input))
-    {
-        emit_error(nullptr,
-                   "No lexer input found\n"
-                   "Use %lexer {}, %option lexer_file=\"PATH\", or builtin lexer");
-        return;
-    }
-
     if (!self->lexer_rules)
     {
         emit_error(nullptr, "No lexing rules have been provided");
-        return;
-    }
-
-    if (!options.lexer_file.empty() || lexer_input)
-    {
-        emit_error(nullptr,
-                   "Multiple lexer input types defined\n"
-                   "Use %lexer {}, %option lexer_file=\"PATH\", or builtin lexer");
         return;
     }
 
@@ -221,9 +220,9 @@ void CodeGenImpl::put_ascii_mappings(std::ostream &os) const
 
 void CodeGenImpl::put_parsing_table(std::ostream &os) const
 {
-    up<const char* []> token_names_ptr(new const char* [tokens.size()]);
+    up<const char* []> token_names_ptr(new const char* [tokens_names.size()]);
     int i = 0;
-    for (const auto &n : tokens)
+    for (const auto &n : tokens_names)
     { token_names_ptr[i++] = n.c_str(); }
 
     const GrammarParser parser{
@@ -251,7 +250,7 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
         precedence_table[mapping.first] = mapping.second;
     }
 
-    uint32_t* parsing_table = canonical_collection_generate(cc, precedence_table.get(), &error);
+    uint32_t* parsing_table = cc->generate(precedence_table.get(), &error);
 
     if (error)
     {
@@ -276,6 +275,13 @@ void CodeGenImpl::put_parsing_table(std::ostream &os) const
         }
     }
     os << "};";
+
+    if (!options.graphviz_file.empty())
+    {
+        std::ofstream gf(options.graphviz_file);
+        dump_graphviz_cxx(cc, gf);
+        gf.close();
+    }
 
     delete cc;
     free(parsing_table);
@@ -383,7 +389,6 @@ void CodeGenImpl::register_grammar(const sp<CGGrammarToken> &ptr)
 CodeGenImpl::CodeGenImpl(CodeGen* parent_)
 : parent(parent_),
   top(nullptr), bottom(nullptr), union_(nullptr),
-  lexer_input(nullptr),
   options(), m_engine()
 {
 }

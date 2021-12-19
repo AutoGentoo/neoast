@@ -94,9 +94,9 @@ void Options::handle(const KeyVal* option)
     {
         lexing_error_cb = option->value;
     }
-    else if (strcmp(option->key, "lexer_file") == 0)
+    else if (strcmp(option->key, "graphviz_file") == 0)
     {
-        lexer_file = option->value;
+        graphviz_file = option->value;
     }
     else
     {

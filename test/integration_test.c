@@ -175,10 +175,10 @@ void parser_error_cb(const char* const* token_names,
     assert_string_equal(token_names[current_token], "A_TOKEN");
 
     assert_string_equal(token_names[expected_tokens[0]], "EOF");
-    assert_string_equal(token_names[expected_tokens[1]], "'/'");
-    assert_string_equal(token_names[expected_tokens[2]], "'*'");
-    assert_string_equal(token_names[expected_tokens[3]], "'-'");
-    assert_string_equal(token_names[expected_tokens[4]], "'+'");
+    assert_string_equal(token_names[expected_tokens[1]], "/");
+    assert_string_equal(token_names[expected_tokens[2]], "*");
+    assert_string_equal(token_names[expected_tokens[3]], "-");
+    assert_string_equal(token_names[expected_tokens[4]], "+");
 
     parser_error_called = 1;
 }

@@ -26,11 +26,11 @@ struct CodeGenImpl
 
     sp <CGLexer> lexer;
     sp <CGGrammars> grammar;
-    up <Code> lexer_input;
 
     std::vector <sp<CGAction>> action_tokens;
     std::vector <sp<CGGrammarToken>> grammar_tokens;
-    std::vector <std::string> tokens;
+    std::vector <std::string> tokens;  // identifier names (goes into ENUM)
+    std::vector <std::string> tokens_names; // debug names (includes ascii characters)
 
     std::map <std::string, up<Code>> destructors;
     Options options;

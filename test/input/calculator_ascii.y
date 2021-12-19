@@ -9,11 +9,12 @@
 }
 
 // This is default, just want to test the parser
-%option parser_type="LALR(1)"
+%option parser_type="CLR(1)"
 %option debug_table="TRUE"
 %option annotate_line="TRUE"
 %option debug_ids="$d+-/*^()ES"
 %option prefix="calc_ascii"
+%option graphviz_file="g.viz"
 
 %token<number> TOK_N
 %token '+' '-' '/' '*'

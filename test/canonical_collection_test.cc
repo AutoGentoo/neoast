@@ -121,9 +121,9 @@ CTEST(test_state_hash)
             {&simple::g_rules[0], 1, lookaheads},
     };
 
-    sp<GrammarState> s1(new GrammarState(nullptr, items1));
-    sp<GrammarState> s2(new GrammarState(nullptr, items2));
-    sp<GrammarState> s3(new GrammarState(nullptr, items3));
+    sp<GrammarState> s1(new GrammarState(nullptr, items1, 0));
+    sp<GrammarState> s2(new GrammarState(nullptr, items2, 1));
+    sp<GrammarState> s3(new GrammarState(nullptr, items3, 2));
 
     assert_int_equal(s1->hash(), s2->hash());
 

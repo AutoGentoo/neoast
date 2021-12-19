@@ -44,6 +44,12 @@ namespace parsergen
         { return k->hash(); }
     };
     template<typename H>
+    struct HasherRawPtr
+    {
+        std::size_t operator()(const H* k) const
+        { return (size_t)k; }
+    };
+    template<typename H>
     struct Equalizer
     {
         bool operator()(const H& k, const H& l) const
@@ -145,19 +151,30 @@ namespace parsergen
         bool has_closure;
         CanonicalCollection* cc;
         std::unordered_set<LR1, Hasher<LR1>, Equalizer<LR1>> lr1_items;   //!< Items in the state
+        mutable std::vector<const GrammarState*> merged_states;
         mutable std::unordered_map<tok_t, const GrammarState*> dfa;       //!< State transitions
+        mutable uint32_t state_id;
+
+        /**
+         * Given the initialization rules are already added to the state,
+         * Apply LR closure to this state.
+         */
+        void apply_closure();
 
     public:
         GrammarState(GrammarState&&) = delete;
 
         GrammarState(CanonicalCollection* cc,
-                     const std::vector<LR1>& initial_items)
-        : cc(cc), has_closure(false)
+                     const std::vector<LR1>& initial_items,
+                     uint32_t state_id_)
+        : cc(cc), has_closure(false), state_id(state_id_)
         {
             for (const auto& i : initial_items)
             {
                 lr1_items.insert(i);
             }
+
+            apply_closure();
         }
 
         std::unordered_set<LR1>::const_iterator begin() const { return lr1_items.begin(); }
@@ -165,12 +182,6 @@ namespace parsergen
 
         std::unordered_map<tok_t, const GrammarState*>::const_iterator dfa_begin() const { return dfa.begin(); };
         std::unordered_map<tok_t, const GrammarState*>::const_iterator dfa_end() const { return dfa.end(); };
-
-        /**
-         * Given the initialization rules are already added to the state,
-         * Apply LR closure to this state.
-         */
-        void apply_closure();
 
         /**
          * Resolve all state transitions out of this state
@@ -187,9 +198,19 @@ namespace parsergen
             return lr1_items == other.lr1_items;
         }
 
+        void set_id(uint32_t id) const
+        {
+            state_id = id;
+            for (const auto& i : merged_states)
+            {
+                i->set_id(id);
+            }
+        }
+        uint32_t get_id() const { return state_id; }
+
         bool lalr_equal(const GrammarState& other) const;
 
-        void lalr_merge(const GrammarState& other) const;
+        void lalr_merge(const GrammarState* other) const;
 
         inline size_t hash() const
         {
