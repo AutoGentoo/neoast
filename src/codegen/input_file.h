@@ -25,7 +25,9 @@
 #include <string>
 #include <sstream>
 
-struct InputFile
+#include <common/context.h>
+
+class InputFile : public Context
 {
     File* file;
     size_t file_length;
@@ -39,6 +41,10 @@ struct InputFile
     std::stringstream warning_stream;
     std::stringstream error_stream;
 
+    const char* get_line(uint32_t lineno, size_t &len) const;
+    void put_position(std::ostream& os, const TokenPosition* position) const;
+
+public:
     explicit InputFile(const std::string& file_path);
 
     ~InputFile()
@@ -47,13 +53,18 @@ struct InputFile
     }
 
     uint32_t put_errors() const;
+    uint32_t has_errors() const override { return err_n; }
 
-    const char* get_line(uint32_t lineno, size_t &len) const;
-    void put_position(std::ostream& os, const TokenPosition* position) const;
-    void emit_error(const TokenPosition* p, const char* format, ...);
+    inline const File* get() const { return file; }
+    inline const std::string& get_path() const { return full_path; }
+
     void emit_error(const TokenPosition* p, const char* format, va_list args);
-    void emit_warning(const TokenPosition* p, const char* format, ...);
     void emit_warning(const TokenPosition* p, const char* format, va_list args);
+
+    void emit_error_message(const TokenPosition* p, const char* format, ...) override;
+    void emit_error(const TokenPosition* p, const char* format, ...) override;
+    void emit_warning_message(const TokenPosition* p, const char* format, ...) override;
+    void emit_warning(const TokenPosition* p, const char* format, ...) override;
 };
 
 #endif //NEOAST_INPUT_FILE_H

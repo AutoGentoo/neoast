@@ -18,9 +18,10 @@
 #include "c_pub.h"
 #include "canonical_collection.h"
 
-void* canonical_collection_init(const GrammarParser* parser, const void* debug_info)
+void* canonical_collection_init(const GrammarParser* parser, void* context, const void* der_positions)
 {
-    return new parsergen::CanonicalCollection(parser, static_cast<const parsergen::DebugInfo*>(debug_info));
+    return new parsergen::CanonicalCollection(parser, static_cast<Context*>(context),
+                                              static_cast<const TokenPosition* const*>(der_positions));
 }
 
 void canonical_collection_resolve(void* self, parser_t p_type)

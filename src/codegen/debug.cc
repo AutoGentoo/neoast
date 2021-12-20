@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
     {
         try
         {
-            CodeGen cg(input.file, input.full_path);
+            CodeGen cg(&input);
             if (has_errors()) break;
 
             const parsergen::CanonicalCollection* cc = cg.get_impl()->cc.get();

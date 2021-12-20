@@ -21,26 +21,19 @@
 
 #include "neoast.h"
 #include "c_pub.h"
-#include "cc_common.h"
+#include "bit_vector.h"
 #include "derivation.h"
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
+#include <common/context.h>
 
 // Codegen
 
 namespace parsergen
 {
     template<typename T> using sp = std::shared_ptr<T>;
-
-    struct DebugInfo
-    {
-        const TokenPosition** grammar_rule_positions;
-        void (*emit_warning)(const TokenPosition* position, const char* message, ...);
-        void (*emit_error)(const TokenPosition* position, const char* message, ...);
-    };
-
     struct CanonicalCollection
     {
     private:
@@ -52,7 +45,8 @@ namespace parsergen
         };
 
         const GrammarParser* parser_;               //!< Parent parser with grammar rules
-        const DebugInfo* debug_info_;               //!< Used for conflict debugging or NULL
+        Context* context_;                          //!< Used for emitting errors and warnings
+        const TokenPosition* const* reduce_positions_;  //!< Positions of reduce rules in input file
         const GrammarState* dfa_;                   //!< Head of the LR DFA
         uint32_t state_n_;
 
@@ -88,9 +82,11 @@ namespace parsergen
         void lr_1_firstof_init(tok_t grammar_id);
 
     public:
-        CanonicalCollection(const GrammarParser* parser, const DebugInfo* debug_info);
+        CanonicalCollection(const GrammarParser* parser, Context* context,
+                            const TokenPosition* const* reduce_positions);
 
         inline const GrammarParser* parser() const { return parser_; }
+        inline Context* context() { return context_; }
 
         const GrammarState* add_state(const std::vector<LR1>& initial_vector);
 
@@ -101,6 +97,12 @@ namespace parsergen
         {
             return reduce_ids_.at(rule);
         }
+
+        inline const TokenPosition* get_position(const GrammarRule* rule) const
+        { return get_position(get_reduce_id(rule)); }
+
+        inline const TokenPosition* get_position(uint32_t reduce_id) const
+        { return reduce_positions_[reduce_id]; }
 
         inline tok_t to_index(tok_t token) const
         {

@@ -20,7 +20,7 @@
 
 #include <neoast.h>
 #include "c_pub.h"
-#include "cc_common.h"
+#include "bit_vector.h"
 
 #include <utility>
 #include <vector>

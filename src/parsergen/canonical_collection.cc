@@ -22,8 +22,9 @@
 
 namespace parsergen
 {
-    CanonicalCollection::CanonicalCollection(const GrammarParser* parser, const DebugInfo* debug_info)
-    : debug_info_(debug_info), parser_(parser), dfa_(nullptr), state_n_(0)
+    CanonicalCollection::CanonicalCollection(const GrammarParser* parser, Context* context,
+                                             const TokenPosition* const* reduce_positions)
+    : context_(context), parser_(parser), dfa_(nullptr), state_n_(0), reduce_positions_(reduce_positions)
     {
         // Initialize the grammar productions to an O(1) map
         for (uint32_t i = 0; i < parser_->grammar_n; i++)

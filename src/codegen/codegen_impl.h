@@ -10,10 +10,12 @@
 #include "cg_grammar.h"
 #include "cg_lexer.h"
 #include "regex.h"
+#include "input_file.h"
 
 struct CodeGenImpl
 {
     CodeGen* parent;
+    InputFile* input;
 
     MacroEngine m_engine;
 
@@ -36,7 +38,6 @@ struct CodeGenImpl
     // Generated parser
     up<const char* []> token_names_ptr;
     up<GrammarParser> parser;
-    up<parsergen::DebugInfo> debug_info;
     up<parsergen::CanonicalCollection> cc;
     up<uint8_t[]> precedence_table;
     up<uint32_t[]> parsing_table;
@@ -46,9 +47,9 @@ struct CodeGenImpl
     uint32_t ascii_mappings[NEOAST_ASCII_MAX] = {0};
     std::map<int, int> precedence_mapping;
 
-    explicit CodeGenImpl(CodeGen* parent_);
+    explicit CodeGenImpl(CodeGen* parent_, InputFile* input_file);
     sp<CGToken> get_token(const std::string &name) const;
-    void parse(const File* self);
+    void parse();
 
     void write_header(std::ostream &os, bool dump_license=true) const;
     void write_source(std::ostream &os, bool dump_license=true) const;

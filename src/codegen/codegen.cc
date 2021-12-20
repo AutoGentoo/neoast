@@ -259,12 +259,7 @@ void CodeGenImpl::init_cc()
     parser->token_n = static_cast<uint32_t>(tokens.size()) - 1;
     parser->action_token_n = static_cast<uint32_t>(action_tokens.size());
 
-    debug_info = up<parsergen::DebugInfo>(new parsergen::DebugInfo);
-    debug_info->grammar_rule_positions = grammar->get_positions();
-    debug_info->emit_error = emit_error;
-    debug_info->emit_warning = emit_warning;
-
-    cc = up<parsergen::CanonicalCollection>(new parsergen::CanonicalCollection(parser.get(), debug_info.get()));
+    cc = up<parsergen::CanonicalCollection>(new parsergen::CanonicalCollection(parser.get(), input, grammar->get_positions()));
     cc->resolve(options.parser_type);
 
     precedence_table = up<uint8_t[]>(new uint8_t[tokens.size()]);
@@ -278,7 +273,7 @@ void CodeGenImpl::init_cc()
 
     if (error)
     {
-        emit_error(nullptr, "Failed to generate parsing table");
+        input->emit_error_message(nullptr, "Failed to generate parsing table");
         return;
     }
 }
@@ -360,24 +355,24 @@ void CodeGenImpl::register_grammar(const sp<CGGrammarToken> &ptr)
     grammar_tokens.push_back(ptr);
 }
 
-CodeGenImpl::CodeGenImpl(CodeGen* parent_)
-: parent(parent_),
+CodeGenImpl::CodeGenImpl(CodeGen* parent_, InputFile* input_file)
+: parent(parent_), input(input_file),
   top(nullptr), bottom(nullptr), union_(nullptr),
   options(), m_engine()
 {
 }
 
-void CodeGenImpl::parse(const File* self)
+void CodeGenImpl::parse()
 {
-    parse_header(self);
+    parse_header(input->get());
     if (has_errors())
     { return; }
 
-    parse_lexer(self);
+    parse_lexer(input->get());
     if (has_errors())
     { return; }
 
-    parse_grammar(self);
+    parse_grammar(input->get());
     if (has_errors())
     { return; }
 
@@ -385,11 +380,11 @@ void CodeGenImpl::parse(const File* self)
     init_cc();
 }
 
-CodeGen::CodeGen(const File* self, const std::string& file_path)
-        : impl_(new CodeGenImpl(this))
+CodeGen::CodeGen(InputFile* input_file)
+: impl_(new CodeGenImpl(this, input_file))
 {
-    grammar_filename = file_path;
-    impl_->parse(self);
+    grammar_filename = input_file->get_path();
+    impl_->parse();
 }
 
 sp<CGToken> CodeGen::get_token(const std::string &name) const

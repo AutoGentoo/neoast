@@ -11,7 +11,7 @@
 #include <utility>
 #include <vector>
 #include "cg_util.h"
-
+#include "input_file.h"
 
 #define CODEGEN_STRUCT "NeoastValue"
 #define CODEGEN_UNION "NeoastUnion"
@@ -34,7 +34,7 @@ class CodeGen
     CodeGenImpl* impl_;
 
 public:
-    explicit CodeGen(const File* self, const std::string& file_path);
+    explicit CodeGen(InputFile* input_file);
 
     sp<CGToken> get_token(const std::string &name) const;
     const char* get_start_token() const;
