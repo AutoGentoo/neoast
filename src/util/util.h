@@ -36,6 +36,7 @@ void dump_graphviz(const void* cc, FILE* fp);
 
 #include <ostream>
 #include <memory>
+#include <cstdarg>
 #include <parsergen/canonical_collection.h>
 
 class Exception : std::exception
