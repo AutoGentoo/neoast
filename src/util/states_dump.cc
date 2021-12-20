@@ -42,7 +42,7 @@ static void dump_state(
             os << " •";
         }
         size_t len = os.tellp() - s;
-        os << std::string(70 - len, ' ');
+        os << std::string(len < 70 ? 70 - len : 0, ' ');
         for (const auto& la : lr1.look_ahead)
         {
             os << " " << cc->parser()->token_names[la];
