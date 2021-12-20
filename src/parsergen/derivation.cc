@@ -107,10 +107,6 @@ namespace parsergen
                     for (const auto &prod: new_prods)
                     {
                         auto p = lr1_items.emplace(prod, 0, new_lookaheads);
-                        if (!p.second)
-                        {
-                            // Item was already in this state
-                        }
                         next_dirty->push_back(&*p.first);
                     }
                 }
@@ -120,6 +116,31 @@ namespace parsergen
             std::vector<const LR1*>* temp = next_dirty;
             next_dirty = curr_dirty;
             curr_dirty = temp;
+        }
+
+        // Keep updating the lookaheads until nothing changes
+        bool dirty = true;
+        while (dirty)
+        {
+            dirty = false;
+            for (const auto& item : lr1_items)
+            {
+                if (item.is_final() || cc->is_action(item.curr())) continue;
+                assert(expanded_rules[cc->to_index(item.curr())]);
+
+                // Option 2 (merge lookaheads)
+                // We need to merge the lookahead with every other
+                // rule that matches this token
+                BitVector new_lookaheads(cc->parser()->action_token_n);
+                item.merge_next_lookaheads(cc, new_lookaheads);
+                for (auto& item2 : lr1_items)
+                {
+                    if (item2.derivation->token == item.curr())
+                    {
+                        dirty = dirty || item2.look_ahead.merge(new_lookaheads);
+                    }
+                }
+            }
         }
 
         has_closure = true;

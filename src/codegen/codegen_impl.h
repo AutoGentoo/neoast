@@ -9,6 +9,7 @@
 #include <codegen/codegen_priv.h>
 #include "cg_grammar.h"
 #include "cg_lexer.h"
+#include "regex.h"
 
 struct CodeGenImpl
 {

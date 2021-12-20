@@ -92,6 +92,16 @@ void dump_states_cxx(
             if (!production->tok_n) os << " ε";
             os << "\n";
         }
+
+        os << "        first_of:";
+        parsergen::BitVector la(cc->parser()->action_token_n);
+        bool has_empty;
+        cc->merge_first_of(la, grammar_unit.first, has_empty);
+        for (const auto& li : la)
+        {
+            os << " " << cc->parser()->token_names[li];
+        }
+        os << "\n        has_empty: " << has_empty << "\n";
     }
 
     for (uint32_t i = 0; i < cc->size(); i++)

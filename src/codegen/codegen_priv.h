@@ -10,10 +10,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "neoast.h"
-#include "codegen.h"
 #include "cg_util.h"
-#include "regex.h"
 
 
 #define CODEGEN_STRUCT "NeoastValue"

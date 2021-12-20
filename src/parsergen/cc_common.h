@@ -117,11 +117,17 @@ namespace parsergen
             v[action_tok / 32] &= ~(1 << (action_tok % 32));
         }
 
-        inline void merge(const BitVector &r)
+        inline bool merge(const BitVector &r)
         {
             uint32_t i = 0;
+            bool changed = false;
             for (auto iter: r.v)
-            { v[i++] |= iter; }
+            {
+                uint32_t new_v = v[i] | iter;
+                changed = changed || new_v != v[i];
+                v[i++] = new_v;
+            }
+            return changed;
         }
 
         inline bool operator==(const BitVector& other) const

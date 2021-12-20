@@ -32,6 +32,8 @@
 
 namespace parsergen
 {
+    template<typename T> using sp = std::shared_ptr<T>;
+
     struct DebugInfo
     {
         const TokenPosition** grammar_rule_positions;
