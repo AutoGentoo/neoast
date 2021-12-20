@@ -43,7 +43,7 @@ void emit_warning(const TokenPosition* p, const char* format, ...)
 
 uint32_t has_errors()
 {
-    return current_input_file ? current_input_file->err_n : 0;
+    return current_input_file ? current_input_file->has_errors() : 0;
 }
 
 void emit_error(const TokenPosition* p, const char* format, ...)
@@ -99,12 +99,15 @@ InputFile::InputFile(const std::string &file_path)
     current_input_file = this;
 
     static char file_p[PATH_MAX];
-    full_path = realpath(file_path.c_str(), file_p);
-    FILE* fp = fopen(full_path.c_str(), "r");
+    FILE* fp = fopen(file_path.c_str(), "r");
     if (!fp)
     {
+        full_path = file_path;
         emit_error(nullptr, "Failed to open file");
+        return;
     }
+
+    full_path = realpath(file_path.c_str(), file_p);
 
     fseek(fp, 0, SEEK_END);
     file_length = ftell(fp);
@@ -186,6 +189,48 @@ void InputFile::emit_error(const TokenPosition* p, const char* format, ...)
     va_list args;
     va_start(args, format);
     emit_error(p, format, args);
+    va_end(args);
+}
+
+void InputFile::emit_error_message(const TokenPosition* p, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    if (p)
+    {
+        error_stream
+                << variadic_string("\033[1m%s:%d:%d: \033[1;0m ", full_path.c_str(), p->line, p->col + 1)
+                << variadic_string(format, args)
+                << "\n";
+        put_position(error_stream, p);
+    }
+    else
+    {
+        error_stream << variadic_string("\033[1m%s: \033[1;0m ", full_path.c_str())
+                     << variadic_string(format, args)
+                     << "\n";
+    }
+    va_end(args);
+}
+
+void InputFile::emit_warning_message(const TokenPosition* p, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    if (p)
+    {
+        warning_stream
+                << variadic_string("\033[1m%s:%d:%d: \033[1;0m ", full_path.c_str(), p->line, p->col + 1)
+                << variadic_string(format, args)
+                << "\n";
+        put_position(warning_stream, p);
+    }
+    else
+    {
+        warning_stream << variadic_string("\033[1m%s: \033[1;0m ", full_path.c_str())
+                       << variadic_string(format, args)
+                       << "\n";
+    }
     va_end(args);
 }
 

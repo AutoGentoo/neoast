@@ -40,7 +40,7 @@ int main(int argc, const char* argv[])
 
     try
     {
-        CodeGen cg(input.file, input.full_path);
+        CodeGen cg(&input);
         std::ofstream h(output_h);
         std::ofstream c(output_c);
 

@@ -243,7 +243,11 @@ namespace parsergen
                 {
                     if (row[i] & TOK_REDUCE_MASK)
                     {
-                        // TODO
+                        cc->context()->emit_error(cc->get_position(lr1.derivation),
+                                                  "RR conflict, two rules are able to reduce on token '%s' (lookahead)",
+                                                  cc->parser()->token_names[i]);
+                        cc->context()->emit_error_message(cc->get_position(row[i] & TOK_MASK),
+                                                          "other rule attempting to reduce");
                         rr_conflicts++;
                     }
                     else if (row[i] & TOK_SHIFT_MASK)
@@ -260,9 +264,10 @@ namespace parsergen
                         }
                         else
                         {
-                            fprintf(stderr, "SR conflict tok %d state %d attempting to shift to %d\n",
-                                    i, get_id(),
-                                    row[i] & TOK_MASK);
+                            cc->context()->emit_error(cc->get_position(lr1.derivation),
+                                                      "SR conflict, trying to reduce with token %s but a rule "
+                                                      "is also attempting to shift this token",
+                                                      cc->parser()->token_names[i]);
                             sr_conflicts++;
                         }
                     }

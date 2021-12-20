@@ -15,8 +15,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NEOAST_CC_COMMON_H
-#define NEOAST_CC_COMMON_H
+#ifndef NEOAST_BIT_VECTOR_H
+#define NEOAST_BIT_VECTOR_H
 
 #include <vector>
 #include <cassert>
@@ -142,4 +142,4 @@ namespace parsergen
     };
 }
 
-#endif //NEOAST_CC_COMMON_H
+#endif //NEOAST_BIT_VECTOR_H

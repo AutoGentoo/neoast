@@ -258,7 +258,7 @@ void initialize_parser()
 CTEST(test_clr_1)
 {
     initialize_parser();
-    void* cc = canonical_collection_init(&p, NULL);
+    void* cc = canonical_collection_init(&p, NULL, NULL);
     canonical_collection_resolve(cc, CLR_1);
 
     uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
@@ -274,7 +274,7 @@ CTEST(test_clr_1)
 CTEST(test_lalr_1)
 {
     initialize_parser();
-    void* cc = canonical_collection_init(&p, NULL);
+    void* cc = canonical_collection_init(&p, NULL, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
     uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
@@ -295,7 +295,7 @@ CTEST(test_lalr_1_calculator)
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct),
                                                  offsetof(CalculatorStruct, position));
 
-    void* cc = canonical_collection_init(&p, NULL);
+    void* cc = canonical_collection_init(&p, NULL, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
     uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
@@ -326,7 +326,7 @@ CTEST(test_lalr_1_order_of_ops)
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct),
                                                  offsetof(CalculatorStruct, position));
 
-    void* cc = canonical_collection_init(&p, NULL);
+    void* cc = canonical_collection_init(&p, NULL, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
     uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));

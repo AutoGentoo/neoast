@@ -15,30 +15,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NEOAST_C_PUB_H
-#define NEOAST_C_PUB_H
+#ifndef NEOAST_CONTEXT_H
+#define NEOAST_CONTEXT_H
 
-#include <neoast.h>
+struct Context
+{
+    virtual uint32_t has_errors() const = 0;
+    virtual void emit_error_message(const TokenPosition* p, const char* format, ...) = 0;
+    virtual void emit_error(const TokenPosition* p, const char* format, ...) = 0;
+    virtual void emit_warning_message(const TokenPosition* p, const char* format, ...) = 0;
+    virtual void emit_warning(const TokenPosition* p, const char* format, ...) = 0;
+};
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef enum {
-    LALR_1,  // Highly recommended!!
-    CLR_1,
-} parser_t;
-
-// C public API
-
-void* canonical_collection_init(const GrammarParser* parser, void* context, const void* der_positions);
-void canonical_collection_resolve(void* self, parser_t p_type);
-size_t canonical_collection_table_size(const void* self);
-uint32_t canonical_collection_generate(const void* self, uint32_t* table, const uint8_t* precedence_table);
-void canonical_collection_free(void* self);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif //NEOAST_C_PUB_H
+#endif //NEOAST_CONTEXT_H
