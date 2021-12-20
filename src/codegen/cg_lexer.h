@@ -2,7 +2,6 @@
 #define NEOAST_CG_LEXER_H
 
 #include <iostream>
-#include <reflex/pattern.h>
 
 class CGLexer
 {

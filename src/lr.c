@@ -35,6 +35,7 @@ const void* g_table_from_matrix(const void* table,
 static inline
 uint32_t g_lr_reduce(
         const GrammarParser* parser,
+        void* context,
         const uint32_t* parsing_table,
         uint32_t reduce_token,
         const ParserBuffers* buffers,
@@ -61,15 +62,11 @@ uint32_t g_lr_reduce(
                buffers->val_s);
     }
 
-    int32_t result_token = (int32_t)reduce_rule->token;
-    if (parser->ascii_mappings)
-    {
-        result_token -= NEOAST_ASCII_MAX;
-        assert(result_token > 0);
-    }
+    int32_t result_token = (int32_t) reduce_rule->token - NEOAST_ASCII_MAX;
+    assert(result_token > 0);
 
     // Run the reduction code
-    parser->parser_reduce(reduce_token & TOK_MASK, dest, (void**) args);
+    parser->parser_reduce(reduce_token & TOK_MASK, dest, (void**) args, context);
 
     // Copy the result back into the table
     memcpy(OFFSET_VOID_PTR(buffers->value_table, buffers->val_s, idx),
@@ -107,12 +104,14 @@ uint32_t g_lr_reduce(
     return next_state;
 }
 
-void lr_parse_error(const GrammarParser* self,
-                    const uint32_t* parsing_table,
-                    const TokenPosition* p,
-                    uint32_t current_state,
-                    uint32_t error_tok,
-                    uint32_t prev_tok)
+static void lr_parse_error(
+        const GrammarParser* self,
+        void* err_ctx,
+        const uint32_t* parsing_table,
+        const TokenPosition* p,
+        uint32_t current_state,
+        uint32_t error_tok,
+        uint32_t prev_tok)
 {
     const char* current_token = self->token_names[error_tok];
     const char* prev_token = self->token_names[prev_tok];
@@ -131,6 +130,7 @@ void lr_parse_error(const GrammarParser* self,
     if (self->parser_error)
     {
         self->parser_error(
+                err_ctx,
                 self->token_names, p, prev_tok, error_tok,
                 expected_tokens, expected_tokens_n);
     }
@@ -138,7 +138,7 @@ void lr_parse_error(const GrammarParser* self,
     {
         if (p)
         {
-            fprintf(stderr, "Error on line %d:%d\n", p->line, p->col_start);
+            fprintf(stderr, "Error on line %d:%d\n", p->line, p->col);
         }
 
         fprintf(stderr, "Invalid syntax: unexpected token '%s' [%d] after '%s' [%d] (state %d)\n",
@@ -202,10 +202,11 @@ static void parser_run_destructors(
 }
 
 int32_t parser_parse_lr(const GrammarParser* parser,
+                        void* context,
                         const uint32_t* parsing_table,
                         const ParserBuffers* buffers,
                         void* lexer,
-                        int ll_next(void*, void*))
+                        int ll_next(void*, void*, void*))
 {
     // Lexer states
     char* lex_val = buffers->value_table;
@@ -216,7 +217,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
 
     uint32_t i = 0;
     uint32_t prev_tok = 0;
-    int32_t tok = ll_next(lexer, lex_val);
+    int32_t tok = ll_next(lexer, lex_val, context);
     buffers->token_table[0] = tok;
 
     uint32_t dest_idx = 0; // index of the last reduction
@@ -237,16 +238,17 @@ int32_t parser_parse_lr(const GrammarParser* parser,
 
         if (table_value == TOK_SYNTAX_ERROR)
         {
-            const TokenPosition* p = (const TokenPosition*)(lex_val + buffers->union_s);
+            const TokenPosition* p = (const TokenPosition*) (lex_val + buffers->union_s);
 
             lr_parse_error(parser,
+                           context,
                            parsing_table,
                            p,
                            current_state,
                            tok, prev_tok);
 
             // We need to free the remaining objects in this map
-            parser_run_destructors(parser, buffers, (int32_t)i);
+            parser_run_destructors(parser, buffers, (int32_t) i);
             return -1;
         }
         else if (table_value & TOK_SHIFT_MASK)
@@ -257,7 +259,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
             prev_tok = tok;
 
             lex_val += buffers->val_s;
-            tok = ll_next(lexer, lex_val);
+            tok = ll_next(lexer, lex_val, context);
             buffers->token_table[++i] = tok;
         }
         else if (table_value & TOK_REDUCE_MASK)
@@ -266,7 +268,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
             assert(tok < parser->action_token_n);
 
             // Reduce this rule
-            current_state = g_lr_reduce(parser, parsing_table,
+            current_state = g_lr_reduce(parser, context, parsing_table,
                                         table_value, buffers,
                                         &dest_idx);
 
@@ -290,7 +292,7 @@ int32_t parser_parse_lr(const GrammarParser* parser,
         }
         else if (table_value & TOK_ACCEPT_MASK)
         {
-            return (int32_t)dest_idx;
+            return (int32_t) dest_idx;
         }
     }
 }

@@ -19,63 +19,23 @@
 #ifndef NEOAST_REGEX_H
 #define NEOAST_REGEX_H
 
-#include <reflex/pattern.h>
 #include <string>
 #include <unordered_map>
-#include <reflex/matcher.h>
+#include <map>
 #include <sstream>
 
+struct MacroEngineImpl;
 class MacroEngine
 {
-    std::unordered_map<std::string, std::string> map;
-    std::map<std::string, std::string> original_map;
-    reflex::Pattern macro_pattern;
+    MacroEngineImpl* impl_;
 
 public:
-    MacroEngine() : macro_pattern("\\{[A-Za-z_][A-Za-z0-9_]*\\}")
-    {
-    }
+    MacroEngine();
+    ~MacroEngine();
 
-    std::string expand(const std::string& regex) const
-    {
-        reflex::Matcher m(macro_pattern, regex);
-        std::ostringstream ss;
-
-        size_t last_col = 0;
-        for (auto& match : m.find)
-        {
-            ss << regex.substr(last_col, match.first() - last_col);
-            last_col = match.last();
-
-            std::string macro_name(match.text() + 1);
-            macro_name.pop_back(); // remove '}'
-
-            if (map.find(macro_name) != map.end())
-            {
-                ss << map.at(macro_name);
-            }
-            else
-            {
-                // Don't try to expand this
-                std::cerr << "Invalid macro name " << macro_name << "\n";
-            }
-        }
-
-        // Place any remaining characters
-        if (last_col < regex.size())
-        {
-            ss << regex.substr(last_col);
-        }
-        return ss.str();
-    }
-
-    void add(const std::string& name, const std::string& value)
-    {
-        map[name] = expand(value);
-        original_map[name] = value;
-    }
-
-    const std::map<std::string, std::string>& get_original() const { return original_map; }
+    std::string expand(const std::string& regex) const;
+    void add(const std::string& name, const std::string& value);
+    const std::map<std::string, std::string>& get_original() const;
 };
 
 #endif //NEOAST_REGEX_H

@@ -94,7 +94,8 @@ class BootstrapLexerSession : public reflex::AbstractLexer<reflex::Matcher>
     ParsingStack* lexer_states;
 
 public:
-    BootstrapLexerSession(const char* input, uint32_t length, const BootstrapLexer* parent,
+    BootstrapLexerSession(const char* input,
+                          uint32_t length, const BootstrapLexer* parent,
                           std::ostream &os = std::cout) :
             AbstractLexer(input, os), parent(parent), input(input, length)
     {
@@ -107,35 +108,30 @@ public:
         }
     }
 
-    int next(void* ll_val)
+    int next(void* ll_val, void* context)
     {
-        int tok = next_impl(ll_val);
+        int tok = next_impl(ll_val, context);
 
         // EOF and INVALID
         if (tok <= 0) return tok;
 
-        if (parent->ascii_mappings)
+        int t_tok;
+        if (tok < NEOAST_ASCII_MAX)
         {
-            int t_tok;
-            if (tok < NEOAST_ASCII_MAX)
+            t_tok = static_cast<int32_t>(parent->ascii_mappings[tok]);
+            if (t_tok <= NEOAST_ASCII_MAX)
             {
-                t_tok = static_cast<int32_t>(parent->ascii_mappings[tok]);
-                if (t_tok <= NEOAST_ASCII_MAX)
-                {
-                    fprintf(stderr, "Lexer returned '%c' (%d) which has not been "
-                                    "explicitly defined as a token",
-                            tok, tok);
-                    fflush(stdout);
-                    exit(1);
-                }
-
-                return t_tok - NEOAST_ASCII_MAX;
+                fprintf(stderr, "Lexer returned '%c' (%d) which has not been "
+                                "explicitly defined as a token",
+                        tok, tok);
+                fflush(stdout);
+                exit(1);
             }
 
-            return tok - NEOAST_ASCII_MAX;
+            return t_tok - NEOAST_ASCII_MAX;
         }
 
-        return tok;
+        return tok - NEOAST_ASCII_MAX;
     }
 
     ~BootstrapLexerSession() override
@@ -145,7 +141,7 @@ public:
     }
 
 private:
-    int next_impl(void* ll_val)
+    int next_impl(void* ll_val, void* context)
     {
         int tok = -1;
         while (tok < 0)
@@ -167,16 +163,18 @@ private:
                 // Invalid token
                 TokenPosition p{
                         .line = static_cast<uint32_t>(lineno()),
-                        .col_start=static_cast<uint32_t>(columno())};
+                        .col=static_cast<uint16_t>(columno()),
+                        .len=static_cast<uint16_t>(size())
+                };
 
                 if (parent->error_cb)
                 {
-                    parent->error_cb(input.cstring(), &p, current_state);
+                    parent->error_cb(context, input.cstring(), &p, std::to_string(current_state).c_str());
                 }
                 else
                 {
                     std::cerr << "Failed to match token near on line:col "
-                              << p.line << ":" << p.col_start << " (state " << current_state << ")\n";
+                              << p.line << ":" << p.col << " (state " << current_state << ")\n";
                 }
 
                 return -1;
@@ -187,7 +185,8 @@ private:
                 auto* position = reinterpret_cast<TokenPosition*>(
                         static_cast<char*>(ll_val) + parent->position_offset);
                 position->line = static_cast<uint32_t>(lineno());
-                position->col_start = static_cast<uint32_t>(columno());
+                position->col = static_cast<uint32_t>(columno());
+                position->len = static_cast<uint32_t>(size());
 
                 // Run token action
                 if (state.rules[rule_idx]->tok)
@@ -207,7 +206,8 @@ private:
 };
 
 
-void* bootstrap_lexer_new(const LexerRule* rules[], const uint32_t rules_n[], uint32_t state_n, ll_error_cb error_cb,
+void* bootstrap_lexer_new(const LexerRule* rules[], const uint32_t rules_n[], uint32_t state_n,
+                          ll_error_cb error_cb,
                           size_t position_offset, const uint32_t* ascii_mappings)
 {
     return new BootstrapLexer(rules, rules_n, state_n, error_cb, position_offset, ascii_mappings);
@@ -218,7 +218,8 @@ void bootstrap_lexer_free(void* lexer)
     delete reinterpret_cast<BootstrapLexer*>(lexer);
 }
 
-void* bootstrap_lexer_instance_new(const void* lexer_parent, const char* input, size_t length)
+void* bootstrap_lexer_instance_new(const void* lexer_parent,
+                                   const char* input, size_t length)
 {
     return new BootstrapLexerSession(input, length, reinterpret_cast<const BootstrapLexer*>(lexer_parent));
 }
@@ -228,7 +229,7 @@ void bootstrap_lexer_instance_free(void* lexer_inst)
     delete reinterpret_cast<BootstrapLexerSession*>(lexer_inst);
 }
 
-int bootstrap_lexer_next(void* lexer, void* ll_val)
+int bootstrap_lexer_next(void* lexer, void* ll_val, void* context)
 {
-    return reinterpret_cast<BootstrapLexerSession*>(lexer)->next(ll_val);
+    return reinterpret_cast<BootstrapLexerSession*>(lexer)->next(ll_val, context);
 }

@@ -10,10 +10,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <reflex.h>
-#include <reflex/matcher.h>
 #include "cg_util.h"
-#include "regex.h"
 
 
 #define CODEGEN_STRUCT "NeoastValue"
@@ -37,7 +34,7 @@ class CodeGen
     CodeGenImpl* impl_;
 
 public:
-    explicit CodeGen(const File* self);
+    explicit CodeGen(const File* self, const std::string& file_path);
 
     sp<CGToken> get_token(const std::string &name) const;
     const char* get_start_token() const;
@@ -46,6 +43,9 @@ public:
 
     void write_header(std::ostream &os) const;
     void write_source(std::ostream &os) const;
+
+    const CodeGenImpl* get_impl() const { return impl_; }
+    CodeGenImpl* get_impl() { return impl_; }
 
     ~CodeGen();
 };
@@ -70,9 +70,6 @@ struct Code : public TokenPosition
     std::string
     get_complex(const Options &options, const std::vector<std::string> &argument_replace, const std::string &zero_arg,
                 const std::string &non_zero_arg, bool is_union) const;
-
-private:
-    static bool in_redzone(const std::vector<std::pair<int, int>>& redzones, const reflex::AbstractMatcher& m);
 };
 
 struct CGToken : public TokenPosition
@@ -93,14 +90,17 @@ struct CGToken : public TokenPosition
 struct CGTyped : public CGToken
 {
     std::string type;           //!< Field in union
+    bool void_type;
 
     CGTyped(const KeyVal* self, int id)
-            : CGToken(&self->position, self->value, id), type(self->key) {}
+            : CGToken(&self->position, self->value, id), type(self->key ? self->key : ""),
+              void_type(self->key == nullptr) {}
 
     CGTyped(const TokenPosition* position,
             const std::string &type,
             const std::string &name,
-            int id) : CGToken(position, name, id), type(type) {}
+            int id) : CGToken(position, name, id),
+            type(type), void_type(false) {}
 };
 
 struct CGGrammarToken : public CGTyped

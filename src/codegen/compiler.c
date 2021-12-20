@@ -79,7 +79,7 @@ kv* declare_types(char* type, struct Token* tokens)
     (void) declare_types;
 
     kv* out = tokens_to_kv(tokens, type, KEY_VAL_TYPE, KEY_VAL_TYPE, 0);
-    free(type);
+    if (type) free(type);
     return out;
 }
 

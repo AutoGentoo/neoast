@@ -24,17 +24,20 @@ extern "C" {
 #endif
 
 #include <neoast.h>
-#include <parsergen/canonical_collection.h>
 
-void dump_table(const uint32_t* table, const CanonicalCollection* cc,
-                const char* tok_names, uint8_t state_wrap, FILE* fp,
+void dump_table(const uint32_t* table, const void* cc,
+                const char** tok_names, uint8_t state_wrap, FILE* fp,
                 const char* indent_str);
+
+void dump_graphviz(const void* cc, FILE* fp);
 
 #ifdef __cplusplus
 }
 
 #include <ostream>
 #include <memory>
+#include <cstdarg>
+#include <parsergen/canonical_collection.h>
 
 class Exception : std::exception
 {
@@ -64,10 +67,36 @@ std::string variadic_string(const char* format,
     return {buf.get(), buf.get() + size - 1}; // We don't want the '\0' inside
 }
 
+inline std::string variadic_string(const char* format, va_list args)
+{
+    va_list original;
+    va_copy(original, args);
+    int size = std::vsnprintf(nullptr, 0, format, args);
+    if(size <= 0)
+    {
+        throw Exception( "Error during formatting: " + std::string(format));
+    }
+    size += 1;
+
+    auto buf = std::unique_ptr<char[]>(new char[size]);
+    std::vsnprintf(buf.get(), size, format, original);
+
+    return {buf.get(), buf.get() + size - 1}; // We don't want the '\0' inside
+}
+
 void dump_table_cxx(
-        const uint32_t* table, const CanonicalCollection* cc,
-        const char* tok_names, uint8_t state_wrap,
+        const uint32_t* table, const parsergen::CanonicalCollection* cc,
+        const char** tok_names, uint8_t state_wrap,
         std::ostream& os, const char* indent_str);
+
+void dump_graphviz_cxx(
+        const parsergen::CanonicalCollection* cc,
+        std::ostream& os,
+        bool small = false);
+
+void dump_states_cxx(
+        const parsergen::CanonicalCollection* cc,
+        std::ostream& os);
 
 #endif
 

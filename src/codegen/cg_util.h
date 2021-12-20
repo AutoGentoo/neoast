@@ -9,14 +9,12 @@
 
 struct Options {
     // Should we dump the table
-    bool debug_table = false;
     bool annotate_line = true;
     std::string track_position_type;
     std::string debug_ids;
     std::string prefix = "neoast";
     std::string lexing_error_cb;
     std::string syntax_error_cb;
-    std::string lexer_file;
     parser_t parser_type = LALR_1; // LALR(1) or CLR(1)
 
     int parsing_stack_n = 1024;

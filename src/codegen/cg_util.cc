@@ -4,6 +4,7 @@
 #include "cg_util.h"
 #include "codegen_priv.h"
 
+static bool in_redzone(const std::vector<std::pair<int, int>> &redzones, const reflex::AbstractMatcher& m);
 reflex::Pattern redzone_pattern(
         "(?mx)"
         "(\\/\\/[^\n]*\n)|"                 // Line comments
@@ -62,10 +63,6 @@ void Options::handle(const KeyVal* option)
             emit_error(&option->position, "Invalid parser type, support types: 'LALR(1)', 'CLR(1)'");
         }
     }
-    else if (strcmp(option->key, "debug_table") == 0)
-    {
-        debug_table = codegen_parse_bool(option);
-    }
     else if (strcmp(option->key, "track_position_type") == 0)
     {
         track_position_type = option->value;
@@ -94,10 +91,6 @@ void Options::handle(const KeyVal* option)
     {
         lexing_error_cb = option->value;
     }
-    else if (strcmp(option->key, "lexer_file") == 0)
-    {
-        lexer_file = option->value;
-    }
     else
     {
         emit_warning(&option->position, "Unsupported option, ignoring");
@@ -119,7 +112,8 @@ std::string Code::get_simple(const Options &options) const
 }
 
 std::string
-Code::get_complex(const Options &options, const std::vector<std::string> &argument_replace, const std::string &zero_arg,
+Code::get_complex(const Options &options, const std::vector<std::string> &argument_replace,
+                  const std::string &zero_arg,
                   const std::string &non_zero_arg, bool is_union) const
 {
     std::ostringstream os;
@@ -150,7 +144,9 @@ Code::get_complex(const Options &options, const std::vector<std::string> &argume
             continue;
         }
 
-        TokenPosition match_pos = {line, static_cast<uint32_t>(col_start + match.first())};
+        TokenPosition match_pos = {line,
+                                   static_cast<uint16_t>(col + match.first()),
+                                   static_cast<uint16_t>(match.size())};
         if (match.text()[1] == '$')
         {
             if (is_union)
@@ -194,7 +190,8 @@ Code::get_complex(const Options &options, const std::vector<std::string> &argume
             }
             else
             {
-                os << variadic_string("((const TokenPosition*)&args[%d].position)", idx - 1);
+                os << variadic_string("((const TokenPosition*)&%s[%d].position)",
+                                      non_zero_arg.c_str(), idx - 1);
             }
         }
         else
@@ -241,7 +238,7 @@ Code::get_complex(const Options &options, const std::vector<std::string> &argume
     return os.str();
 }
 
-bool Code::in_redzone(const std::vector<std::pair<int, int>> &redzones, const reflex::AbstractMatcher &m)
+static bool in_redzone(const std::vector<std::pair<int, int>> &redzones, const reflex::AbstractMatcher& m)
 {
     for (const auto& iter : redzones)
     {

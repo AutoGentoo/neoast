@@ -4,7 +4,15 @@
       <w>dest</w>
       <w>firstof</w>
       <w>neoast</w>
+      <w>parsergen</w>
       <w>tumbar</w>
+      <w>yylen</w>
+      <w>yypop</w>
+      <w>yyposition</w>
+      <w>yypush</w>
+      <w>yystate</w>
+      <w>yytext</w>
+      <w>yyval</w>
     </words>
   </dictionary>
 </component>

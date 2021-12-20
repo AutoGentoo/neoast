@@ -29,7 +29,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdio.h>
 
-#define NEOAST_ASCII_MAX ('~' + 1)
+#define NEOAST_ASCII_MAX (256)
 #define NEOAST_ARR_LEN(arr) ((sizeof(arr)) / sizeof(((arr)[0])))
 #define NEOAST_STACK_PUSH(stack, i) (stack)->data[((stack)->pos)++] = (i)
 #define NEOAST_STACK_POP(stack) (stack)->data[--((stack)->pos)]
@@ -43,12 +43,9 @@ typedef struct ParsingStack_prv ParsingStack;
 typedef struct ParserBuffers_prv ParserBuffers;
 typedef struct TokenPosition_prv TokenPosition;
 
-// Codegen
-typedef struct LR_1_prv LR_1;
-typedef struct GrammarState_prv GrammarState;
-typedef struct CanonicalCollection_prv CanonicalCollection;
+typedef uint32_t tok_t;
 
-typedef void (*parser_reduce) (uint32_t reduce_rule, void* dest, void** values);
+typedef void (*parser_reduce) (tok_t reduce_rule, void* dest, void** values, void* context);
 typedef void (*parser_destructor) (void* self);
 
 
@@ -56,17 +53,19 @@ typedef void (*parser_destructor) (void* self);
 
 // Called when no matching token could be found
 typedef void (*ll_error_cb)(
+        void* error_ctx,                 //!< Arbitrary pointer passed to error
         const char* input,               //!< NeoastInput passed in with parse()
         const TokenPosition* position,   //!< Position of unmatched token
-        uint32_t lexer_state);
+        const char* lexer_state);
 
 typedef void (*yy_error_cb)(
-        const char* const* token_names,
-        const TokenPosition* position,
-        uint32_t last_token,
-        uint32_t current_token,
-        const uint32_t expected_tokens[],
-        uint32_t expected_tokens_n);
+        void* error_ctx,                 //!< Arbitrary pointer passed to error
+        const char* const* token_names,  //!< List of token names
+        const TokenPosition* position,   //!< Position of syntax error
+        tok_t last_token,                //!< Token before
+        tok_t current_token,             //!< Error token
+        const tok_t expected_tokens[],   //!< Excepted next tokens
+        tok_t expected_tokens_n);        //!< Number of expected tokens
 
 enum
 {
@@ -105,9 +104,9 @@ enum
 
 struct GrammarRule_prv
 {
-    uint32_t token;
-    uint32_t tok_n;
-    const uint32_t* grammar;
+    tok_t token;
+    tok_t tok_n;
+    const tok_t* grammar;
 };
 
 struct GrammarParser_prv
@@ -120,9 +119,9 @@ struct GrammarParser_prv
     parser_reduce parser_reduce;
 
     // Also number of columns
-    uint32_t grammar_n;
-    uint32_t token_n;
-    uint32_t action_token_n;
+    tok_t grammar_n;
+    tok_t token_n;
+    tok_t action_token_n;
 };
 
 struct ParsingStack_prv
@@ -150,7 +149,8 @@ struct ParserBuffers_prv
 struct TokenPosition_prv
 {
     uint32_t line;
-    uint32_t col_start;
+    uint16_t col;
+    uint16_t len;
 };
 
 #ifndef NEOAST_PARSER_H
@@ -177,10 +177,11 @@ void parser_reset_buffers(const ParserBuffers* self);
  * @return index in token/value table where the parsed value resides
  */
 int32_t parser_parse_lr(const GrammarParser* parser,
+                        void* context,
                         const uint32_t* parsing_table,
                         const ParserBuffers* buffers,
                         void* lexer,
-                        int ll_next(void*, void*));
+                        int ll_next(void*, void*, void*));
 #endif
 
 #ifdef __cplusplus

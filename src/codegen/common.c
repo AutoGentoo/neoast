@@ -10,15 +10,8 @@
 KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value)
 {
     KeyVal* self = malloc(sizeof(KeyVal));
-    if (p)
-    {
-        self->position = *p;
-    }
-    else
-    {
-        self->position.line = 0;
-        self->position.col_start = 0;
-    }
+    assert(p);
+    self->position = *p;
 
     self->next = NULL;
     self->back = NULL;
@@ -38,15 +31,8 @@ struct Token* build_token(const TokenPosition* position, char* name)
         return NULL;
     }
 
-    if (position)
-    {
-        self->position = *position;
-    }
-    else
-    {
-        self->position.line = 0;
-        self->position.col_start = 0;
-    }
+    assert(position);
+    self->position = *position;
 
     self->name = name;
     self->next = NULL;
@@ -70,15 +56,9 @@ char get_ascii_from_name(const char* name)
 struct Token* build_token_ascii(const TokenPosition* position, char value)
 {
     struct Token* self = malloc(sizeof(struct Token));
-    if (position)
-    {
-        self->position = *position;
-    }
-    else
-    {
-        self->position.line = 0;
-        self->position.col_start = 0;
-    }
+
+    assert(position);
+    self->position = *position;
 
     self->name = get_ascii_token_name(value);
     self->next = NULL;

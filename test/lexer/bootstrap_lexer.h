@@ -48,7 +48,7 @@ void bootstrap_lexer_free(void* lexer);
 
 void* bootstrap_lexer_instance_new(const void* lexer_parent, const char* input, size_t length);
 
-int bootstrap_lexer_next(void* lexer, void* ll_val);
+int bootstrap_lexer_next(void* lexer, void* ll_val, void* context);
 void bootstrap_lexer_instance_free(void* lexer_inst);
 
 #ifdef __cplusplus

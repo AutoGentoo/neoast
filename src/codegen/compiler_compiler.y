@@ -1,23 +1,13 @@
+%include {
+    #include <codegen/codegen.h>
+    #include <codegen/compiler.h>
+    #include <stdlib.h>
+    #include <stddef.h>
+    #include <stdint.h>
+    #include <assert.h>
+}
+
 %top {
-
-#include <stdlib.h>
-#include <codegen/codegen.h>
-#include <codegen/compiler.h>
-#include <stddef.h>
-#include <string.h>
-#include <stdint.h>
-#include <assert.h>
-
-void lexing_error_cb(const char* input,
-                     const TokenPosition* position,
-                     const char* lexer_state);
-
-void parsing_error_cb(const char* const* token_names,
-                      const TokenPosition* position,
-                      uint32_t last_token,
-                      uint32_t current_token,
-                      const uint32_t expected_tokens[],
-                      uint32_t expected_tokens_n);
 
 struct LexerTextBuffer
 {
@@ -32,6 +22,7 @@ static __thread struct LexerTextBuffer brace_buffer = {0};
 
 static inline void ll_add_to_brace(const char* lex_text, uint32_t len);
 static inline void ll_match_brace(const TokenPosition* start_position);
+static inline char ll_handle_ascii(void* yycontext, const char* yytext);
 
 }
 
@@ -58,11 +49,45 @@ static inline void ll_match_brace(const TokenPosition* start_position)
     brace_buffer.counter = 1;
 }
 
+static inline char ll_handle_ascii(void* yycontext, const char* yytext)
+{
+    if (yytext[1] != '\\')
+    {
+        return yytext[1];
+    }
+    else
+    {
+        // Handle all escape sequences supported in C
+        switch(yytext[2])
+        {
+#define HANDLE_ESCAPE(n, c) case (n): \
+            return (c); \
+            break
+        HANDLE_ESCAPE('a', '\a');
+        HANDLE_ESCAPE('b', '\b');
+//        HANDLE_ESCAPE('e', '\e');
+        HANDLE_ESCAPE('f', '\f');
+        HANDLE_ESCAPE('n', '\n');
+        HANDLE_ESCAPE('r', '\r');
+        HANDLE_ESCAPE('t', '\t');
+        HANDLE_ESCAPE('v', '\v');
+        HANDLE_ESCAPE('\\', '\\');
+        HANDLE_ESCAPE('\'', '\'');
+        HANDLE_ESCAPE('"', '"');
+        HANDLE_ESCAPE('?', '?');
+        default:
+            emit_error(yycontext, "unhandled escape sequence '\\%c'",
+                       yytext[2]);
+            return 0;
+#undef HANDLE_ESCAPE
+        }
+    }
+}
+
 }
 
 %option parser_type="LALR(1)"
 %option prefix="cc"
-%option debug_table="FALSE"
 %option annotate_line="FALSE"
 %option lexing_error_cb="lexing_error_cb"
 %option parsing_error_cb="parsing_error_cb"
@@ -149,7 +174,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 
 // These take precedence over literal tokens
 "{literal}"         { yyval->identifier = strndup(yytext + 1, yylen - 2); return LITERAL; }
-"{ascii}"           { yyval->ascii = yytext[1]; return ASCII; }
+"{ascii}"           { yyval->ascii = ll_handle_ascii(yycontext, yytext); return ASCII; }
 
 // Don't build anything during lexing to keep things simple
 // This is different from the way the bootstraping compiler does it
@@ -201,7 +226,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
                         return LEX_STATE;
                     }
 "{literal}"         { yyval->identifier = strndup(yytext + 1, yylen - 2); return LITERAL; }
-"\{"                 { yypush(S_MATCH_BRACE); ll_match_brace(yyposition); }
+"\{"                { yypush(S_MATCH_BRACE); ll_match_brace(yyposition); }
 }
 
 <S_LL_STATE> {
@@ -219,7 +244,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 <S_GG_RULES> {
 "{whitespace}"      { /* skip */ }
 "//[^\n]*"          { /* skip */ }
-"{ascii}"           { yyval->ascii = yytext[1]; return ASCII; }
+"{ascii}"           { yyval->ascii = ll_handle_ascii(yycontext, yytext); return ASCII; }
 "/\*"               { yypush(S_COMMENT); }
 "%%"                { yypop(); return GG; }
 "{identifier}"      { yyval->identifier = strdup(yytext); return IDENTIFIER; }
@@ -285,8 +310,9 @@ tokens: token                       { $$ = $1; }
       | token tokens                { $$ = $1; $$->next = $2; }
       ;
 
-pair: OPTION IDENTIFIER '=' LITERAL         { $$ = declare_option($p1, $2, $4); }
+pair: OPTION IDENTIFIER '=' LITERAL         { $$ = declare_option($p2, $2, $4); }
     | TOKEN tokens                          { $$ = declare_tokens($2); }
+    | TYPE tokens                           { $$ = declare_types(NULL, $2); }
     | START '<' IDENTIFIER '>' IDENTIFIER   { $$ = declare_start($p1, $3, $5); }
     | TOKEN '<' IDENTIFIER '>' tokens       { $$ = declare_typed_tokens($3, $5); }
     | TYPE '<' IDENTIFIER '>' tokens        { $$ = declare_types($3, $5); }

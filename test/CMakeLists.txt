@@ -8,6 +8,8 @@ macro(CUnitTest name)
             )
 endmacro()
 
+add_subdirectory(lexer)
+
 add_mocked_test(bootstrap_lexer_C
         SOURCES bootstrap_lexer_test.c
         LINK_LIBRARIES neoast neoast-bootstrap-lexer
@@ -24,6 +26,13 @@ add_mocked_test(lr_C
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT ${EXEC_ENV}
         INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src
+        )
+
+add_mocked_test(canonical_collection_CC
+        SOURCES canonical_collection_test.cc
+        LINK_LIBRARIES neoast-parsergen neoast-util
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        ENVIRONMENT ${EXEC_ENV}
         )
 
 add_mocked_test(macro_C

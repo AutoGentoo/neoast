@@ -555,6 +555,11 @@ size_t matcher_columno(NeoastMatcher* self)
     return self->cno_;
 }
 
+size_t matcher_size(NeoastMatcher* self)
+{
+    return self->len_;
+}
+
 const char* matcher_text(NeoastMatcher* self)
 {
     if (self->chr_ == '\0')

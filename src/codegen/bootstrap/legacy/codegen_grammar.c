@@ -22,9 +22,9 @@
 #include "codegen/codegen.h"
 #include <string.h>
 #include <stdlib.h>
-#include <parsergen/canonical_collection.h>
+#include <parsergen/c_pub.h>
 #include <stdarg.h>
-#include <assert.h>
+#include <util/util.h>
 #include "codegen/bootstrap/lexer/bootstrap_lexer.h"
 #include "grammar.h"
 
@@ -35,22 +35,22 @@
 
 uint32_t* GEN_parsing_table = NULL;
 const char* tok_names_errors[] = {
-        "eof",
-        "option",
-        "header",
-        "bottom",
-        "union",
-        "destructor",
-        "==",
-        "lex_state",
+        "$",
+        "%o",
+        "%t",
+        "%b",
+        "%u",
+        "%d",
+        "=",
+        "ll_s",
         "regex",
-        "}",
+        "ll_s_end",
         "expr_def",
         "grammar_token",
-        "|",
+        "end_state",
         ";",
-        "{grammar action}",
-        "file",
+        "{action}",
+        "F",
         "key_value",
         "header",
         "lexer_rule",
@@ -60,8 +60,10 @@ const char* tok_names_errors[] = {
         "grammar_tokens",
         "grammar",
         "grammars",
-        "augment rule"
+        "A"
 };
+
+//const char* tok_dump_names = "$ohbud=lr}eg|;{FKHL'G\"TiIP";
 
 struct LexerTextBuffer
 {
@@ -481,7 +483,7 @@ static LexerRule ll_rules_s0[] = {
         {.regex = "%left" WS_X ASCII, .expr = (lexer_expr) ll_left_ascii},
         {.regex = "%right" WS_X ID_X, .expr = (lexer_expr) ll_right},
         {.regex = "%right" WS_X ASCII, .expr = (lexer_expr) ll_right_ascii},
-        {.regex = "%top", .tok = TOK_HEADER},
+        {.regex = "%top", .tok = TOK_TOP},
         {.regex = "%bottom", .tok = TOK_BOTTOM},
         {.regex = "%union", .tok = TOK_UNION},
         {.regex = "%destructor" WS_OPT "<" ID_X ">", .expr = (lexer_expr) ll_destructor},
@@ -566,14 +568,14 @@ const uint32_t grammars[][7] = {
 
         /* TOK_GG_KEY_VALS => */
         {TOK_OPTION},
-        {TOK_HEADER,            TOK_G_ACTION},
-        {TOK_UNION,             TOK_G_ACTION},
-        {TOK_BOTTOM,            TOK_G_ACTION},
-        {TOK_DESTRUCTOR,        TOK_G_ACTION},
+        {TOK_TOP,         TOK_G_ACTION},
+        {TOK_UNION,       TOK_G_ACTION},
+        {TOK_BOTTOM,      TOK_G_ACTION},
+        {TOK_DESTRUCTOR,  TOK_G_ACTION},
 
         /* TOK_GG_HEADER */
         {TOK_GG_KEY_VALS},
-        {TOK_GG_KEY_VALS,       TOK_GG_HEADER},
+        {TOK_GG_KEY_VALS, TOK_GG_HEADER},
 
         /* Lexer Rules */
         // TOK_GG_LEX_RULE =>
@@ -648,7 +650,6 @@ static void gg_build_l_rule_1(CodegenUnion* dest, CodegenUnion* args)
 static void gg_build_l_rule_2(CodegenUnion* dest, CodegenUnion* args)
 {
     dest->l_rule = args[0].l_rule;
-    assert(dest->l_rule->next == NULL);
     dest->l_rule->next = args[1].l_rule;
 }
 
@@ -766,7 +767,7 @@ static const GrammarRule gg_rules[] = {
         {.token=TOK_GG_FILE, .tok_n=7, .grammar=grammars[21]}, // 21
 };
 
-uint8_t precedence_table[TOK_AUGMENT] = {0};
+uint8_t precedence_table[TOK_AUGMENT - NEOAST_ASCII_MAX] = {0};
 
 static void ll_error(const char* input, const TokenPosition* position, uint32_t lexer_state)
 {
@@ -779,11 +780,12 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
 {
     self->grammar_rules = gg_rules;
     self->grammar_n = NEOAST_ARR_LEN(gg_rules);
-    self->action_token_n = TOK_GG_FILE;
-    self->token_n = TOK_AUGMENT;
+    self->action_token_n = TOK_GG_FILE - NEOAST_ASCII_MAX;
+    self->token_n = TOK_AUGMENT - NEOAST_ASCII_MAX;
     self->token_names = tok_names_errors;
     self->destructors = NULL;
     self->ascii_mappings = NULL;
+    self->parser_error = NULL;
     self->parser_reduce = (parser_reduce) parser_reduce_all;
 
     *lexer_ptr = bootstrap_lexer_new(ll_rules,
@@ -791,14 +793,15 @@ int gen_parser_init(GrammarParser* self, void** lexer_ptr)
                                      NEOAST_ARR_LEN(ll_rules_n),
                                      ll_error, sizeof(CodegenUnion), NULL);
 
-    precedence_table[TOK_G_OR] = PRECEDENCE_LEFT;
+    precedence_table[TOK_G_OR - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
 
     // Generate the parsing table
-    CanonicalCollection* cc = canonical_collection_init(self);
+    void* cc = canonical_collection_init(self, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
     uint8_t error;
     GEN_parsing_table = canonical_collection_generate(cc, precedence_table, &error);
+    dump_table(GEN_parsing_table, cc, tok_names_errors, 0, stdout, NULL);
     canonical_collection_free(cc);
 
     if (error)

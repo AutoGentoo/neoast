@@ -22,6 +22,7 @@ public:
 
     uint32_t size() const;
     GrammarRule* get() const;
+    const TokenPosition** get_positions() const;
 
     ~CGGrammars();
 };

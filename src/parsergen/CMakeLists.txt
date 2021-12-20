@@ -1,11 +1,13 @@
 add_library(
         neoast-parsergen
-        clr_lalr.c clr_lalr.h
-        canonical_collection.c canonical_collection.h
-        )
+        canonical_collection.cc canonical_collection.h
+        derivation.cc derivation.h
+        c_pub.cc)
 
-include_directories(neoast-parsergen
+target_include_directories(neoast-parsergen
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/cre2/src)
+)
+
+target_include_directories(neoast-parsergen
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../include)

@@ -20,9 +20,12 @@
 #include <string>
 #include "codegen_impl.h"
 #include "cg_neoast_lexer.h"
+#include "codegen_priv.h"
+
 #include <parsergen/canonical_collection.h>
 #include <util/util.h>
 #include <utility>
+#include <fstream>
 
 
 std::string grammar_filename;
@@ -41,7 +44,6 @@ void CodeGenImpl::parse_header(const File* self)
             {KEY_VAL_TOP,     {"top",     &top}},
             {KEY_VAL_BOTTOM,  {"bottom",  &bottom}},
             {KEY_VAL_UNION,   {"union",   &union_}},
-            {KEY_VAL_LEXER,   {"lexer",   &lexer_input}},
             {KEY_VAL_INCLUDE, {"include", &include_}},
     };
 
@@ -166,29 +168,65 @@ void CodeGenImpl::parse_header(const File* self)
     { tokens.push_back(i->name); }
     for (const auto &i : grammar_tokens)
     { tokens.push_back(i->name); }
+
+    for (const auto& tok : action_tokens)
+    {
+        if (tok->is_ascii)
+        {
+            char ascii_char = get_ascii_from_name(tok->name.c_str());
+            switch(ascii_char)
+            {
+                case '\a':
+                    tokens_names.emplace_back("\\a");
+                    break;
+                case '\b':
+                    tokens_names.emplace_back("\\b");
+                    break;
+                case '\f':
+                    tokens_names.emplace_back("\\f");
+                    break;
+                case '\n':
+                    tokens_names.emplace_back("\\n");
+                    break;
+                case '\r':
+                    tokens_names.emplace_back("\\r");
+                    break;
+                case '\t':
+                    tokens_names.emplace_back("\\t");
+                    break;
+                case '\\':
+                    tokens_names.emplace_back("\\");
+                    break;
+                case '\'':
+                    tokens_names.emplace_back("'");
+                    break;
+                case '\"':
+                    tokens_names.emplace_back("\"");
+                    break;
+                case '\?':
+                    tokens_names.emplace_back("?");
+                    break;
+                default:
+                    tokens_names.emplace_back(std::string(1, ascii_char));
+                    break;
+            }
+        }
+        else
+        {
+            tokens_names.push_back(tok->name);
+        }
+    }
+    for (const auto& tok : grammar_tokens)
+    {
+        tokens_names.push_back(tok->name);
+    }
 }
 
 void CodeGenImpl::parse_lexer(const File* self)
 {
-    if (!(self->lexer_rules || !options.lexer_file.empty() || lexer_input))
-    {
-        emit_error(nullptr,
-                   "No lexer input found\n"
-                   "Use %lexer {}, %option lexer_file=\"PATH\", or builtin lexer");
-        return;
-    }
-
     if (!self->lexer_rules)
     {
         emit_error(nullptr, "No lexing rules have been provided");
-        return;
-    }
-
-    if (!options.lexer_file.empty() || lexer_input)
-    {
-        emit_error(nullptr,
-                   "Multiple lexer input types defined\n"
-                   "Use %lexer {}, %option lexer_file=\"PATH\", or builtin lexer");
         return;
     }
 
@@ -206,6 +244,45 @@ void CodeGenImpl::parse_grammar(const File* self)
     grammar = std::make_shared<CGGrammars>(parent, self);
 }
 
+void CodeGenImpl::init_cc()
+{
+    // Generate the canonical collection and resolve it
+    token_names_ptr = up<const char*[]>(new const char* [tokens_names.size()]);
+    int i = 0;
+    for (const auto &n : tokens_names)
+    { token_names_ptr[i++] = n.c_str(); }
+    parser = up<GrammarParser>(new GrammarParser);
+    parser->ascii_mappings = ascii_mappings;
+    parser->grammar_rules = grammar->get();
+    parser->token_names = token_names_ptr.get();
+    parser->grammar_n = grammar->size();
+    parser->token_n = static_cast<uint32_t>(tokens.size()) - 1;
+    parser->action_token_n = static_cast<uint32_t>(action_tokens.size());
+
+    debug_info = up<parsergen::DebugInfo>(new parsergen::DebugInfo);
+    debug_info->grammar_rule_positions = grammar->get_positions();
+    debug_info->emit_error = emit_error;
+    debug_info->emit_warning = emit_warning;
+
+    cc = up<parsergen::CanonicalCollection>(new parsergen::CanonicalCollection(parser.get(), debug_info.get()));
+    cc->resolve(options.parser_type);
+
+    precedence_table = up<uint8_t[]>(new uint8_t[tokens.size()]);
+    for (const auto &mapping : precedence_mapping)
+    {
+        precedence_table[mapping.first] = mapping.second;
+    }
+
+    parsing_table = up<uint32_t[]>(new uint32_t[cc->table_size()]);
+    auto error = cc->generate(parsing_table.get(), precedence_table.get());
+
+    if (error)
+    {
+        emit_error(nullptr, "Failed to generate parsing table");
+        return;
+    }
+}
+
 void CodeGenImpl::put_ascii_mappings(std::ostream &os) const
 {
     int i = 0;
@@ -221,105 +298,18 @@ void CodeGenImpl::put_ascii_mappings(std::ostream &os) const
 
 void CodeGenImpl::put_parsing_table(std::ostream &os) const
 {
-    up<const char* []> token_names_ptr(new const char* [tokens.size()]);
-    int i = 0;
-    for (const auto &n : tokens)
-    { token_names_ptr[i++] = n.c_str(); }
-
-    const GrammarParser parser{
-            .ascii_mappings = ascii_mappings,
-            .grammar_rules = grammar->get(),
-            .token_names = token_names_ptr.get(),
-            .grammar_n = grammar->size(),
-            .token_n = static_cast<uint32_t>(tokens.size()) - 1,
-            .action_token_n = static_cast<uint32_t>(action_tokens.size()),
-    };
-
-    CanonicalCollection* cc = canonical_collection_init(&parser);
-    canonical_collection_resolve(cc, options.parser_type);
-
-    uint8_t error;
-    up<uint8_t[]> precedence_table(new uint8_t[tokens.size()]);
-    for (const auto &mapping : precedence_mapping)
-    {
-        precedence_table[mapping.first] = mapping.second;
-    }
-
-    uint32_t* parsing_table = canonical_collection_generate(cc, precedence_table.get(), &error);
-
-    if (error)
-    {
-        emit_error(nullptr, "Failed to generate parsing table");
-        return;
-    }
-
-    if (options.debug_table)
-    {
-        put_table_debug(os, parsing_table, cc);
-    }
-
     // Actually put the LR parsing table
-    i = 0;
+    int i = 0;
     os << "static const\nuint32_t " << options.prefix << "_parsing_table[] = {\n";
-    for (int state_i = 0; state_i < cc->state_n; state_i++)
+    for (int state_i = 0; state_i < cc->size(); state_i++)
     {
         os << "        ";
-        for (int tok_i = 0; tok_i < cc->parser->token_n; tok_i++, i++)
+        for (int tok_i = 0; tok_i < cc->parser()->token_n; tok_i++, i++)
         {
-            os << variadic_string("0x%08X,%c", parsing_table[i], tok_i + 1 >= cc->parser->token_n ? '\n' : ' ');
+            os << variadic_string("0x%08X,%c", parsing_table[i], tok_i + 1 >= cc->parser()->token_n ? '\n' : ' ');
         }
     }
     os << "};";
-
-    canonical_collection_free(cc);
-    free(parsing_table);
-}
-
-void CodeGenImpl::put_table_debug(std::ostream &os,
-                                  const uint32_t* table,
-                                  const CanonicalCollection* cc) const
-{
-    os << "// Token names:\n";
-
-    std::string fallback;
-    fallback.reserve(tokens.size() + 1);
-    for (int i = 0; i < tokens.size(); i++)
-    {
-        if (i == 0)
-        {
-            fallback[i] = '$';
-        }
-        else if (i < action_tokens.size())
-        {
-            fallback[i] = (char) ('a' + (char) i - 1);
-        }
-        else
-        {
-            fallback[i] = (char) ('A' + (char) i - (action_tokens.size()));
-        }
-    }
-
-    const char* debug_ids = fallback.c_str();
-    if (!options.debug_ids.empty())
-    { debug_ids = options.debug_ids.c_str(); }
-
-    for (int i = 0; i < tokens.size(); i++)
-    {
-        if (tokens[i].substr(0, 13) == "ASCII_CHAR_0x")
-        {
-            os << variadic_string("//  %s => '%c' ('%c')\n",
-                                  tokens[i].c_str(), debug_ids[i],
-                                  get_ascii_from_name(tokens[i].c_str()));
-        }
-        else
-        {
-            os << variadic_string("//  %s => '%c'\n", tokens[i].c_str(), debug_ids[i]);
-        }
-    }
-
-    os << "\n";
-
-    dump_table_cxx(table, cc, debug_ids, 0, os, "//  ");
 }
 
 sp<CGToken> CodeGenImpl::get_token(const std::string &name) const
@@ -373,7 +363,6 @@ void CodeGenImpl::register_grammar(const sp<CGGrammarToken> &ptr)
 CodeGenImpl::CodeGenImpl(CodeGen* parent_)
 : parent(parent_),
   top(nullptr), bottom(nullptr), union_(nullptr),
-  lexer_input(nullptr),
   options(), m_engine()
 {
 }
@@ -391,11 +380,15 @@ void CodeGenImpl::parse(const File* self)
     parse_grammar(self);
     if (has_errors())
     { return; }
+
+    // Resolve the grammar into an LR(1) parser
+    init_cc();
 }
 
-CodeGen::CodeGen(const File* self)
+CodeGen::CodeGen(const File* self, const std::string& file_path)
         : impl_(new CodeGenImpl(this))
 {
+    grammar_filename = file_path;
     impl_->parse(self);
 }
 
@@ -419,39 +412,3 @@ void CodeGen::write_source(std::ostream &os) const
 
 CodeGen::~CodeGen()
 { delete impl_; }
-
-
-int codegen_write(const char* grammar_file_path,
-                  const File* self,
-                  const char* output_file_cc,
-                  const char* output_file_hh)
-{
-    if (grammar_file_path)
-    { grammar_filename = grammar_file_path; }
-
-    std::ofstream hh_os(output_file_hh);
-    std::ofstream cc_os(output_file_cc);
-
-    try
-    {
-        CodeGen c(self);
-        if (has_errors())
-        { return 1; }
-
-        c.write_header(hh_os);
-        if (has_errors())
-        { return 1; }
-
-        c.write_source(cc_os);
-        if (has_errors())
-        { return 1; }
-    }
-    catch (const ASTException &e)
-    { emit_error(e.position(), e.what()); }
-    catch (const Exception &e)
-    { emit_error(nullptr, e.what()); }
-    catch (const std::exception &e)
-    { emit_error(nullptr, "System exception: %s", e.what()); }
-
-    return has_errors();
-}

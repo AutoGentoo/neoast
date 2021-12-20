@@ -18,39 +18,11 @@
 
 #include <stdio.h>
 #include <cmocka.h>
-#include <regex.h>
 #include <string.h>
 #include <stdlib.h>
-#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
+#include "lexer/bootstrap_lexer.h"
 
 #define CTEST(name) static void name(void** state)
-
-CTEST(test_regexec)
-{
-    size_t len;
-    char result[BUFSIZ];
-    int i;
-    regmatch_t p[3];
-    p[0].rm_so = 1;
-    p[0].rm_eo = 4;
-
-    const char src[] = " test33 string 123";
-
-    regex_t c;
-    assert_int_equal(regcomp(&c, "[A-z]+", REG_EXTENDED), 0);
-    assert_int_equal(regexec(&c, src, 2, p, 0), 0);
-
-    for (i = 0; p[i].rm_so != -1; i++)
-    {
-        len = p[i].rm_eo - p[i].rm_so;
-        memcpy(result, src + p[i].rm_so, len);
-        result[len] = 0;
-        assert_string_equal(result, "test");
-    }
-
-    assert_int_equal(i, 1);
-    regfree(&c);
-}
 
 typedef union {
     int integer;
@@ -63,7 +35,7 @@ typedef union {
 int32_t ll_tok_num(const char* yytext, CodegenUnion* yyval)
 {
     yyval->integer = (int)strtol(yytext, NULL, 10);
-    return 1;
+    return NEOAST_ASCII_MAX + 1;
 }
 
 static GrammarParser p;
@@ -103,14 +75,14 @@ CTEST(test_lexer)
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenUnion), sizeof(CodegenUnion));
     void* lex = bootstrap_lexer_instance_new(l, yyinput, strlen(lexer_input));
 
-    assert_int_equal(bootstrap_lexer_next(lex, &llval), 1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval, NULL), 1);
     assert_int_equal(llval.value.integer, 10);
-    assert_int_equal(bootstrap_lexer_next(lex, &llval), 1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval, NULL), 1);
     assert_int_equal(llval.value.integer, 20);
-    assert_int_equal(bootstrap_lexer_next(lex, &llval), 1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval, NULL), 1);
     assert_int_equal(llval.value.integer, 30);
-    assert_int_equal(bootstrap_lexer_next(lex, &llval), -1); // Unhandled 'a'
-    assert_int_equal(bootstrap_lexer_next(lex, &llval), -1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval, NULL), -1); // Unhandled 'a'
+    assert_int_equal(bootstrap_lexer_next(lex, &llval, NULL), -1);
 
     bootstrap_lexer_instance_free(lex);
     parser_free_buffers(buf);
@@ -118,7 +90,6 @@ CTEST(test_lexer)
 }
 
 const static struct CMUnitTest lexer_tests[] = {
-        cmocka_unit_test(test_regexec),
         cmocka_unit_test(test_lexer),
 };
 

@@ -4,11 +4,13 @@
 }
 
 %top {
-void lexer_error_cb(const char* input,
+void lexer_error_cb(void* ctx,
+                    const char* input,
                     const TokenPosition* position,
                     const char* state_name);
 
-void parser_error_cb(const char* const* token_names,
+void parser_error_cb(void* ctx,
+                     const char* const* token_names,
                      const TokenPosition* position,
                      uint32_t last_token,
                      uint32_t current_token,
@@ -51,10 +53,10 @@ out: expr           { $$ = $1; }
     ;
 
 expr: A_TOKEN       { $$ = $1; }
-    | out '+' out   { $$ = $1 + $3; }
-    | out '-' out   { $$ = $1 - $3; }
-    | out '*' out   { $$ = $1 * $3; }
-    | out '/' out   { $$ = $1 / $3; }
+    | expr '+' expr { $$ = $1 + $3; }
+    | expr '-' expr { $$ = $1 - $3; }
+    | expr '*' expr { $$ = $1 * $3; }
+    | expr '/' expr { $$ = $1 / $3; }
     ;
 
 %%

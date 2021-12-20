@@ -17,11 +17,11 @@
 
 
 #include <stdlib.h>
-#include <parsergen/canonical_collection.h>
+#include <parsergen/c_pub.h>
 #include <math.h>
 #include <util/util.h>
 #include <string.h>
-#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
+#include "lexer/bootstrap_lexer.h"
 #include <cmocka.h>
 #include <stddef.h>
 
@@ -47,7 +47,7 @@
 
 enum
 {
-    TOK_EOF = 0,
+    TOK_EOF = NEOAST_ASCII_MAX,
     TOK_NUM,
     TOK_PLUS,
     TOK_MINUS,
@@ -62,8 +62,8 @@ enum
 };
 
 static const char* token_error_names[] = {
-        "EOF",
-        "number",
+        "$",
+        "n",
         "+",
         "-",
         "*",
@@ -71,13 +71,26 @@ static const char* token_error_names[] = {
         "^",
         "(",
         ")",
-        "expression",
-        "input",
-        "augment"
+        "E",
+        "I",
+        "A"
 };
 
-static const char* token_names = "$N+-*/^()ES'";
-static uint8_t precedence_table[TOK_AUGMENT] = {PRECEDENCE_NONE};
+static const char* token_names[] = {
+        "$",
+        "N",
+        "+",
+        "-",
+        "*",
+        "/",
+        "^",
+        "(",
+        ")",
+        "E",
+        "S",
+        "'"
+};
+static uint8_t precedence_table[TOK_AUGMENT - NEOAST_ASCII_MAX] = {PRECEDENCE_NONE};
 
 typedef union
 {
@@ -204,11 +217,11 @@ void initialize_parser()
     static uint32_t r8[] = {TOK_E};
     static uint32_t r9[] = {};
 
-    precedence_table[TOK_PLUS] = PRECEDENCE_LEFT;
-    precedence_table[TOK_MINUS] = PRECEDENCE_LEFT;
-    precedence_table[TOK_STAR] = PRECEDENCE_LEFT;
-    precedence_table[TOK_SLASH] = PRECEDENCE_LEFT;
-    precedence_table[TOK_CARET] = PRECEDENCE_RIGHT;
+    precedence_table[TOK_PLUS - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
+    precedence_table[TOK_MINUS - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
+    precedence_table[TOK_STAR - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
+    precedence_table[TOK_SLASH - NEOAST_ASCII_MAX] = PRECEDENCE_LEFT;
+    precedence_table[TOK_CARET - NEOAST_ASCII_MAX] = PRECEDENCE_RIGHT;
 
     static uint32_t a_r[] = {TOK_S};
 
@@ -234,7 +247,7 @@ void initialize_parser()
     p.grammar_n = 10;
     p.grammar_rules = g_rules;
     p.action_token_n = 9;
-    p.token_n = TOK_AUGMENT;
+    p.token_n = TOK_AUGMENT - NEOAST_ASCII_MAX;
     p.token_names = token_error_names;
     p.parser_reduce = (parser_reduce) reduce_handler;
 
@@ -245,11 +258,11 @@ void initialize_parser()
 CTEST(test_clr_1)
 {
     initialize_parser();
-    CanonicalCollection* cc = canonical_collection_init(&p);
+    void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, CLR_1);
 
-    uint8_t error;
-    uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
+    uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
+    uint32_t error = canonical_collection_generate(cc, table, precedence_table);
     assert_int_equal(error, 0);
 
     dump_table(table, cc, token_names, 0, stdout, NULL);
@@ -261,11 +274,11 @@ CTEST(test_clr_1)
 CTEST(test_lalr_1)
 {
     initialize_parser();
-    CanonicalCollection* cc = canonical_collection_init(&p);
+    void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
-    uint8_t error;
-    uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
+    uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
+    uint32_t error = canonical_collection_generate(cc, table, precedence_table);
     assert_int_equal(error, 0);
 
     dump_table(table, cc, token_names, 0, stdout, NULL);
@@ -282,15 +295,15 @@ CTEST(test_lalr_1_calculator)
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct),
                                                  offsetof(CalculatorStruct, position));
 
-    CanonicalCollection* cc = canonical_collection_init(&p);
+    void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
-    uint8_t error;
-    uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
+    uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
+    uint32_t error = canonical_collection_generate(cc, table, precedence_table);
     assert_int_equal(error, 0);
 
     void* lexer_inst = bootstrap_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
-    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_inst, bootstrap_lexer_next);
+    int32_t res_idx = parser_parse_lr(&p, NULL, table, buf, lexer_inst, bootstrap_lexer_next);
     bootstrap_lexer_instance_free(lexer_inst);
 
     dump_table(table, cc, token_names, 0, stdout, NULL);
@@ -313,15 +326,15 @@ CTEST(test_lalr_1_order_of_ops)
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CalculatorStruct),
                                                  offsetof(CalculatorStruct, position));
 
-    CanonicalCollection* cc = canonical_collection_init(&p);
+    void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
-    uint8_t error;
-    uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
+    uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
+    uint32_t error = canonical_collection_generate(cc, table, precedence_table);
     assert_int_equal(error, 0);
 
     void* lexer_inst = bootstrap_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
-    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_inst, bootstrap_lexer_next);
+    int32_t res_idx = parser_parse_lr(&p, NULL, table, buf, lexer_inst, bootstrap_lexer_next);
     bootstrap_lexer_instance_free(lexer_inst);
 
     // This parser has no order of ops
@@ -334,32 +347,7 @@ CTEST(test_lalr_1_order_of_ops)
     bootstrap_lexer_free(lexer_parent);
 }
 
-uint8_t lr_1_firstof(uint8_t dest[],
-                     uint32_t token,
-                     const GrammarParser* parser);
-
-CTEST(test_first_of_expr)
-{
-    initialize_parser();
-
-    uint8_t first_of_items[TOK_E] = {0};
-    lr_1_firstof(first_of_items, TOK_E, &p);
-
-    assert_true(first_of_items[TOK_OPEN_P]);
-    assert_true(first_of_items[TOK_NUM]);
-
-    assert_false(first_of_items[TOK_EOF]);
-    assert_false(first_of_items[TOK_CLOSE_P]);
-    assert_false(first_of_items[TOK_PLUS]);
-    assert_false(first_of_items[TOK_MINUS]);
-    assert_false(first_of_items[TOK_STAR]);
-    assert_false(first_of_items[TOK_SLASH]);
-    assert_false(first_of_items[TOK_CARET]);
-    bootstrap_lexer_free(lexer_parent);
-}
-
 const static struct CMUnitTest left_scan_tests[] = {
-        cmocka_unit_test(test_first_of_expr),
         cmocka_unit_test(test_clr_1),
         cmocka_unit_test(test_lalr_1),
         cmocka_unit_test(test_lalr_1_calculator),

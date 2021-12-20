@@ -2,11 +2,13 @@
 // Created by tumbar on 7/17/21.
 //
 
+#include <map>
 #include "cg_grammar.h"
 
 
 struct CGGrammar
 {
+    const TokenPosition* ast_position;
     std::vector<uint32_t> &table;
 
     const GrammarRuleSingleProto* parent;
@@ -22,7 +24,7 @@ struct CGGrammar
               const CodeGen* cg,
               sp<CGGrammarToken> return_type_,
               const GrammarRuleSingleProto* self) :
-        table(table_),
+        table(table_), ast_position(&self->position),
         action(self->function ? self->function : "", &self->position),
         return_type(std::move(return_type_)), token_n(0),
         parent(self)
@@ -73,7 +75,7 @@ struct CGGrammar
         }
 
         os << "        case " << i << ":\n"
-           << action.get_complex(options, argument_types, "dest", "args", false)
+           << action.get_complex(options, argument_types, "dest__", "args__", false)
            << "            break;\n";
     }
 
@@ -98,6 +100,7 @@ struct CGGrammarsImpl
 
     std::map<std::string, std::vector<CGGrammar>> rules_cg;
     std::vector<GrammarRule> rules;
+    std::vector<const TokenPosition*> rule_positions;
     uint32_t grammar_n = 0;
 
     Token* augment_rule_tok;
@@ -181,11 +184,13 @@ CGGrammars::CGGrammars(const CodeGen* cg, const File* self)
     }
 
     impl_->rules.reserve(impl_->grammar_n);
+    impl_->rule_positions.reserve(impl_->grammar_n);
     for (const auto &rules : impl_->rules_cg)
     {
         for (const auto& rule : rules.second)
         {
             impl_->rules.emplace_back(rule.initialize_grammar());
+            impl_->rule_positions.push_back(rule.ast_position);
         }
     }
 }
@@ -232,7 +237,7 @@ void CGGrammars::put_rules(std::ostream &os) const
     // Print the grammar rules
     uint32_t grammar_offset_i = 0;
     os << "static const\n"
-          "GrammarRule __neoast_grammar_rules[] = {\n";
+          "GrammarRule neoast_grammar_rules[] = {\n";
 
     for (const auto &rule : impl_->rules)
     {
@@ -249,9 +254,10 @@ void CGGrammars::put_rules(std::ostream &os) const
 void CGGrammars::put_actions(std::ostream &os) const
 {
     int gg_i = 0;
-    os << variadic_string("static void __neoast_reduce_handler(uint32_t reduce_id, %s* dest, %s* args)\n{\n",
+    os << variadic_string("static void neoast_reduce_handler(uint32_t reduce_id__, %s* dest__, %s* args__, void* context__)\n"
+                          "{\n#define yycontext (context__)\n",
                           CODEGEN_STRUCT, CODEGEN_STRUCT)
-       << "    switch(reduce_id)\n    {\n";
+       << "    switch(reduce_id__)\n    {\n";
     for (const auto &rules : impl_->rules_cg)
     {
         for (const auto &rule : rules.second)
@@ -260,8 +266,8 @@ void CGGrammars::put_actions(std::ostream &os) const
         }
     }
     os << "    default:\n"
-          "        *dest = args[0];\n"
-          "        break;\n    }\n}\n";
+          "        *dest__ = args__[0];\n"
+          "        break;\n    }\n#undef yycontext\n}\n";
 }
 
 uint32_t CGGrammars::size() const
@@ -273,4 +279,9 @@ uint32_t CGGrammars::size() const
 GrammarRule* CGGrammars::get() const
 {
     return impl_->rules.data();
+}
+
+const TokenPosition** CGGrammars::get_positions() const
+{
+    return impl_->rule_positions.data();
 }

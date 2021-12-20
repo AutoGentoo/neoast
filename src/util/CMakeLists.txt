@@ -1,6 +1,6 @@
 add_library(neoast-util STATIC
         table_dump.cc
-        util.h)
+        util.h graphiz.cc states_dump.cc)
 
 target_include_directories(neoast-util PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../

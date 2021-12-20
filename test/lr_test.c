@@ -19,8 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <neoast.h>
-#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
 #include <cmocka.h>
+#include "lexer/bootstrap_lexer.h"
 #include <stddef.h>
 
 #define CTEST(name) static void name(void** state)
@@ -39,7 +39,7 @@
 enum
 {
     // 0 reserved for eof
-    TOK_a = 1,
+    TOK_a = NEOAST_ASCII_MAX + 1,
     TOK_b,
     TOK_S,
     TOK_A,
@@ -100,30 +100,16 @@ static void reduce_generic(uint32_t id, CodegenStruct* dest, CodegenStruct* args
 void initialize_parser()
 {
     static LexerRule l_rules[] = {
-            {.tok = TOK_b, .regex = ";"},
+            {.regex = ";", .tok = TOK_b},
             {.regex = "[ ]+"},
-            {.expr = (lexer_expr) ll_tok_num, .regex = "[0-9]+"}
+            {.regex = "[0-9]+", .expr = (lexer_expr) ll_tok_num}
     };
 
-    static uint32_t r1[] = {
-            TOK_A,
-            TOK_A
-    };
-
-    static uint32_t r2[] = {
-            TOK_a,
-            TOK_A
-    };
-
-    static uint32_t r3[] = {
-            TOK_b
-    };
-
-    static uint32_t a_r[] = {
-            TOK_AUGMENT
-    };
-
-    static GrammarRule g_rules[] = {
+    static const uint32_t r1[] = {TOK_A, TOK_A};
+    static const uint32_t r2[] = {TOK_a, TOK_A};
+    static const uint32_t r3[] = {TOK_b};
+    static const uint32_t a_r[] = {TOK_S};
+    static const GrammarRule g_rules[] = {
             {.token = TOK_AUGMENT, .tok_n = 1, .grammar = a_r},
             {.token = TOK_S, .tok_n = 2, .grammar = r1},
             {.token = TOK_A, .tok_n = 2, .grammar = r2},
@@ -136,7 +122,7 @@ void initialize_parser()
 
     p.grammar_n = 4;
     p.grammar_rules = g_rules;
-    p.token_n = TOK_AUGMENT;
+    p.token_n = TOK_AUGMENT - NEOAST_ASCII_MAX;
     p.action_token_n = 3;
     p.token_names = token_error_names;
     p.parser_reduce = (parser_reduce) reduce_generic;
@@ -153,12 +139,11 @@ CTEST(test_parser)
                               "20 " // a
                               "30"  // a
                               ";";  // b
-    initialize_parser();
 
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenStruct), sizeof(CodegenUnion));
 
     void* lexer_inst = bootstrap_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
-    int32_t res_idx = parser_parse_lr(&p, lalr_table, buf, lexer_inst, bootstrap_lexer_next);
+    int32_t res_idx = parser_parse_lr(&p, NULL, lalr_table, buf, lexer_inst, bootstrap_lexer_next);
     bootstrap_lexer_instance_free(lexer_inst);
 
     parser_free_buffers(buf);
@@ -173,5 +158,6 @@ const static struct CMUnitTest left_scan_tests[] = {
 
 int main()
 {
+    initialize_parser();
     return cmocka_run_group_tests(left_scan_tests, NULL, NULL);
 }

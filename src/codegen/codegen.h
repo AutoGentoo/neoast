@@ -24,7 +24,6 @@ extern "C" {
 #endif
 
 #include <neoast.h>
-#include <parsergen/canonical_collection.h>
 
 typedef enum
 {
@@ -99,15 +98,22 @@ struct File
     struct GrammarRuleProto* grammar_rules;
 };
 
-int gen_parser_init(GrammarParser* self, void** lexer_ptr);
-int codegen_write(const char* grammar_file_path,
-                  const struct File* self,
-                  const char* output_file_cc,
-                  const char* output_file_hh);
-
 void emit_warning(const TokenPosition* position, const char* message, ...);
 void emit_error(const TokenPosition* position, const char* message, ...);
-int has_errors();
+uint32_t has_errors();
+
+void lexing_error_cb(void* ctx,
+                     const char* input,
+                     const TokenPosition* position,
+                     const char* lexer_state);
+
+void parsing_error_cb(void* ctx,
+                      const char* const* token_names,
+                      const TokenPosition* position,
+                      uint32_t last_token,
+                      uint32_t current_token,
+                      const uint32_t expected_tokens[],
+                      uint32_t expected_tokens_n);
 
 KeyVal* key_val_build(const TokenPosition* p, key_val_t type, char* key, char* value);
 struct Token* build_token(const TokenPosition* position, char* name);
@@ -122,10 +128,8 @@ void grammar_rule_single_free(struct GrammarRuleSingleProto* self);
 void grammar_rule_multi_free(struct GrammarRuleProto* self);
 void file_free(struct File* self);
 
-extern const char* tok_names_errors[];
-
 #ifdef __cplusplus
-};
+}
 #endif
 
 #endif //NEOAST_CODEGEN_H
