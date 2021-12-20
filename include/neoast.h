@@ -35,8 +35,6 @@ extern "C" {
 #define NEOAST_STACK_POP(stack) (stack)->data[--((stack)->pos)]
 #define NEOAST_STACK_PEEK(stack) (stack)->data[(stack)->pos - 1]
 
-#define NEOAST_COMPILE_ASSERT(assertion, name) extern int name ## _gbl_assertion_compile___[(assertion) ? 1 : -1]
-
 typedef struct GrammarParser_prv GrammarParser;
 typedef struct GrammarRule_prv GrammarRule;
 typedef struct ParsingStack_prv ParsingStack;
@@ -129,12 +127,6 @@ struct ParsingStack_prv
     uint32_t pos;
     uint32_t data[];
 };
-
-typedef struct
-{
-    uint32_t line;
-    uint32_t line_start_offset;
-} PositionData;
 
 struct ParserBuffers_prv
 {
