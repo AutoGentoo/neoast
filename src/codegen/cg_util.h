@@ -45,7 +45,6 @@ void put_enum(int start, const T& iterable, std::ostream& os,
     {
         if (_i < skip_start)
         {
-            ;
         }
         else if (is_first)
         {
@@ -57,7 +56,10 @@ void put_enum(int start, const T& iterable, std::ostream& os,
             os << variadic_string("    %s, // %d 0x%03X", i.c_str(), start, start);
             if (i.substr(0, 13) == "ASCII_CHAR_0x")
             {
-                os << variadic_string(" '%c'", std::stoul(i.substr(13), nullptr, 16));
+                char ascii = get_ascii_from_name(i.c_str());
+                const char* printable = get_ascii_printable(ascii);
+                if (printable) os << " '" << printable << "'";
+                else os << variadic_string(" '%c'", ascii);
             }
 
             os << "\n";

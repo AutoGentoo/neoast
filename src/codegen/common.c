@@ -53,6 +53,35 @@ char get_ascii_from_name(const char* name)
     return (char)strtoul(name + 13, NULL, 16);
 }
 
+const char* get_ascii_printable(char ascii)
+{
+    switch(ascii)
+    {
+        case '\a':
+            return "\\a";
+        case '\b':
+            return "\\b";
+        case '\f':
+            return "\\f";
+        case '\n':
+            return "\\n";
+        case '\r':
+            return "\\r";
+        case '\t':
+            return "\\t";
+        case '\\':
+            return "\\";
+        case '\'':
+            return "'";
+        case '\"':
+            return "\"";
+        case '\?':
+            return "?";
+        default:
+            return NULL;
+    }
+}
+
 struct Token* build_token_ascii(const TokenPosition* position, char value)
 {
     struct Token* self = malloc(sizeof(struct Token));
