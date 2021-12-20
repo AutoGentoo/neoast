@@ -120,6 +120,7 @@ struct Token* build_token(const TokenPosition* position, char* name);
 struct Token* build_token_ascii(const TokenPosition* position, char value);
 char* get_ascii_token_name(char value);
 char get_ascii_from_name(const char* name);
+const char* get_ascii_printable(char ascii);
 
 void tokens_free(struct Token* self);
 void key_val_free(KeyVal* self);
