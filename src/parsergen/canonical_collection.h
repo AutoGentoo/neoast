@@ -136,6 +136,12 @@ namespace parsergen
             return productions_.at(grammar);
         }
 
+        inline std::unordered_map<tok_t, std::vector<const GrammarRule*>>::const_iterator
+        begin_productions() const { return productions_.begin(); }
+
+        inline std::unordered_map<tok_t, std::vector<const GrammarRule*>>::const_iterator
+        end_productions() const { return productions_.end(); }
+
         /**
          * @return Number of items in the parsing table
          */

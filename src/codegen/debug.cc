@@ -19,7 +19,10 @@
 #include <getopt.h>
 #include <cstdint>
 #include <iostream>
+#include <fstream>
 #include "codegen_priv.h"
+#include "codegen_impl.h"
+#include "input_file.h"
 
 uint32_t cc_init();
 
@@ -37,6 +40,7 @@ int main(int argc, char* argv[])
             {"graph",       required_argument, nullptr, 'g'},
             {"table",       required_argument, nullptr, 't'},
             {"states",      required_argument, nullptr, 's'},
+            {"input",       required_argument, nullptr, 'i'},
             {"small-graph", no_argument,       nullptr, 'q'},
             {"help",        no_argument,       nullptr, 'h'},
             {nullptr, 0,                       nullptr, 0}
@@ -45,11 +49,12 @@ int main(int argc, char* argv[])
     const char* graph_file = nullptr;
     const char* table_file = nullptr;
     const char* states_file = nullptr;
+    const char* input_file = nullptr;
     bool small_graph = false;
 
     int rc, option_index = 0;
     int error = 0, help = 0;
-    while ((rc = getopt_long_only(argc, argv, "g:t:qs:h",
+    while ((rc = getopt_long_only(argc, argv, "g:t:qs:hi:",
                                   long_options, &option_index)) != -1)
     {
         switch (rc)
@@ -63,8 +68,14 @@ int main(int argc, char* argv[])
             case 's':
                 states_file = optarg;
                 break;
+            case 'i':
+                input_file = optarg;
+                break;
             case 'h':
                 help = 1;
+                break;
+            case 'q':
+                small_graph = true;
                 break;
             case 0 :  /* no short form case  */
             case '?':  /* Handled by the default error handler */
@@ -82,6 +93,12 @@ int main(int argc, char* argv[])
         error = 1;
     }
 
+    if (!input_file)
+    {
+        std::cout << "an input file must be provided (--input=FILE)\n";
+        error = 2;
+    }
+
     if (error || help)
     {
         std::cout << "Usage: neoast-debug [OPTION]... -i input.y\n"
@@ -91,19 +108,61 @@ int main(int argc, char* argv[])
                      "  -g, --graph=FILE        graphviz dot file\n"
                      "  -t, --table=FILE        LALR(1)/CLR(1) parsing table with debugging information\n"
                      "  -s, --states=FILE       similar to graphviz but in human readable ascii\n\n"
-                     "Options:"
+                     "Options:\n"
+                     "  -i, --input             (required) parser input file to debug\n"
                      "  -h, --help              generate this message and exit\n"
                      "  -q, --small-graph       used with --graph to generate smaller graphs for large parsers\n";
         return error;
     }
 
     // Parse and generate the canonical collection
-    CodeGen cg()
-
-    if (graph_file)
+    InputFile input(input_file);
+    if (has_errors())
     {
-
+        input.put_errors();
+        return (int)has_errors();
     }
 
-    return 0;
+    do
+    {
+        try
+        {
+            CodeGen cg(input.file, input.full_path);
+            if (has_errors()) break;
+
+            const parsergen::CanonicalCollection* cc = cg.get_impl()->cc.get();
+            if (graph_file)
+            {
+                std::ofstream gf(graph_file);
+                dump_graphviz_cxx(cc, gf, small_graph);
+                gf.close();
+            }
+
+            if (table_file)
+            {
+                std::ofstream tf(table_file);
+                up<uint32_t[]> table = up<uint32_t[]>(new uint32_t[cc->table_size()]);
+                cc->generate(table.get(), cg.get_impl()->precedence_table.get());
+                dump_table_cxx(table.get(), cc, cg.get_impl()->token_names_ptr.get(),
+                               0, tf, "");
+                tf.close();
+            }
+
+            if (states_file)
+            {
+                std::ofstream sf(states_file);
+                dump_states_cxx(cc, sf);
+                sf.close();
+            }
+        }
+        catch (const ASTException &e)
+        { emit_error(e.position(), e.what()); }
+        catch (const Exception &e)
+        { emit_error(nullptr, e.what()); }
+        catch (const std::exception &e)
+        { emit_error(nullptr, "System exception: %s", e.what()); }
+    } while (false);
+
+    input.put_errors();
+    return (int)has_errors();
 }

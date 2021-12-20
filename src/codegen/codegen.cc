@@ -173,7 +173,43 @@ void CodeGenImpl::parse_header(const File* self)
     {
         if (tok->is_ascii)
         {
-            tokens_names.emplace_back(std::string(1, get_ascii_from_name(tok->name.c_str())));
+            char ascii_char = get_ascii_from_name(tok->name.c_str());
+            switch(ascii_char)
+            {
+                case '\a':
+                    tokens_names.emplace_back("\\a");
+                    break;
+                case '\b':
+                    tokens_names.emplace_back("\\b");
+                    break;
+                case '\f':
+                    tokens_names.emplace_back("\\f");
+                    break;
+                case '\n':
+                    tokens_names.emplace_back("\\n");
+                    break;
+                case '\r':
+                    tokens_names.emplace_back("\\r");
+                    break;
+                case '\t':
+                    tokens_names.emplace_back("\\t");
+                    break;
+                case '\\':
+                    tokens_names.emplace_back("\\");
+                    break;
+                case '\'':
+                    tokens_names.emplace_back("'");
+                    break;
+                case '\"':
+                    tokens_names.emplace_back("\"");
+                    break;
+                case '\?':
+                    tokens_names.emplace_back("?");
+                    break;
+                default:
+                    tokens_names.emplace_back(std::string(1, ascii_char));
+                    break;
+            }
         }
         else
         {

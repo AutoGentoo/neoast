@@ -59,5 +59,10 @@ target_link_libraries(neoast-exec
         neoast-codegen
 )
 add_executable(neoast-debug debug.cc)
-target_link_libraries(neoast-debug neoast_compiler_compiler neoast-codegen neoast-util)
+target_link_libraries(neoast-debug
+        neoast-util
+        neoast_compiler_compiler
+        neoast-codegen
+        neoast_compiler_compiler
+        neoast-codegen)
 

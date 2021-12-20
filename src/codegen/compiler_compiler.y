@@ -22,6 +22,7 @@ static __thread struct LexerTextBuffer brace_buffer = {0};
 
 static inline void ll_add_to_brace(const char* lex_text, uint32_t len);
 static inline void ll_match_brace(const TokenPosition* start_position);
+static inline char ll_handle_ascii(void* yycontext, const char* yytext);
 
 }
 
@@ -46,6 +47,41 @@ static inline void ll_match_brace(const TokenPosition* start_position)
     brace_buffer.n = 0;
     brace_buffer.start_position = *start_position;
     brace_buffer.counter = 1;
+}
+
+static inline char ll_handle_ascii(void* yycontext, const char* yytext)
+{
+    if (yytext[1] != '\\')
+    {
+        return yytext[1];
+    }
+    else
+    {
+        // Handle all escape sequences supported in C
+        switch(yytext[2])
+        {
+#define HANDLE_ESCAPE(n, c) case (n): \
+            return (c); \
+            break
+        HANDLE_ESCAPE('a', '\a');
+        HANDLE_ESCAPE('b', '\b');
+//        HANDLE_ESCAPE('e', '\e');
+        HANDLE_ESCAPE('f', '\f');
+        HANDLE_ESCAPE('n', '\n');
+        HANDLE_ESCAPE('r', '\r');
+        HANDLE_ESCAPE('t', '\t');
+        HANDLE_ESCAPE('v', '\v');
+        HANDLE_ESCAPE('\\', '\\');
+        HANDLE_ESCAPE('\'', '\'');
+        HANDLE_ESCAPE('"', '"');
+        HANDLE_ESCAPE('?', '?');
+        default:
+            emit_error(yycontext, "unhandled escape sequence '\\%c'",
+                       yytext[2]);
+            return 0;
+#undef HANDLE_ESCAPE
+        }
+    }
 }
 
 }
@@ -138,7 +174,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 
 // These take precedence over literal tokens
 "{literal}"         { yyval->identifier = strndup(yytext + 1, yylen - 2); return LITERAL; }
-"{ascii}"           { yyval->ascii = yytext[1]; return ASCII; }
+"{ascii}"           { yyval->ascii = ll_handle_ascii(yycontext, yytext); return ASCII; }
 
 // Don't build anything during lexing to keep things simple
 // This is different from the way the bootstraping compiler does it
@@ -208,7 +244,7 @@ static inline void ll_match_brace(const TokenPosition* start_position)
 <S_GG_RULES> {
 "{whitespace}"      { /* skip */ }
 "//[^\n]*"          { /* skip */ }
-"{ascii}"           { yyval->ascii = yytext[1]; return ASCII; }
+"{ascii}"           { yyval->ascii = ll_handle_ascii(yycontext, yytext); return ASCII; }
 "/\*"               { yypush(S_COMMENT); }
 "%%"                { yypop(); return GG; }
 "{identifier}"      { yyval->identifier = strdup(yytext); return IDENTIFIER; }

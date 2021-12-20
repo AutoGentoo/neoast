@@ -91,7 +91,11 @@ void dump_table_cxx(
 void dump_graphviz_cxx(
         const parsergen::CanonicalCollection* cc,
         std::ostream& os,
-        bool full = true);
+        bool small = false);
+
+void dump_states_cxx(
+        const parsergen::CanonicalCollection* cc,
+        std::ostream& os);
 
 #endif
 

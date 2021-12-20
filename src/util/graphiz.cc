@@ -45,16 +45,8 @@ static inline void dump_name(const char* t_name, std::ostream& os)
 static void dump_graphviz_state(
         const parsergen::CanonicalCollection* cc,
         const parsergen::GrammarState* gs,
-        std::ostream &os,
-        bool full)
+        std::ostream &os)
 {
-    if (!full)
-    {
-        os << "s" << gs->get_id()
-           << "shape=none, margin=0, label=<s" << gs->get_id() << ">]\n";
-        return;
-    }
-
     os << "s" << gs->get_id()
        << " [shape=none, margin=0, label=<\n"
           "    <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">\n"
@@ -106,14 +98,17 @@ static void dump_graphviz_state_edges(
 void dump_graphviz_cxx(
         const parsergen::CanonicalCollection* cc,
         std::ostream &os,
-        bool full)
+        bool small)
 {
     os << "digraph{\n";
 
     // Dump all state nodes
-    for (uint32_t st_i = 0; st_i < cc->size(); st_i++)
+    if (!small)
     {
-        dump_graphviz_state(cc, cc->get_state(st_i), os, full);
+        for (uint32_t st_i = 0; st_i < cc->size(); st_i++)
+        {
+            dump_graphviz_state(cc, cc->get_state(st_i), os);
+        }
     }
 
     // Connect the states with transitions
