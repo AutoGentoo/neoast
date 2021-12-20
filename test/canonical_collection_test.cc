@@ -121,7 +121,7 @@ CTEST(test_state_hash)
             {&simple::g_rules[0], 1, lookaheads},
     };
 
-    CanonicalCollection cc(&simple_p, nullptr);
+    CanonicalCollection cc(&simple_p, nullptr, nullptr);
 
     sp<GrammarState> s1(new GrammarState(&cc, items1, 0));
     sp<GrammarState> s2(new GrammarState(&cc, items2, 1));
@@ -168,7 +168,7 @@ CTEST(test_lr1_lr0_sorting)
 
 CTEST(test_tablegen)
 {
-    CanonicalCollection cc(&simple_p, nullptr);
+    CanonicalCollection cc(&simple_p, nullptr, nullptr);
     cc.resolve(LALR_1);
 
     std::unique_ptr<uint32_t[]> table = std::unique_ptr<uint32_t[]>(new uint32_t[cc.table_size()]);
@@ -183,7 +183,7 @@ CTEST(test_tablegen)
 
 CTEST(test_lookaheads)
 {
-    CanonicalCollection cc(&simple_p, nullptr);
+    CanonicalCollection cc(&simple_p, nullptr, nullptr);
 
     BitVector first_of_A(simple_p.action_token_n);
     first_of_A.select(1);
