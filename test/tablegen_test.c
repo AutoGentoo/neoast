@@ -21,7 +21,7 @@
 #include <math.h>
 #include <util/util.h>
 #include <string.h>
-#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
+#include "lexer/bootstrap_lexer.h"
 #include <cmocka.h>
 #include <stddef.h>
 
@@ -261,8 +261,8 @@ CTEST(test_clr_1)
     void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, CLR_1);
 
-    uint8_t error;
-    uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
+    uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
+    uint32_t error = canonical_collection_generate(cc, table, precedence_table);
     assert_int_equal(error, 0);
 
     dump_table(table, cc, token_names, 0, stdout, NULL);
@@ -277,8 +277,8 @@ CTEST(test_lalr_1)
     void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
-    uint8_t error;
-    uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
+    uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
+    uint32_t error = canonical_collection_generate(cc, table, precedence_table);
     assert_int_equal(error, 0);
 
     dump_table(table, cc, token_names, 0, stdout, NULL);
@@ -298,12 +298,12 @@ CTEST(test_lalr_1_calculator)
     void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
-    uint8_t error;
-    uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
+    uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
+    uint32_t error = canonical_collection_generate(cc, table, precedence_table);
     assert_int_equal(error, 0);
 
     void* lexer_inst = bootstrap_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
-    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_inst, bootstrap_lexer_next);
+    int32_t res_idx = parser_parse_lr(&p, NULL, table, buf, lexer_inst, bootstrap_lexer_next);
     bootstrap_lexer_instance_free(lexer_inst);
 
     dump_table(table, cc, token_names, 0, stdout, NULL);
@@ -329,12 +329,12 @@ CTEST(test_lalr_1_order_of_ops)
     void* cc = canonical_collection_init(&p, NULL);
     canonical_collection_resolve(cc, LALR_1);
 
-    uint8_t error;
-    uint32_t* table = canonical_collection_generate(cc, precedence_table, &error);
+    uint32_t* table = malloc(sizeof(uint32_t) * canonical_collection_table_size(cc));
+    uint32_t error = canonical_collection_generate(cc, table, precedence_table);
     assert_int_equal(error, 0);
 
     void* lexer_inst = bootstrap_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
-    int32_t res_idx = parser_parse_lr(&p, table, buf, lexer_inst, bootstrap_lexer_next);
+    int32_t res_idx = parser_parse_lr(&p, NULL, table, buf, lexer_inst, bootstrap_lexer_next);
     bootstrap_lexer_instance_free(lexer_inst);
 
     // This parser has no order of ops

@@ -4,11 +4,13 @@
 }
 
 %top {
-void lexer_error_cb(const char* input,
+void lexer_error_cb(void* ctx,
+                    const char* input,
                     const TokenPosition* position,
                     const char* state_name);
 
-void parser_error_cb(const char* const* token_names,
+void parser_error_cb(void* ctx,
+                     const char* const* token_names,
                      const TokenPosition* position,
                      uint32_t last_token,
                      uint32_t current_token,
@@ -21,7 +23,6 @@ void parser_error_cb(const char* const* token_names,
 %option parsing_error_cb="parser_error_cb"
 %option lexing_error_cb="lexer_error_cb"
 %option annotate_line="FALSE"
-%option debug_table="TRUE"
 
 %union {
     int out;

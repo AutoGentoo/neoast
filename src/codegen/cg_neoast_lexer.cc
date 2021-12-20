@@ -223,7 +223,7 @@ void CGNeoastLexer::put_global(std::ostream &os) const
         {
             os << "                if (!matcher_at_end(self__)) { fprintf(stderr, \"Failed to match token near "
                   "line:col %d:%d (state " << state.name
-               << ")\", yyposition->line, yyposition->col_start); return -1; }\n"
+               << ")\", yyposition->line, yyposition->col); return -1; }\n"
                   "                else return 0;\n";
         }
         else

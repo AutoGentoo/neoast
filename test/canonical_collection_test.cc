@@ -121,9 +121,11 @@ CTEST(test_state_hash)
             {&simple::g_rules[0], 1, lookaheads},
     };
 
-    sp<GrammarState> s1(new GrammarState(nullptr, items1, 0));
-    sp<GrammarState> s2(new GrammarState(nullptr, items2, 1));
-    sp<GrammarState> s3(new GrammarState(nullptr, items3, 2));
+    CanonicalCollection cc(&simple_p, nullptr);
+
+    sp<GrammarState> s1(new GrammarState(&cc, items1, 0));
+    sp<GrammarState> s2(new GrammarState(&cc, items2, 1));
+    sp<GrammarState> s3(new GrammarState(&cc, items3, 2));
 
     assert_int_equal(s1->hash(), s2->hash());
 
@@ -169,16 +171,14 @@ CTEST(test_tablegen)
     CanonicalCollection cc(&simple_p, nullptr);
     cc.resolve(LALR_1);
 
-    uint8_t error;
-    uint32_t* table = cc.generate(nullptr, &error);
+    std::unique_ptr<uint32_t[]> table = std::unique_ptr<uint32_t[]>(new uint32_t[cc.table_size()]);
+    uint8_t error = cc.generate(table.get(), nullptr);
     assert_int_equal(error, 0);
 
-    dump_table(table, &cc, simple::token_names, 0, stdout, nullptr);
+    dump_table(table.get(), &cc, simple::token_names, 0, stdout, nullptr);
     fprintf(stdout, "===========\n");
     dump_table(expected_lalr1_table, &cc, simple::token_names, 0, stdout, nullptr);
-    assert_memory_equal(table, expected_lalr1_table, sizeof(expected_lalr1_table));
-
-    free(table);
+    assert_memory_equal(table.get(), expected_lalr1_table, sizeof(expected_lalr1_table));
 }
 
 CTEST(test_lookaheads)

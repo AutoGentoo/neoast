@@ -20,7 +20,7 @@
 #include <cmocka.h>
 #include <string.h>
 #include <stdlib.h>
-#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
+#include "lexer/bootstrap_lexer.h"
 
 #define CTEST(name) static void name(void** state)
 
@@ -75,14 +75,14 @@ CTEST(test_lexer)
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenUnion), sizeof(CodegenUnion));
     void* lex = bootstrap_lexer_instance_new(l, yyinput, strlen(lexer_input));
 
-    assert_int_equal(bootstrap_lexer_next(lex, &llval), 1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval, NULL), 1);
     assert_int_equal(llval.value.integer, 10);
-    assert_int_equal(bootstrap_lexer_next(lex, &llval), 1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval, NULL), 1);
     assert_int_equal(llval.value.integer, 20);
-    assert_int_equal(bootstrap_lexer_next(lex, &llval), 1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval, NULL), 1);
     assert_int_equal(llval.value.integer, 30);
-    assert_int_equal(bootstrap_lexer_next(lex, &llval), -1); // Unhandled 'a'
-    assert_int_equal(bootstrap_lexer_next(lex, &llval), -1);
+    assert_int_equal(bootstrap_lexer_next(lex, &llval, NULL), -1); // Unhandled 'a'
+    assert_int_equal(bootstrap_lexer_next(lex, &llval, NULL), -1);
 
     bootstrap_lexer_instance_free(lex);
     parser_free_buffers(buf);

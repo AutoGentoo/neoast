@@ -92,15 +92,12 @@ class BootstrapLexerSession : public reflex::AbstractLexer<reflex::Matcher>
     const BootstrapLexer* parent;
     const reflex::Input input;
     ParsingStack* lexer_states;
-    void* err_ctx;
 
 public:
     BootstrapLexerSession(const char* input,
-                          void* err_ctx,
                           uint32_t length, const BootstrapLexer* parent,
                           std::ostream &os = std::cout) :
-            AbstractLexer(input, os), parent(parent), input(input, length),
-            err_ctx(err_ctx)
+            AbstractLexer(input, os), parent(parent), input(input, length)
     {
         lexer_states = parser_allocate_stack(32);
         NEOAST_STACK_PUSH(lexer_states, 0);
@@ -111,9 +108,9 @@ public:
         }
     }
 
-    int next(void* ll_val)
+    int next(void* ll_val, void* context)
     {
-        int tok = next_impl(ll_val);
+        int tok = next_impl(ll_val, context);
 
         // EOF and INVALID
         if (tok <= 0) return tok;
@@ -144,7 +141,7 @@ public:
     }
 
 private:
-    int next_impl(void* ll_val)
+    int next_impl(void* ll_val, void* context)
     {
         int tok = -1;
         while (tok < 0)
@@ -166,16 +163,18 @@ private:
                 // Invalid token
                 TokenPosition p{
                         .line = static_cast<uint32_t>(lineno()),
-                        .col_start=static_cast<uint32_t>(columno())};
+                        .col=static_cast<uint16_t>(columno()),
+                        .len=static_cast<uint16_t>(size())
+                };
 
                 if (parent->error_cb)
                 {
-                    parent->error_cb(err_ctx, input.cstring(), &p, std::to_string(current_state).c_str());
+                    parent->error_cb(context, input.cstring(), &p, std::to_string(current_state).c_str());
                 }
                 else
                 {
                     std::cerr << "Failed to match token near on line:col "
-                              << p.line << ":" << p.col_start << " (state " << current_state << ")\n";
+                              << p.line << ":" << p.col << " (state " << current_state << ")\n";
                 }
 
                 return -1;
@@ -186,7 +185,8 @@ private:
                 auto* position = reinterpret_cast<TokenPosition*>(
                         static_cast<char*>(ll_val) + parent->position_offset);
                 position->line = static_cast<uint32_t>(lineno());
-                position->col_start = static_cast<uint32_t>(columno());
+                position->col = static_cast<uint32_t>(columno());
+                position->len = static_cast<uint32_t>(size());
 
                 // Run token action
                 if (state.rules[rule_idx]->tok)
@@ -219,10 +219,9 @@ void bootstrap_lexer_free(void* lexer)
 }
 
 void* bootstrap_lexer_instance_new(const void* lexer_parent,
-                                   void* err_ctx,
                                    const char* input, size_t length)
 {
-    return new BootstrapLexerSession(input, err_ctx, length, reinterpret_cast<const BootstrapLexer*>(lexer_parent));
+    return new BootstrapLexerSession(input, length, reinterpret_cast<const BootstrapLexer*>(lexer_parent));
 }
 
 void bootstrap_lexer_instance_free(void* lexer_inst)
@@ -230,7 +229,7 @@ void bootstrap_lexer_instance_free(void* lexer_inst)
     delete reinterpret_cast<BootstrapLexerSession*>(lexer_inst);
 }
 
-int bootstrap_lexer_next(void* lexer, void* ll_val)
+int bootstrap_lexer_next(void* lexer, void* ll_val, void* context)
 {
-    return reinterpret_cast<BootstrapLexerSession*>(lexer)->next(ll_val);
+    return reinterpret_cast<BootstrapLexerSession*>(lexer)->next(ll_val, context);
 }

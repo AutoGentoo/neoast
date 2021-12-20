@@ -31,8 +31,8 @@ uint32_t FUNC(name, init)(); \
 void* FUNC(name, allocate_buffers)(); \
 void FUNC(name, free_buffers)(void* self); \
 void FUNC(name, free)(); \
-return_type FUNC(name, parse)(const void* buffers, const char* input); \
-return_type FUNC(name, parse_input)(const void* buffers, NeoastInput* input);
+return_type FUNC(name, parse)(void* ctx, const void* buffers, const char* input); \
+return_type FUNC(name, parse_input)(void* ctx, const void* buffers, NeoastInput* input);
 
 // Pretend headers
 DEFINE_HEADER(calc, double)
@@ -47,7 +47,7 @@ CTEST(test_empty)
     assert_int_equal(calc_init(), 0);
     void* buffers = calc_allocate_buffers();
 
-    assert_double_equal(calc_parse(buffers, "   "), 0, 0);
+    assert_double_equal(calc_parse(NULL, buffers, "   "), 0, 0);
 
     calc_free();
     calc_free_buffers(buffers);
@@ -59,7 +59,7 @@ CTEST(test_parser)
     void* buffers = calc_allocate_buffers();
 
     const char* input = "3 + 5 + (4 * 2 + (5 / 2))";
-    double result = calc_parse(buffers, input);
+    double result = calc_parse(NULL, buffers, input);
     assert_double_equal(result, 3 + 5 + (4 * 2 + (5.0 / 2)), 0.001);
     calc_free_buffers(buffers);
     calc_free();
@@ -70,7 +70,7 @@ CTEST(test_empty_ascii)
     assert_int_equal(calc_ascii_init(), 0);
     void* buffers = calc_ascii_allocate_buffers();
 
-    assert_double_equal(calc_ascii_parse(buffers, "   "), 0, 0);
+    assert_double_equal(calc_ascii_parse(NULL, buffers, "   "), 0, 0);
 
     calc_ascii_free();
     calc_ascii_free_buffers(buffers);
@@ -82,7 +82,7 @@ CTEST(test_parser_ascii)
     void* buffers = calc_ascii_allocate_buffers();
 
     const char* input = "3 + 5 + (4 * 2 + (5 / 2))";
-    double result = calc_ascii_parse(buffers, input);
+    double result = calc_ascii_parse(NULL, buffers, input);
     assert_double_equal(result, 3 + 5 + (4 * 2 + (5.0 / 2)), 0.001);
     calc_ascii_free_buffers(buffers);
     calc_ascii_free();
@@ -94,7 +94,7 @@ CTEST(test_parser_ascii_order_of_ops)
     void* buffers = calc_ascii_allocate_buffers();
 
     const char* input = "3 + 5 * 5 + 3 * 6 + 3";
-    double result = calc_ascii_parse(buffers, input);
+    double result = calc_ascii_parse(NULL, buffers, input);
     assert_double_equal(result, 3 + 5 * 5 + 3 * 6 + 3, 0.001);
     calc_ascii_free_buffers(buffers);
     calc_ascii_free();
@@ -109,7 +109,7 @@ CTEST(test_parser_input)
     FILE* mock_file = fmemopen(input, strlen(input), "r");
     NeoastInput* mock_input = input_new_from_file(mock_file);
 
-    double result = calc_ascii_parse_input(buffers, mock_input);
+    double result = calc_ascii_parse_input(NULL, buffers, mock_input);
     assert_double_equal(result, 3 + 5 + (4 * 2 + (5.0 / 2)), 0.001);
     calc_ascii_free_buffers(buffers);
     calc_ascii_free();
@@ -120,7 +120,7 @@ CTEST(test_destructor)
 {
     assert_int_equal(required_use_init(), 0);
     void* buffers = required_use_allocate_buffers();
-    void* stmt = required_use_parse(buffers, "?? ( hello_world");
+    void* stmt = required_use_parse(NULL, buffers, "?? ( hello_world");
     assert_null(stmt);
     required_use_stmt_free(stmt);
     required_use_free_buffers(buffers);
@@ -131,7 +131,7 @@ CTEST(test_destructor_lex)
 {
     assert_int_equal(required_use_init(), 0);
     void* buffers = required_use_allocate_buffers();
-    void* stmt = required_use_parse(buffers, "( hello_world %%%% )");
+    void* stmt = required_use_parse(NULL, buffers, "( hello_world %%%% )");
     assert_null(stmt);
     required_use_stmt_free(stmt);
     required_use_free_buffers(buffers);
@@ -141,30 +141,37 @@ CTEST(test_destructor_lex)
 static volatile int lexer_error_called = 0;
 static volatile int parser_error_called = 0;
 
-void lexer_error_cb(const char* input,
+void lexer_error_cb(void* ctx,
+                    const char* input,
                     const TokenPosition* position,
                     const char* lexer_state)
 {
+    (void) lexer_error_cb;
+    (void) ctx;
     (void) input;
     assert_int_equal(position->line, 2);
-    assert_int_equal(position->col_start, 4);
+    assert_int_equal(position->col, 4);
     assert_string_equal(lexer_state, "LEX_STATE_DEFAULT");
     lexer_error_called = 1;
 }
 
-void parser_error_cb(const char* const* token_names,
+void parser_error_cb(void* ctx,
+                     const char* const* token_names,
                      const TokenPosition* position,
                      uint32_t last_token,
                      uint32_t current_token,
                      const uint32_t expected_tokens[],
                      uint32_t expected_tokens_n)
 {
+    (void) ctx;
+
     assert_non_null(token_names);
     assert_non_null(position);
     assert_non_null(expected_tokens);
 
     assert_int_equal(position->line, 1);
-    assert_int_equal(position->col_start, 13);
+    assert_int_equal(position->col, 13);
+    assert_int_equal(position->len, 2);
 
     assert_int_equal(last_token, 1);
     assert_int_equal(current_token, 1);
@@ -188,7 +195,7 @@ CTEST(test_error_ll)
     lexer_error_called = 0;
     assert_int_equal(error_init(), 0);
     void* buffers = error_allocate_buffers();
-    int out = error_parse(buffers, "\n5555;");
+    int out = error_parse(NULL, buffers, "\n5555;");
     assert_int_equal(out, 0);
     assert_int_equal(lexer_error_called, 1);
     error_free();
@@ -200,7 +207,7 @@ CTEST(test_error_yy)
     parser_error_called = 0;
     assert_int_equal(error_init(), 0);
     void* buffers = error_allocate_buffers();
-    int out = error_parse(buffers, "55 + 55 + 99 99");
+    int out = error_parse(NULL, buffers, "55 + 55 + 99 99");
     assert_int_equal(parser_error_called, 1);
     assert_int_equal(out, 0);
     error_free();

@@ -20,10 +20,8 @@
 #include <string.h>
 #include <neoast.h>
 #include <cmocka.h>
-#include <codegen/bootstrap/lexer/bootstrap_lexer.h>
+#include "lexer/bootstrap_lexer.h"
 #include <stddef.h>
-#include <parsergen/c_pub.h>
-#include <util/util.h>
 
 #define CTEST(name) static void name(void** state)
 
@@ -145,7 +143,7 @@ CTEST(test_parser)
     ParserBuffers* buf = parser_allocate_buffers(256, 256, sizeof(CodegenStruct), sizeof(CodegenUnion));
 
     void* lexer_inst = bootstrap_lexer_instance_new(lexer_parent, lexer_input, strlen(lexer_input));
-    int32_t res_idx = parser_parse_lr(&p, lalr_table, buf, lexer_inst, bootstrap_lexer_next);
+    int32_t res_idx = parser_parse_lr(&p, NULL, lalr_table, buf, lexer_inst, bootstrap_lexer_next);
     bootstrap_lexer_instance_free(lexer_inst);
 
     parser_free_buffers(buf);

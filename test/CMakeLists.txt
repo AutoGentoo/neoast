@@ -8,6 +8,8 @@ macro(CUnitTest name)
             )
 endmacro()
 
+add_subdirectory(lexer)
+
 add_mocked_test(bootstrap_lexer_C
         SOURCES bootstrap_lexer_test.c
         LINK_LIBRARIES neoast neoast-bootstrap-lexer
