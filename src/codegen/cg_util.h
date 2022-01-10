@@ -10,7 +10,7 @@
 struct Options {
     // Should we dump the table
     bool annotate_line = true;
-    std::string track_position_type;
+    std::string track_position_type = "TokenPosition";
     std::string debug_ids;
     std::string prefix = "neoast";
     std::string lexing_error_cb;

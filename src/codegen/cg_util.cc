@@ -181,18 +181,10 @@ Code::get_complex(const Options &options, const std::vector<std::string> &argume
                 continue;
             }
 
-            if (!options.track_position_type.empty())
-            {
-                os << variadic_string("((const %s*)&%s[%d].position)",
-                                      options.track_position_type.c_str(),
-                                      non_zero_arg.c_str(),
-                                      idx - 1);
-            }
-            else
-            {
-                os << variadic_string("((const TokenPosition*)&%s[%d].position)",
-                                      non_zero_arg.c_str(), idx - 1);
-            }
+            os << variadic_string("((const %s*)&%s[%d].position)",
+                                  options.track_position_type.c_str(),
+                                  non_zero_arg.c_str(),
+                                  idx - 1);
         }
         else
         {

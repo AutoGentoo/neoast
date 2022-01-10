@@ -52,6 +52,10 @@ namespace parsergen
             if (!(i.second & FirstOfOption::INITIALIZED))
             {
                 lr_1_firstof_init(i.first);
+                if (context && context->has_errors())
+                {
+                    break;
+                }
             }
         }
     }
@@ -94,6 +98,14 @@ namespace parsergen
                 }
                 else
                 {
+                    auto f = first_ofs_.find(first_tok);
+                    if (f == first_ofs_.end())
+                    {
+                        context_->emit_error(get_position(production), "Grammar %s has no productions",
+                                             parser_->token_names[to_index(first_tok)]);
+                        continue;
+                    }
+
                     // Recursively resolve the first_of vector
                     lr_1_firstof_impl(first_ofs_.at(first_tok),
                                       first_tok, visiting);

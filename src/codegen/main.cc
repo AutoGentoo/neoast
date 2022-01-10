@@ -60,8 +60,8 @@ int main(int argc, const char* argv[])
     { emit_error(e.position(), e.what()); }
     catch (const Exception &e)
     { emit_error(nullptr, e.what()); }
-    catch (const std::exception &e)
-    { emit_error(nullptr, "System exception: %s", e.what()); }
+//    catch (const std::exception &e)
+//    { emit_error(nullptr, "System exception: %s", e.what()); }
 
 error:
     input.put_errors();
