@@ -196,7 +196,7 @@ void CGNeoastLexer::put_global(std::ostream &os) const
           "#define yystate (self__->lexing_state)\n"
           "#define yypush(state) NEOAST_STACK_PUSH(yystate, (state))\n"
           "#define yypop() NEOAST_STACK_POP(yystate)\n"
-          "#define yyposition (&(destination__->position))\n"
+          "#define yyposition ((" << impl_->options.track_position_type << "*)&(destination__->position))\n"
           "#define yycontext (context__)\n"
           "#define yylen (self__->len_)\n\n"
           "    while (!matcher_at_end(self__))\n"

@@ -260,7 +260,18 @@ void CodeGenImpl::init_cc()
     parser->action_token_n = static_cast<uint32_t>(action_tokens.size());
 
     cc = up<parsergen::CanonicalCollection>(new parsergen::CanonicalCollection(parser.get(), input, grammar->get_positions()));
+    if (input->has_errors())
+    {
+        input->emit_error_message(nullptr, "Failed to initialize canonical collection");
+        return;
+    }
+
     cc->resolve(options.parser_type);
+    if (input->has_errors())
+    {
+        input->emit_error_message(nullptr, "Failed to resolve canonical collection");
+        return;
+    }
 
     precedence_table = up<uint8_t[]>(new uint8_t[tokens.size()]);
     for (const auto &mapping : precedence_mapping)
