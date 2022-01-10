@@ -52,7 +52,7 @@ namespace parsergen
             if (!(i.second & FirstOfOption::INITIALIZED))
             {
                 lr_1_firstof_init(i.first);
-                if (context->has_errors())
+                if (context && context->has_errors())
                 {
                     break;
                 }
