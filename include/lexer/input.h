@@ -83,7 +83,8 @@ typedef enum
 
 struct NeoastInput_prv
 {
-    input_t type;
+    input_t type;               ///< ID of the impl_ to use
+    int context;                ///< Opaque identifier for user purposes. Placed in TokenPosition
     union
     {
         struct BufferHandle
@@ -126,7 +127,7 @@ size_t input_get(NeoastInput* self, char* s, size_t n);
  * @param len length of string
  * @return input
  */
-NeoastInput* input_new_from_buffer(const char* str, size_t len);
+NeoastInput* input_new_from_buffer(int context, const char* str, size_t len);
 
 /**
  * Create an input given a POSIX file pointer
@@ -134,16 +135,16 @@ NeoastInput* input_new_from_buffer(const char* str, size_t len);
  * @param encoding encoding type to read file with
  * @return input
  */
-NeoastInput* input_new_from_file_and_encoding(FILE* fp, file_encoding_type_t encoding);
+NeoastInput* input_new_from_file_and_encoding(int context, FILE* fp, file_encoding_type_t encoding);
 
 /**
  * input_new_from_file_and_encoding() with default plain-text encoding
  * @param fp file pointer structure
  * @return input
  */
-NeoastInput* input_new_from_file(FILE* fp);
+NeoastInput* input_new_from_file(int context, FILE* fp);
 
-NeoastInput* input_new_from_custom(void* ptr, neoast_input_get get);
+NeoastInput* input_new_from_custom(int context, void* ptr, neoast_input_get get);
 
 void input_free(NeoastInput* self);
 

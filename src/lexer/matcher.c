@@ -570,6 +570,11 @@ const char* matcher_text(NeoastMatcher* self)
     return self->txt_;
 }
 
+int matcher_input_context(NeoastMatcher* self)
+{
+    return self->in->context;
+}
+
 static inline size_t matcher_get_1(NeoastMatcher* self, char* s, size_t n)
 {
     return input_get(self->in, s, n);

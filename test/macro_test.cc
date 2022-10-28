@@ -16,7 +16,7 @@
  */
 
 
-#include <codegen/regex.h>
+#include <yacc_codegen/regex.h>
 
 extern "C" {
     #include <cmocka.h>

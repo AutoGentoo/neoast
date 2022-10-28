@@ -8,5 +8,6 @@ add_library(neoast STATIC
 target_include_directories(neoast PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
 add_subdirectory(parsergen)
-add_subdirectory(codegen)
+add_subdirectory(yacc_codegen)
+add_subdirectory(lark_codegen)
 add_subdirectory(util)

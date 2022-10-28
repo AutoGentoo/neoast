@@ -50,6 +50,7 @@ size_t matcher_lineno(NeoastMatcher* self);
 size_t matcher_columno(NeoastMatcher* self);
 size_t matcher_size(NeoastMatcher* self);
 const char* matcher_text(NeoastMatcher* self);
+int matcher_input_context(NeoastMatcher* self);
 
 #ifdef __cplusplus
 };

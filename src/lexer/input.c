@@ -381,9 +381,9 @@ size_t input_get(NeoastInput* self, char* s, size_t n)
     }
 }
 
-NeoastInput* input_new_from_file(FILE* fp)
+NeoastInput* input_new_from_file(int context, FILE* fp)
 {
-    return input_new_from_file_and_encoding(fp, ENCODING_plain);
+    return input_new_from_file_and_encoding(context, fp, ENCODING_plain);
 }
 
 static void input_file_init(struct FileHandle* this, file_encoding_type_t enc)
@@ -483,10 +483,11 @@ static void input_file_init(struct FileHandle* this, file_encoding_type_t enc)
     }
 }
 
-NeoastInput* input_new_from_file_and_encoding(FILE* fp, file_encoding_type_t encoding)
+NeoastInput* input_new_from_file_and_encoding(int context, FILE* fp, file_encoding_type_t encoding)
 {
     NeoastInput* self = malloc(sizeof(NeoastInput));
     self->type = NEOAST_INPUT_FILE;
+    self->context = context;
     struct FileHandle* this = &self->impl_.file_;
     memset(this->utf8_, 0, sizeof(this->utf8_));
     this->uidx_ = 0;
@@ -497,21 +498,23 @@ NeoastInput* input_new_from_file_and_encoding(FILE* fp, file_encoding_type_t enc
     return self;
 }
 
-NeoastInput* input_new_from_buffer(const char* str, size_t len)
+NeoastInput* input_new_from_buffer(int context, const char* str, size_t len)
 {
     NeoastInput* self = malloc(sizeof(NeoastInput));
     self->impl_.buffer_.cstring_ = str;
     self->impl_.buffer_.size_ = len;
     self->type = NEOAST_INPUT_BUFFER;
+    self->context = context;
     return self;
 }
 
-NeoastInput* input_new_from_custom(void* ptr, neoast_input_get get)
+NeoastInput* input_new_from_custom(int context, void* ptr, neoast_input_get get)
 {
     NeoastInput* self = malloc(sizeof(NeoastInput));
     self->impl_.custom_.ptr = ptr;
     self->impl_.custom_.get = get;
     self->type = NEOAST_INPUT_CUSTOM;
+    self->context = context;
     return self;
 }
 

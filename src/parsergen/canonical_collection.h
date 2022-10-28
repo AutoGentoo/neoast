@@ -106,7 +106,8 @@ namespace parsergen
 
         inline tok_t to_index(tok_t token) const
         {
-            if (token < NEOAST_ASCII_MAX)
+            if (token == 0) return 0;
+            else if (token < NEOAST_ASCII_MAX)
             {
                 assert(parser_->ascii_mappings);
                 assert(parser_->ascii_mappings[token] >= NEOAST_ASCII_MAX);

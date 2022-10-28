@@ -141,8 +141,9 @@ struct ParserBuffers_prv
 struct TokenPosition_prv
 {
     uint32_t line;
-    uint16_t col;
-    uint16_t len;
+    uint32_t col;
+    uint32_t len;
+    int32_t context;
 };
 
 #ifndef NEOAST_PARSER_H
@@ -162,7 +163,7 @@ void parser_reset_buffers(const ParserBuffers* self);
  * given a parser with the parsing
  * table filled.
  * @param parser target parser (kept constant)
- * @param stack used for parsing
+ * @param context context passed into error handler
  * @param token_table tokens from lexer
  * @param val_table values from lexer
  * @param val_s sizeof each value

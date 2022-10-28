@@ -246,8 +246,8 @@ namespace parsergen
                         cc->context()->emit_error(cc->get_position(lr1.derivation),
                                                   "RR conflict, two rules are able to reduce on token '%s' (lookahead)",
                                                   cc->parser()->token_names[i]);
-                        cc->context()->emit_error_message(cc->get_position(row[i] & TOK_MASK),
-                                                          "other rule attempting to reduce");
+                        cc->context()->emit_message(cc->get_position(row[i] & TOK_MASK),
+                                                    "other rule attempting to reduce");
                         rr_conflicts++;
                     }
                     else if (row[i] & TOK_SHIFT_MASK)

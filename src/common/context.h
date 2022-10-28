@@ -18,13 +18,46 @@
 #ifndef NEOAST_CONTEXT_H
 #define NEOAST_CONTEXT_H
 
+#include <cstdarg>
+
+#ifdef __cplusplus
+struct Ast
+{
+    virtual ~Ast() = default;
+protected:
+    Ast() = default;
+};
+#endif
+
 struct Context
 {
-    virtual uint32_t has_errors() const = 0;
-    virtual void emit_error_message(const TokenPosition* p, const char* format, ...) = 0;
-    virtual void emit_error(const TokenPosition* p, const char* format, ...) = 0;
-    virtual void emit_warning_message(const TokenPosition* p, const char* format, ...) = 0;
-    virtual void emit_warning(const TokenPosition* p, const char* format, ...) = 0;
+protected:
+    enum Message
+    {
+        NOTE,
+        MESSAGE,
+        WARNING,
+        ERROR,
+    };
+
+    virtual void emit_message_typed(Message msg, const TokenPosition* p, const char* format, va_list args) = 0;
+
+    uint32_t error_n = 0;
+    uint32_t warning_n = 0;
+
+public:
+    virtual uint32_t has_errors() const { return error_n; };
+
+#define FWD_VA_LIST(type_) { va_list args; va_start(args, format); emit_message_typed((type_), p, format, args); va_end(args); }
+#define FWD_VA_LIST_INC(type_, inc_) { FWD_VA_LIST(type_) (inc_)++; }
+
+    void emit_message(const TokenPosition* p, const char* format, ...) FWD_VA_LIST(MESSAGE);
+    void emit_error(const TokenPosition* p, const char* format, ...) FWD_VA_LIST_INC(ERROR, error_n);
+    void emit_warning(const TokenPosition* p, const char* format, ...) FWD_VA_LIST_INC(WARNING, warning_n);
+    void emit_note(const TokenPosition* p, const char* format, ...) FWD_VA_LIST(NOTE);
+
+#undef FWD_VA_LIST
+
 };
 
 #endif //NEOAST_CONTEXT_H

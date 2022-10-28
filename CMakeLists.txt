@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 enable_language(C CXX)
 
+set(CMAKE_COLOR_DIAGNOSTICS ON)
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
@@ -10,7 +12,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(neoast VERSION "1.3")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(SANITIZER_BUILD "Build with AddressSanitizer" OFF)
 set(SANITIZER "" CACHE STRING "Compile with -fsanitize=...")
 option(ENABLE_NEOAST_TESTS "Build+execute neoast's tests" OFF)
 set(ASAN_LIB "libasan.so" CACHE STRING "Path to address sanitizer library")
